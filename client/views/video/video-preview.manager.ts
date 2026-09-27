@@ -7,6 +7,7 @@ export interface VideoPreviewManagerOptions {
   canvasElement: HTMLCanvasElement;
   container: HTMLElement;
   getProject: () => VideoProject;
+  onBufferProgress?: (clipId: string, percent: number) => void;
   onClipSelect?: (clipId: string | null) => void;
   onClipTransformChange?: (clipId: string, transform: VideoTransform) => void;
   onClipTransformEnd?: (clipId: string, transform: VideoTransform) => void;
@@ -19,6 +20,7 @@ export class VideoPreviewManager {
   private _ctx: CanvasRenderingContext2D | null;
   private _getProject: () => VideoProject;
   private _onTimeUpdate: (time: number) => void;
+  private _onBufferProgress?: (clipId: string, percent: number) => void;
   private _onClipSelect?: (clipId: string | null) => void;
   private _onClipTransformChange?: (clipId: string, transform: VideoTransform) => void;
   private _onClipTransformEnd?: (clipId: string, transform: VideoTransform) => void;
@@ -53,6 +55,11 @@ export class VideoPreviewManager {
   private _durTimecodeEl: HTMLElement | null = null;
   private _lastFormattedCurrentTime = '';
   private _lastFormattedDuration = '';
+  private _bufferingOverlay: HTMLElement | null = null;
+  private _bufferingTextEl: HTMLElement | null = null;
+  private _isBuffering = false;
+  private _isBufferingWait = false;
+  private _activeBufferingClips: Set<string> = new Set();
 
   private logDebug(_category: string, _message: string, _data?: unknown): void {}
 
@@ -62,6 +69,7 @@ export class VideoPreviewManager {
     this._ctx = this._canvas.getContext('2d');
     this._getProject = options.getProject;
     this._onTimeUpdate = options.onTimeUpdate;
+    this._onBufferProgress = options.onBufferProgress;
     this._onClipSelect = options.onClipSelect;
     this._onClipTransformChange = options.onClipTransformChange;
     this._onClipTransformEnd = options.onClipTransformEnd;
@@ -102,6 +110,9 @@ export class VideoPreviewManager {
     this.bindCanvasPointerEvents(signal);
     this._curTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-current"]');
     this._durTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-duration"]');
+    this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
+    this._bufferingTextEl = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-text"]');
+    this.prewarmProjectMedia();
     this.renderFrame();
   }
 
@@ -234,6 +245,7 @@ export class VideoPreviewManager {
       }
     }
 
+    this.prewarmProjectMedia();
     this.renderFrame();
   }
 
@@ -244,6 +256,10 @@ export class VideoPreviewManager {
 
   private tick = (): void => {
     if (!this._isPlaying) return;
+    if (this._isBufferingWait) {
+      this._animationFrameId = requestAnimationFrame(this.tick);
+      return;
+    }
     const now = performance.now();
     const elapsed = Math.min((now - this._lastFrameTimestamp) / 1000, 0.1);
     this._lastFrameTimestamp = now;
@@ -252,29 +268,23 @@ export class VideoPreviewManager {
     const { clip: masterClip, media: masterMedia } = this.getActiveMasterMedia(project);
 
     this._tickCount++;
-    if (this._tickCount % 30 === 0) {
-      this.logDebug('Tick', `Playback tick #${this._tickCount}`, {
-        currentTime: Number(this._currentTime.toFixed(3)),
-        masterClipId: masterClip?.id ?? 'none',
-        masterCurrentTime: masterMedia ? Number(masterMedia.currentTime.toFixed(3)) : null,
-        masterPaused: masterMedia?.paused ?? null,
-        masterReadyState: masterMedia?.readyState ?? null,
-        masterSeeking: masterMedia?.seeking ?? null,
-      });
-    }
 
     if (masterMedia && masterClip) {
-      if (!masterMedia.paused && !masterMedia.seeking && !masterMedia.error) {
+      if (!masterMedia.paused && !masterMedia.seeking && !masterMedia.error && masterMedia.readyState >= 2) {
         this._seekingSince = 0;
         const hardwareTime = masterClip.startTime - masterClip.trimStart + masterMedia.currentTime;
         this._currentTime = Math.max(0, Math.min(hardwareTime, project.duration));
       } else if (masterMedia.seeking && !masterMedia.error) {
         if (!this._seekingSince) {
           this._seekingSince = now;
-        } else if (now - this._seekingSince > 250) {
-          this.logDebug('Tick', `Master media seeking timeout (>250ms) on [${masterClip.id}], advancing via software clock`);
+        } else if (now - this._seekingSince > 500) {
           this._currentTime += elapsed;
         }
+      } else if (masterMedia.readyState < 2 && !masterMedia.paused) {
+        this._isBufferingWait = true;
+        this.showBuffering('Cargando buffer de video...');
+        this._animationFrameId = requestAnimationFrame(this.tick);
+        return;
       } else {
         this._seekingSince = 0;
         this._currentTime += elapsed;
@@ -595,6 +605,11 @@ export class VideoPreviewManager {
       return;
     }
 
+    if (diff > 0.3 && el.readyState < 3 && this.isClipActive(clipId)) {
+      this._activeBufferingClips.add(clipId);
+      this.showBuffering('Buscando fotograma...');
+    }
+
     const custom = el as any;
     const now = performance.now();
     const isSeekingStuck = el.seeking && custom.__seekTimestamp && (now - custom.__seekTimestamp > 350);
@@ -630,6 +645,23 @@ export class VideoPreviewManager {
     if (el.error) {
       this.logDebug('Play', `[${clipId || 'media'}] Media element in error state (code=${el.error.code}), reloading media`);
       el.load();
+      return;
+    }
+
+    if (el.readyState < 2) {
+      this._activeBufferingClips.add(clipId);
+      this.showBuffering('Preparando reproducción...');
+      this._isBufferingWait = true;
+      el.addEventListener('canplay', () => {
+        if (this._isPlaying) {
+          this._activeBufferingClips.delete(clipId);
+          if (this._activeBufferingClips.size === 0) {
+            this.hideBuffering();
+          }
+          this._isBufferingWait = false;
+          this.safePlayMedia(el, clipId);
+        }
+      }, { once: true });
       return;
     }
 
@@ -718,10 +750,35 @@ export class VideoPreviewManager {
     if (this.isExternalUrl(url)) {
       vid.crossOrigin = 'anonymous';
     }
-    vid.preload = 'metadata';
+    vid.preload = 'auto';
     vid.playsInline = true;
     vid.muted = this._isMuted;
     vid.src = url;
+    vid.addEventListener('waiting', () => {
+      this._activeBufferingClips.add(clipId);
+      if (this.isClipActive(clipId)) {
+        this.showBuffering('Amortiguando video...');
+        if (this._isPlaying) {
+          this._isBufferingWait = true;
+        }
+      }
+    });
+    vid.addEventListener('stalled', () => {
+      if (this._isPlaying && this.isClipActive(clipId) && vid.readyState < 3) {
+        this._activeBufferingClips.add(clipId);
+        this.showBuffering('Cargando buffer de red...');
+        this._isBufferingWait = true;
+      }
+    });
+    vid.addEventListener('playing', () => {
+      this._activeBufferingClips.delete(clipId);
+      if (this._activeBufferingClips.size === 0) {
+        this.hideBuffering();
+      }
+    });
+    vid.addEventListener('progress', () => {
+      this.computeBufferProgress(clipId, vid);
+    });
     vid.addEventListener('loadedmetadata', () => {
       this.logDebug('Media', `[${clipId}] Video loadedmetadata: duration=${vid.duration.toFixed(3)}s, size=${vid.videoWidth}x${vid.videoHeight}`);
       this.renderFrame();
@@ -732,11 +789,24 @@ export class VideoPreviewManager {
     });
     vid.addEventListener('canplay', () => {
       this.logDebug('Media', `[${clipId}] Video canplay (readyState=${vid.readyState})`);
+      this._activeBufferingClips.delete(clipId);
+      if (this._activeBufferingClips.size === 0) {
+        this.hideBuffering();
+      }
+      if (this._isPlaying && this._isBufferingWait && this.isClipActive(clipId)) {
+        this._isBufferingWait = false;
+        this.safePlayMedia(vid, clipId);
+      }
+      this.computeBufferProgress(clipId, vid);
       this.renderFrame();
     });
     vid.addEventListener('seeked', () => {
       const custom = vid as any;
       custom.__seekTimestamp = 0;
+      this._activeBufferingClips.delete(clipId);
+      if (this._activeBufferingClips.size === 0) {
+        this.hideBuffering();
+      }
       this.logDebug('Seek', `[${clipId}] Event:seeked at ${vid.currentTime.toFixed(3)}s, Pending=${custom.__pendingSeekTime ?? 'none'}`);
       if (custom.__pendingSeekTime !== null && custom.__pendingSeekTime !== undefined) {
         const nextTime = custom.__pendingSeekTime;
@@ -807,15 +877,19 @@ export class VideoPreviewManager {
     if (this.isExternalUrl(url)) {
       aud.crossOrigin = 'anonymous';
     }
-    aud.preload = 'metadata';
+    aud.preload = 'auto';
     aud.muted = this._isMuted;
     aud.src = url;
+    aud.addEventListener('progress', () => {
+      this.computeBufferProgress(clipId, aud);
+    });
     aud.addEventListener('loadedmetadata', () => {
       this.logDebug('Media', `[${clipId}] Audio loadedmetadata: duration=${aud.duration.toFixed(3)}s`);
       this.renderFrame();
     });
     aud.addEventListener('canplay', () => {
       this.logDebug('Media', `[${clipId}] Audio canplay (readyState=${aud.readyState})`);
+      this.computeBufferProgress(clipId, aud);
       this.renderFrame();
     });
     aud.addEventListener('seeked', () => {
@@ -1432,6 +1506,103 @@ export class VideoPreviewManager {
     }, { signal });
   }
 
+  private showBuffering(text = 'Cargando video...'): void {
+    if (!this._bufferingOverlay) {
+      this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
+    }
+    if (!this._bufferingTextEl) {
+      this._bufferingTextEl = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-text"]');
+    }
+    if (this._bufferingTextEl) {
+      this._bufferingTextEl.textContent = text;
+    }
+    if (this._bufferingOverlay) {
+      this._bufferingOverlay.classList.remove('is-hidden');
+    }
+    this._isBuffering = true;
+  }
+
+  private hideBuffering(): void {
+    if (!this._bufferingOverlay) {
+      this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
+    }
+    if (this._bufferingOverlay) {
+      this._bufferingOverlay.classList.add('is-hidden');
+    }
+    this._isBuffering = false;
+    this._isBufferingWait = false;
+  }
+
+  private isClipActive(clipId: string): boolean {
+    const project = this._getProject();
+    for (const track of project.tracks) {
+      if (track.hidden) continue;
+      for (const clip of track.clips) {
+        if (clip.id === clipId) {
+          return this._currentTime >= clip.startTime && this._currentTime < (clip.startTime + clip.duration);
+        }
+      }
+    }
+    return false;
+  }
+
+  private computeBufferProgress(clipId: string, el: HTMLMediaElement): void {
+    if (!Number.isFinite(el.duration) || el.duration <= 0) return;
+    const buffered = el.buffered;
+    if (!buffered || buffered.length === 0) return;
+
+    let maxEnd = 0;
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.end(i) > maxEnd) {
+        maxEnd = buffered.end(i);
+      }
+    }
+    const percent = Math.min(100, Math.round((maxEnd / el.duration) * 100));
+    this._onBufferProgress?.(clipId, percent);
+  }
+
+  public prewarmProjectMedia(): void {
+    const project = this._getProject();
+    const curTime = this._currentTime;
+
+    const mediaClips: { clip: VideoClip; distance: number }[] = [];
+    for (const track of project.tracks) {
+      if (track.hidden) continue;
+      for (const clip of track.clips) {
+        if ((clip.mediaType === 'video' || clip.mediaType === 'audio') && clip.assetUrl) {
+          const clipStart = clip.startTime;
+          const clipEnd = clip.startTime + clip.duration;
+          let distance = 0;
+          if (curTime >= clipStart && curTime < clipEnd) {
+            distance = 0;
+          } else if (clipStart >= curTime) {
+            distance = clipStart - curTime;
+          } else {
+            distance = curTime - clipEnd + 1000;
+          }
+          mediaClips.push({ clip, distance });
+        }
+      }
+    }
+
+    mediaClips.sort((a, b) => a.distance - b.distance);
+
+    const candidates = mediaClips.slice(0, 4);
+    for (const { clip } of candidates) {
+      if (clip.mediaType === 'video' && clip.assetUrl) {
+        const vid = this.getVideoElement(clip.id, clip.assetUrl);
+        if (vid.preload !== 'auto') {
+          vid.preload = 'auto';
+        }
+      } else if (clip.mediaType === 'audio' && clip.assetUrl) {
+        const aud = this.getAudioElement(clip.id, clip.assetUrl);
+        if (aud.preload !== 'auto') {
+          aud.preload = 'auto';
+        }
+      }
+    }
+  }
+
   public destroy(): void {
     this.pause();
     if (this._abortController) {
@@ -1451,5 +1622,8 @@ export class VideoPreviewManager {
     this._pendingFrameRequests.clear();
     this._curTimecodeEl = null;
     this._durTimecodeEl = null;
+    this._bufferingOverlay = null;
+    this._bufferingTextEl = null;
+    this._activeBufferingClips.clear();
   }
 }

@@ -27,6 +27,7 @@ export class VideoTimelineManager {
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
   private _playheadElement: HTMLElement | null = null;
+  private _clipBufferProgress: Map<string, number> = new Map();
 
   private logDebug(_category: string, _message: string, _data?: unknown): void {}
 
@@ -269,6 +270,10 @@ export class VideoTimelineManager {
           if ((clip.audioFadeIn && clip.audioFadeIn > 0) || (clip.audioFadeOut && clip.audioFadeOut > 0)) badges.push('Fade');
 
           const waveformHtml = clip.mediaType === 'audio' ? this.renderWaveformSvg(clip, widthPx) : '';
+          const bufferedPct = this._clipBufferProgress.get(clip.id) || 0;
+          const bufferBarHtml = (clip.mediaType === 'video' || clip.mediaType === 'audio')
+            ? `<div class="video-clip-buffer-bar" data-ref="clip-buffer-${clip.id}" style="width: ${bufferedPct}%;"></div>`
+            : '';
 
           return `
             <div class="video-clip-item ${clipTypeClass}${isSelected ? ' is-selected' : ''}" data-ref="clip-item-${clip.id}" data-clip-id="${clip.id}" style="left: ${leftPx}px; width: ${widthPx}px;">
@@ -279,6 +284,7 @@ export class VideoTimelineManager {
                 <span class="video-clip-item__label">${clip.name}</span>
                 ${badges.length > 0 ? `<div class="video-clip-item__badges">${badges.map((b) => `<span class="video-clip-item__tag">${b}</span>`).join('')}</div>` : ''}
               </div>
+              ${bufferBarHtml}
               <div class="clip-trim-handle right" data-ref="trim-right-${clip.id}" data-handle="right"></div>
             </div>
           `;
@@ -1247,11 +1253,21 @@ export class VideoTimelineManager {
     }
   }
 
+  public updateClipBuffer(clipId: string, percent: number): void {
+    const clamped = Math.max(0, Math.min(100, percent));
+    this._clipBufferProgress.set(clipId, clamped);
+    const bar = this._container.querySelector<HTMLElement>(`[data-ref="clip-buffer-${clipId}"]`);
+    if (bar) {
+      bar.style.width = `${clamped}%`;
+    }
+  }
+
   public destroy(): void {
     if (this._abortController) {
       this._abortController.abort();
       this._abortController = null;
     }
     this._playheadElement = null;
+    this._clipBufferProgress.clear();
   }
 }

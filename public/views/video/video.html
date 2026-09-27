@@ -100,6 +100,10 @@
         <div class="video-viewport-wrapper" data-ref="video-viewport-wrapper">
           <div class="video-canvas-container" data-ref="video-canvas-container">
             <canvas class="video-preview-canvas" data-ref="video-preview-canvas" width="1920" height="1080"></canvas>
+            <div class="video-buffering-overlay is-hidden" data-ref="video-buffering-overlay">
+              <div class="video-buffering-spinner" aria-hidden="true"></div>
+              <span class="video-buffering-text" data-ref="video-buffering-text">Cargando video...</span>
+            </div>
             <div class="video-media-pool" data-ref="video-media-pool" style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; overflow: hidden;" aria-hidden="true"></div>
           </div>
         </div>

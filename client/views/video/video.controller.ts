@@ -141,6 +141,9 @@ export class VideoController {
       canvasElement: canvasEl,
       container: this._container,
       getProject: () => this._project,
+      onBufferProgress: (clipId, percent) => {
+        this._timelineManager?.updateClipBuffer(clipId, percent);
+      },
       onClipSelect: (clipId) => {
         this._timelineManager?.selectClip(clipId || '', false);
       },
@@ -165,6 +168,7 @@ export class VideoController {
       },
       onProjectChanged: () => {
         this._historyManager.pushState(this._project);
+        this._previewManager?.prewarmProjectMedia();
         this._previewManager?.renderFrame();
         this.scheduleAutoSave();
       },
@@ -254,6 +258,7 @@ export class VideoController {
       (this._container as any).__currentVideoProject = this._project;
       this.updateAspectPresetButtons();
       this._timelineManager?.render();
+      this._previewManager?.prewarmProjectMedia();
       this._previewManager?.renderFrame();
       this.scheduleAutoSave();
     }
@@ -266,6 +271,7 @@ export class VideoController {
       (this._container as any).__currentVideoProject = this._project;
       this.updateAspectPresetButtons();
       this._timelineManager?.render();
+      this._previewManager?.prewarmProjectMedia();
       this._previewManager?.renderFrame();
       this.scheduleAutoSave();
     }
@@ -292,6 +298,7 @@ export class VideoController {
     }
 
     this._timelineManager?.addClipToTrack(track.id, clipData);
+    this._previewManager?.prewarmProjectMedia();
   }
 
   public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
