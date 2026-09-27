@@ -1,0 +1,429 @@
+import fs from 'fs';
+import path from 'path';
+
+export const TAB_BAR_HTML_CONTENT = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tabs</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: #0e0e10;
+      color: #e4e4e7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      height: 38px;
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid #27272a;
+    }
+
+    .tab-bar-container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding-left: 8px;
+      padding-right: 140px;
+      -webkit-app-region: drag;
+    }
+
+    .tab-strip {
+      display: flex;
+      align-items: flex-end;
+      height: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+
+    .tab-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-item {
+      display: flex;
+      align-items: center;
+      height: 33px;
+      min-width: 120px;
+      max-width: 220px;
+      padding: 0 10px;
+      margin-right: 4px;
+      background: transparent;
+      color: #9ca3af;
+      border-top: 2px solid transparent;
+      border-left: 1px solid transparent;
+      border-right: 1px solid transparent;
+      border-bottom: 1px solid transparent;
+      border-radius: 7px 7px 0 0;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+      -webkit-app-region: no-drag;
+      position: relative;
+    }
+
+    .tab-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e4e4e7;
+    }
+
+    .tab-item--active {
+      background: #18181b;
+      color: #ffffff;
+      border-top: 2px solid #3b82f6;
+      border-left: 1px solid #27272a;
+      border-right: 1px solid #27272a;
+      border-bottom: 1px solid #18181b;
+      font-weight: 500;
+    }
+
+    .tab-item--active:hover {
+      background: #18181b;
+    }
+
+    .tab-item__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .tab-item__icon img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+      border-radius: 2px;
+    }
+
+    .tab-item__icon svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tab-item__spinner {
+      animation: tab-spin 1s linear infinite;
+    }
+
+    @keyframes tab-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .tab-item__title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 6px;
+    }
+
+    .tab-item__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.15s, background-color 0.15s, color 0.15s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .tab-item__close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+
+    .tab-item__close svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tab-strip__new-tab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      margin-left: 4px;
+      margin-bottom: 2px;
+      transition: background-color 0.15s, color 0.15s;
+      -webkit-app-region: no-drag;
+      flex-shrink: 0;
+    }
+
+    .tab-strip__new-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    .tab-strip__new-tab svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tab-bar__update-btn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      height: 25px;
+      padding: 0 10px;
+      margin-left: 10px;
+      border-radius: 13px;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      transition: background-color 0.2s, transform 0.1s;
+      flex-shrink: 0;
+    }
+
+    .tab-bar__update-btn:hover {
+      background: #1d4ed8;
+      transform: scale(1.02);
+    }
+
+    .tab-bar__update-btn--ready {
+      background: #16a34a;
+    }
+
+    .tab-bar__update-btn--ready:hover {
+      background: #15803d;
+    }
+
+    .tab-bar__update-btn svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tab-bar__drag-spacer {
+      flex: 1;
+      height: 100%;
+      -webkit-app-region: drag;
+    }
+  </style>
+</head>
+<body>
+  <div class="tab-bar-container" data-ref="tab-bar-container">
+    <div class="tab-strip" data-ref="tab-strip"></div>
+    <button type="button" class="tab-strip__new-tab" data-ref="btn-new-tab" title="Nueva pestaña (Ctrl+T)" aria-label="Nueva pestaña (Ctrl+T)">
+      <svg viewBox="0 0 24 24">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+    <button type="button" class="tab-bar__update-btn" data-ref="btn-app-update" title="Actualización disponible" aria-label="Actualización disponible">
+      <svg viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      <span class="tab-bar__update-text" data-ref="update-text">Actualizar</span>
+    </button>
+    <div class="tab-bar__drag-spacer" data-ref="tab-bar-drag-spacer"></div>
+  </div>
+
+  <script>
+    (() => {
+      const tabStrip = document.querySelector('[data-ref="tab-strip"]');
+      const btnNewTab = document.querySelector('[data-ref="btn-new-tab"]');
+      const btnAppUpdate = document.querySelector('[data-ref="btn-app-update"]');
+      const updateText = document.querySelector('[data-ref="update-text"]');
+
+      if (!window.tabBarApi) {
+        return;
+      }
+
+      const defaultIconSvg = \`
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+      \`;
+
+      const spinnerSvg = \`
+        <svg class="tab-item__spinner" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" stroke-dasharray="40 20" stroke-linecap="round"></circle>
+        </svg>
+      \`;
+
+      const closeIconSvg = \`
+        <svg viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      \`;
+
+      function renderTabs(tabs, activeTabId) {
+        if (!tabStrip) return;
+        tabStrip.innerHTML = '';
+
+        tabs.forEach((tab) => {
+          const isActive = tab.id === activeTabId;
+          const tabElement = document.createElement('div');
+          tabElement.className = isActive ? 'tab-item tab-item--active' : 'tab-item';
+          tabElement.setAttribute('data-ref', 'tab-item');
+          tabElement.setAttribute('data-tab-id', tab.id);
+          tabElement.setAttribute('title', tab.title || 'Pestaña');
+
+          const iconContainer = document.createElement('span');
+          iconContainer.className = 'tab-item__icon';
+          iconContainer.setAttribute('data-ref', 'tab-icon');
+
+          if (tab.isLoading) {
+            iconContainer.innerHTML = spinnerSvg;
+          } else if (tab.favicon) {
+            const img = document.createElement('img');
+            img.src = tab.favicon;
+            img.alt = '';
+            iconContainer.appendChild(img);
+          } else {
+            iconContainer.innerHTML = defaultIconSvg;
+          }
+
+          const titleElement = document.createElement('span');
+          titleElement.className = 'tab-item__title';
+          titleElement.setAttribute('data-ref', 'tab-title');
+          titleElement.textContent = tab.title || 'Nueva pestaña';
+
+          const btnClose = document.createElement('button');
+          btnClose.setAttribute('type', 'button');
+          btnClose.className = 'tab-item__close';
+          btnClose.setAttribute('data-ref', 'btn-tab-close');
+          btnClose.setAttribute('title', 'Cerrar pestaña (Ctrl+W)');
+          btnClose.setAttribute('aria-label', 'Cerrar pestaña');
+          btnClose.innerHTML = closeIconSvg;
+
+          btnClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.tabBarApi.closeTab(tab.id);
+          });
+
+          tabElement.addEventListener('click', () => {
+            window.tabBarApi.switchTab(tab.id);
+          });
+
+          tabElement.addEventListener('auxclick', (e) => {
+            if (e.button === 1) {
+              e.preventDefault();
+              window.tabBarApi.closeTab(tab.id);
+            }
+          });
+
+          tabElement.appendChild(iconContainer);
+          tabElement.appendChild(titleElement);
+          tabElement.appendChild(btnClose);
+          tabStrip.appendChild(tabElement);
+
+          if (isActive) {
+            tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          }
+        });
+      }
+
+      btnNewTab?.addEventListener('click', () => {
+        window.tabBarApi.newTab();
+      });
+
+      tabStrip?.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          tabStrip.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+
+      window.tabBarApi.onUpdateTabs((tabs, activeTabId) => {
+        renderTabs(tabs, activeTabId);
+      });
+
+      if (window.tabBarApi.onUpdateStatus) {
+        window.tabBarApi.onUpdateStatus((status) => {
+          if (!btnAppUpdate || !updateText || !status) return;
+
+          if (status.downloaded) {
+            btnAppUpdate.style.display = 'flex';
+            btnAppUpdate.classList.add('tab-bar__update-btn--ready');
+            btnAppUpdate.setAttribute('title', \`Versión \${status.version || ''} lista. Clic para reiniciar y actualizar.\`);
+            updateText.textContent = 'Reiniciar para actualizar';
+          } else if (status.isDownloading) {
+            btnAppUpdate.style.display = 'flex';
+            btnAppUpdate.classList.remove('tab-bar__update-btn--ready');
+            const pct = status.percent != null ? \`\${status.percent}%\` : '';
+            btnAppUpdate.setAttribute('title', \`Descargando actualización \${pct}\`);
+            updateText.textContent = pct ? \`Descargando \${pct}\` : 'Descargando...';
+          } else if (status.available) {
+            btnAppUpdate.style.display = 'flex';
+            btnAppUpdate.classList.remove('tab-bar__update-btn--ready');
+            btnAppUpdate.setAttribute('title', 'Nueva versión disponible. Descargando...');
+            updateText.textContent = 'Nueva versión';
+          } else {
+            btnAppUpdate.style.display = 'none';
+          }
+        });
+      }
+
+      btnAppUpdate?.addEventListener('click', () => {
+        window.tabBarApi.installUpdate();
+      });
+    })();
+  </script>
+</body>
+</html>
+`;
+
+export function ensureTabBarHtmlFile(targetDir: string): string {
+  const filePath = path.join(targetDir, 'tab-bar.html');
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, TAB_BAR_HTML_CONTENT, 'utf-8');
+  }
+  return filePath;
+}

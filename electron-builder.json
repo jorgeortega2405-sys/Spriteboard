@@ -5,6 +5,11 @@
   "directories": {
     "output": "dist/installers"
   },
+  "publish": {
+    "provider": "github",
+    "owner": "jorgeortega2405-sys",
+    "repo": "Spriteboard"
+  },
   "files": [
     "dist/desktop/**/*",
     "package.json"
@@ -22,10 +27,6 @@
     "target": [
       {
         "target": "nsis",
-        "arch": ["x64"]
-      },
-      {
-        "target": "portable",
         "arch": ["x64"]
       }
     ]
