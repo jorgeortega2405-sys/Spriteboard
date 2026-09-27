@@ -11,6 +11,7 @@ export interface VideoPreviewManagerOptions {
   onClipSelect?: (clipId: string | null) => void;
   onClipTransformChange?: (clipId: string, transform: VideoTransform) => void;
   onClipTransformEnd?: (clipId: string, transform: VideoTransform) => void;
+  onContentZoomChange?: (zoom: number) => void;
   onTimeUpdate: (time: number) => void;
 }
 
@@ -24,7 +25,13 @@ export class VideoPreviewManager {
   private _onClipSelect?: (clipId: string | null) => void;
   private _onClipTransformChange?: (clipId: string, transform: VideoTransform) => void;
   private _onClipTransformEnd?: (clipId: string, transform: VideoTransform) => void;
+  private _onContentZoomChange?: (zoom: number) => void;
 
+  private _contentZoom = 1.0;
+  private _panOffset = { x: 0, y: 0 };
+  private _isPanning = false;
+  private _panStart = { x: 0, y: 0 };
+  private _isSpacePressed = false;
   private _isPlaying = false;
   private _currentTime = 0;
   private _lastFrameTimestamp = 0;
@@ -75,6 +82,7 @@ export class VideoPreviewManager {
     this._onClipSelect = options.onClipSelect;
     this._onClipTransformChange = options.onClipTransformChange;
     this._onClipTransformEnd = options.onClipTransformEnd;
+    this._onContentZoomChange = options.onContentZoomChange;
   }
 
   public init(): void {
@@ -151,6 +159,35 @@ export class VideoPreviewManager {
       this._onClipSelect?.(clipId);
     }
     this.renderFrame();
+  }
+
+  public get contentZoom(): number {
+    return this._contentZoom;
+  }
+
+  public setContentZoom(zoom: number, clamp = true): void {
+    this._contentZoom = clamp ? Math.max(0.2, Math.min(3.0, zoom)) : zoom;
+    this.applyCanvasTransform();
+    this._onContentZoomChange?.(this._contentZoom);
+  }
+
+  public resetContentZoom(): void {
+    this._contentZoom = 1.0;
+    this._panOffset = { x: 0, y: 0 };
+    this.applyCanvasTransform();
+    this._onContentZoomChange?.(this._contentZoom);
+  }
+
+  public zoomBy(delta: number): void {
+    this.setContentZoom(this._contentZoom + delta);
+  }
+
+  public applyCanvasTransform(): void {
+    const canvasContainer = this._container.querySelector<HTMLElement>('[data-ref="video-canvas-container"]');
+    if (canvasContainer) {
+      canvasContainer.style.transform = `translate(${this._panOffset.x}px, ${this._panOffset.y}px) scale(${this._contentZoom})`;
+      canvasContainer.style.transformOrigin = 'center center';
+    }
   }
 
   public get selectedClipId(): string | null {
@@ -1311,6 +1348,47 @@ export class VideoPreviewManager {
   }
 
   private bindCanvasPointerEvents(signal: AbortSignal): void {
+    const viewportWrapper = this._container.querySelector<HTMLElement>('[data-ref="video-viewport-wrapper"]');
+
+    viewportWrapper?.addEventListener('wheel', (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+        this.setContentZoom(this._contentZoom + zoomDelta);
+      } else if (this._contentZoom > 1.02) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this._panOffset.x -= (e.deltaY || e.deltaX) / this._contentZoom;
+        } else {
+          this._panOffset.y -= e.deltaY / this._contentZoom;
+          if (e.deltaX) this._panOffset.x -= e.deltaX / this._contentZoom;
+        }
+        this.applyCanvasTransform();
+      }
+    }, { passive: false, signal });
+
+    viewportWrapper?.addEventListener('mousedown', (e: MouseEvent) => {
+      const isMiddle = e.button === 1;
+      const isSpaceDrag = e.button === 0 && this._isSpacePressed;
+      const isAltDrag = e.button === 0 && e.altKey;
+
+      if (isMiddle || isSpaceDrag || isAltDrag) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._isPanning = true;
+        this._panStart = {
+          x: e.clientX - this._panOffset.x,
+          y: e.clientY - this._panOffset.y,
+        };
+        if (viewportWrapper) viewportWrapper.style.cursor = 'grabbing';
+      }
+    }, { signal });
+
+    viewportWrapper?.addEventListener('dblclick', (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.video-clip-item')) return;
+      this.resetContentZoom();
+    }, { signal });
+
     const getProjectCoords = (clientX: number, clientY: number): { x: number; y: number } | null => {
       const rect = this._canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return null;
@@ -1330,7 +1408,7 @@ export class VideoPreviewManager {
     };
 
     this._canvas.addEventListener('mousedown', (e: MouseEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || this._isSpacePressed || e.altKey) return;
       const coords = getProjectCoords(e.clientX, e.clientY);
       if (!coords) return;
 
@@ -1424,6 +1502,13 @@ export class VideoPreviewManager {
     }, { signal });
 
     window.addEventListener('mousemove', (e: MouseEvent) => {
+      if (this._isPanning) {
+        this._panOffset.x = e.clientX - this._panStart.x;
+        this._panOffset.y = e.clientY - this._panStart.y;
+        this.applyCanvasTransform();
+        return;
+      }
+
       const coords = getProjectCoords(e.clientX, e.clientY);
       if (!coords) return;
 
@@ -1512,6 +1597,11 @@ export class VideoPreviewManager {
         return;
       }
 
+      if (this._isSpacePressed) {
+        if (viewportWrapper) viewportWrapper.style.cursor = 'grab';
+        return;
+      }
+
       const rect = this._canvas.getBoundingClientRect();
       const scaleFactor = rect.width > 0 ? (this._canvas.width / rect.width) : 1;
       const handleRadius = Math.max(16, 16 * scaleFactor);
@@ -1551,6 +1641,10 @@ export class VideoPreviewManager {
     }, { signal });
 
     window.addEventListener('mouseup', () => {
+      if (this._isPanning) {
+        this._isPanning = false;
+        if (viewportWrapper) viewportWrapper.style.cursor = this._isSpacePressed ? 'grab' : '';
+      }
       if (this._dragState) {
         const clip = this._dragState.clip;
         this._dragState = null;
@@ -1559,9 +1653,25 @@ export class VideoPreviewManager {
       }
     }, { signal });
 
+    window.addEventListener('keyup', (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        this._isSpacePressed = false;
+        if (viewportWrapper && !this._isPanning) {
+          viewportWrapper.style.cursor = '';
+        }
+      }
+    }, { signal });
+
     window.addEventListener('keydown', (e: KeyboardEvent) => {
       if (['input', 'textarea', 'select'].includes((e.target as HTMLElement).tagName?.toLowerCase())) return;
       if ((e.target as HTMLElement).isContentEditable) return;
+
+      if (e.code === 'Space' && !this._isSpacePressed) {
+        this._isSpacePressed = true;
+        if (viewportWrapper && !this._dragState && !this._isPanning) {
+          viewportWrapper.style.cursor = 'grab';
+        }
+      }
 
       if (e.code === 'Space' || e.key === ' ' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();

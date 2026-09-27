@@ -1,8 +1,8 @@
+import { spawn } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { spawn } from 'child_process';
 import { logger } from './logger.service.js';
 
 export interface RenderJob {
@@ -225,11 +225,16 @@ async function processRenderJob(
     const overlayY = hasCustomTransform ? Math.max(0, Math.round(clip.transform.y)) : 0;
     const overlayW = hasCustomTransform ? Math.max(16, Math.round(clip.transform.width)) : width;
     const overlayH = hasCustomTransform ? Math.max(16, Math.round(clip.transform.height)) : height;
+    const rotation = clip.transform?.rotation || 0;
 
     if (hasCustomTransform) {
       vFilterParts.push(`scale=${overlayW}:${overlayH}:force_original_aspect_ratio=decrease,setsar=1`);
       if (clip.transform?.opacity !== undefined && clip.transform.opacity < 1) {
         vFilterParts.push(`format=rgba,colorchannelmixer=aa=${clip.transform.opacity}`);
+      }
+      if (rotation !== 0) {
+        const rotRad = ((rotation * Math.PI) / 180).toFixed(4);
+        vFilterParts.push(`format=rgba,rotate=${rotRad}:c=none:ow='rotw(${rotRad})':oh='roth(${rotRad})'`);
       }
     } else {
       vFilterParts.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${bgColor},setsar=1`);
@@ -272,8 +277,15 @@ async function processRenderJob(
     const vLabel = `v${i}`;
     const nextBase = `base${i + 1}`;
 
+    let overlayPos = `x=${overlayX}:y=${overlayY}`;
+    if (hasCustomTransform && rotation !== 0) {
+      const cx = overlayX + overlayW / 2;
+      const cy = overlayY + overlayH / 2;
+      overlayPos = `x=${cx}-w/2:y=${cy}-h/2`;
+    }
+
     filterComplex.push(`[${inIdx}:v]${vFilterParts.join(',')}[${vLabel}]`);
-    filterComplex.push(`[${currentBase}][${vLabel}]overlay=x=${overlayX}:y=${overlayY}:enable='between(t,${startTime},${endTime})'[${nextBase}]`);
+    filterComplex.push(`[${currentBase}][${vLabel}]overlay=${overlayPos}:enable='between(t,${startTime},${endTime})'[${nextBase}]`);
     currentBase = nextBase;
 
     if (!isImage && !clip.isTrackMuted && !clip.muted) {
@@ -310,14 +322,47 @@ async function processRenderJob(
       .replace(/%/g, '\\%');
     if (!textStr) continue;
 
-    const fontSize = Math.max(16, Math.min(120, tClip.textConfig.fontSize || 40));
+    const fontSize = Math.max(14, Math.min(180, tClip.textConfig.fontSize || 48));
     const fontColor = (tClip.textConfig.color || '#ffffff').replace('#', '0x');
     const tStart = Math.max(0, tClip.startTime || 0);
     const tEnd = tStart + Math.max(0.1, tClip.duration || 2);
     const nextBase = `tbase${k + 1}`;
 
-    const drawTextFilter = `drawtext=text='${textStr}':fontsize=${fontSize}:fontcolor=${fontColor}:x=(w-text_w)/2:y=(h-text_h)*0.85:shadowcolor=black:shadowx=2:shadowy=2:enable='between(t,${tStart},${tEnd})'`;
+    const align = tClip.textConfig.textAlign || 'center';
+    const posX = tClip.transform?.x !== undefined ? Math.round(tClip.transform.x) : Math.round(width / 2);
+    const posY = tClip.transform?.y !== undefined ? Math.round(tClip.transform.y) : Math.round(height / 2);
 
+    let xExpr = `${posX}-text_w/2`;
+    if (align === 'left') {
+      xExpr = `${posX}`;
+    } else if (align === 'right') {
+      xExpr = `${posX}-text_w`;
+    }
+    const yExpr = `${posY}-text_h/2`;
+
+    const drawTextParts: string[] = [
+      `text='${textStr}'`,
+      `fontsize=${fontSize}`,
+      `fontcolor=${fontColor}`,
+      `x=${xExpr}`,
+      `y=${yExpr}`,
+      'shadowcolor=black@0.75',
+      'shadowx=2',
+      'shadowy=2',
+    ];
+
+    if (tClip.textConfig.backgroundColor) {
+      const boxColor = tClip.textConfig.backgroundColor.replace('#', '0x');
+      drawTextParts.push(`box=1:boxcolor=${boxColor}@0.8:boxborderw=8`);
+    }
+
+    if (tClip.transform?.opacity !== undefined && tClip.transform.opacity < 1) {
+      drawTextParts.push(`alpha=${tClip.transform.opacity.toFixed(2)}`);
+    }
+
+    drawTextParts.push(`enable='between(t,${tStart},${tEnd})'`);
+
+    const drawTextFilter = `drawtext=${drawTextParts.join(':')}`;
     filterComplex.push(`[${currentBase}]${drawTextFilter}[${nextBase}]`);
     currentBase = nextBase;
   }

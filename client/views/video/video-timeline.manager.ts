@@ -1,9 +1,12 @@
 import { generateVideoSubtitlesApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { WebAudioPlaybackEngine } from './engine/audio-engine.js';
+import { VideoPreviewManager } from './video-preview.manager.js';
 import { VideoClip, VideoProject, VideoTrack } from './video.types.js';
 
 export interface VideoTimelineManagerOptions {
   container: HTMLElement;
+  getPreviewManager?: () => VideoPreviewManager | null;
   getProject: () => VideoProject;
   onClipSelected?: (clipId: string | null) => void;
   onProjectChanged: () => void;
@@ -14,6 +17,7 @@ export interface VideoTimelineManagerOptions {
 
 export class VideoTimelineManager {
   private _container: HTMLElement;
+  private _getPreviewManager?: () => VideoPreviewManager | null;
   private _getProject: () => VideoProject;
   private _onClipSelected?: (clipId: string | null) => void;
   private _onProjectChanged: () => void;
@@ -22,17 +26,29 @@ export class VideoTimelineManager {
   private _onSeek: (time: number, isScrubbing?: boolean) => void;
 
   private _pixelsPerSecond = 50;
+  private _zoomMode: 'timeline' | 'canvas' = 'timeline';
   private _selectedClipId: string | null = null;
+  private _selectedClipIds: Set<string> = new Set();
   private _selectedTrackId: string | null = null;
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
   private _playheadElement: HTMLElement | null = null;
+  private _hoverLineElement: HTMLElement | null = null;
+  private _hoverTooltipElement: HTMLElement | null = null;
+  private _marqueeElement: HTMLElement | null = null;
+  private _isDraggingMarquee = false;
+  private _isScrubbingPlayhead = false;
   private _clipBufferProgress: Map<string, number> = new Map();
+  private _audioEngine: WebAudioPlaybackEngine = new WebAudioPlaybackEngine();
+  private _waveformCache: Map<string, number[]> = new Map();
+  private _fetchingWaveforms: Set<string> = new Set();
+  private _contextMenuEl: HTMLElement | null = null;
 
   private logDebug(_category: string, _message: string, _data?: unknown): void {}
 
   constructor(options: VideoTimelineManagerOptions) {
     this._container = options.container;
+    this._getPreviewManager = options.getPreviewManager;
     this._getProject = options.getProject;
     this._onClipSelected = options.onClipSelected;
     this._onProjectChanged = options.onProjectChanged;
@@ -48,6 +64,8 @@ export class VideoTimelineManager {
 
     const btnSplit = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-split"]');
     const btnDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-delete"]');
+    const btnRippleDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-ripple-delete"]');
+    const btnDetachAudio = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-detach-audio"]');
     const btnDuplicate = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-duplicate"]');
     const btnAddTrack = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-add-track"]');
     const btnSnap = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-snap"]');
@@ -55,6 +73,7 @@ export class VideoTimelineManager {
     const btnTransitions = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-transitions"]');
     const btnAudioFade = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-audio-fade"]');
     const btnSubtitles = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-subtitles"]');
+    const btnZoomMode = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-mode"]');
     const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
     const btnZoomIn = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-in"]');
     const btnZoomOut = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-out"]');
@@ -62,6 +81,8 @@ export class VideoTimelineManager {
 
     btnSplit?.addEventListener('click', () => this.splitSelectedClip(), { signal });
     btnDelete?.addEventListener('click', () => this.deleteSelectedClip(), { signal });
+    btnRippleDelete?.addEventListener('click', () => this.rippleDeleteSelectedClip(), { signal });
+    btnDetachAudio?.addEventListener('click', () => this.detachAudioFromClip(), { signal });
     btnDuplicate?.addEventListener('click', () => this.duplicateSelectedClip(), { signal });
     btnAddTrack?.addEventListener('click', () => this.addNewTrack(), { signal });
 
@@ -75,34 +96,154 @@ export class VideoTimelineManager {
     btnAudioFade?.addEventListener('click', () => this.openAudioFadeModal(), { signal });
     btnSubtitles?.addEventListener('click', () => this.openSubtitlesModal(), { signal });
 
+    btnZoomMode?.addEventListener('click', () => {
+      this._zoomMode = this._zoomMode === 'timeline' ? 'canvas' : 'timeline';
+      this.syncZoomUI();
+      showToast(this._zoomMode === 'canvas' ? 'Control de Zoom: Lienzo de Video' : 'Control de Zoom: Línea de Tiempo', 'info');
+    }, { signal });
+
     inputZoom?.addEventListener('input', () => {
-      this._pixelsPerSecond = parseInt(inputZoom.value, 10) || 50;
-      this.render();
+      if (this._zoomMode === 'timeline') {
+        this._pixelsPerSecond = parseInt(inputZoom.value, 10) || 50;
+        this.render();
+      } else {
+        const preview = this._getPreviewManager?.();
+        if (preview) {
+          const val = parseInt(inputZoom.value, 10) || 100;
+          preview.setContentZoom(val / 100);
+        }
+      }
     }, { signal });
 
     btnZoomIn?.addEventListener('click', () => {
-      this._pixelsPerSecond = Math.min(200, this._pixelsPerSecond + 15);
-      if (inputZoom) inputZoom.value = String(this._pixelsPerSecond);
-      this.render();
+      if (this._zoomMode === 'timeline') {
+        this.zoomIn();
+      } else {
+        const preview = this._getPreviewManager?.();
+        if (preview) {
+          preview.zoomBy(0.15);
+          if (inputZoom) inputZoom.value = String(Math.round(preview.contentZoom * 100));
+        }
+      }
     }, { signal });
 
     btnZoomOut?.addEventListener('click', () => {
-      this._pixelsPerSecond = Math.max(10, this._pixelsPerSecond - 15);
-      if (inputZoom) inputZoom.value = String(this._pixelsPerSecond);
-      this.render();
+      if (this._zoomMode === 'timeline') {
+        this.zoomOut();
+      } else {
+        const preview = this._getPreviewManager?.();
+        if (preview) {
+          preview.zoomBy(-0.15);
+          if (inputZoom) inputZoom.value = String(Math.round(preview.contentZoom * 100));
+        }
+      }
     }, { signal });
 
-    btnFit?.addEventListener('click', () => this.fitToWindow(), { signal });
+    btnFit?.addEventListener('click', () => {
+      if (this._zoomMode === 'timeline') {
+        this.fitToWindow();
+      } else {
+        const preview = this._getPreviewManager?.();
+        if (preview) {
+          preview.resetContentZoom();
+          if (inputZoom) inputZoom.value = '100';
+        }
+      }
+    }, { signal });
 
     this.bindModals(signal);
     this.bindPlayheadEvents(signal);
+    this.bindTimelineScroll(signal);
+    this.bindHoverPreview(signal);
+    this.bindMarqueeSelection(signal);
     this.bindKeyboardShortcuts(signal);
+    this.bindContextMenu(signal);
     window.addEventListener('themechange', () => this.render(), { signal });
+    this.syncZoomUI();
     this.render();
   }
 
   public get selectedClipId(): string | null {
     return this._selectedClipId;
+  }
+
+  public get selectedClipIds(): Set<string> {
+    return this._selectedClipIds;
+  }
+
+  public get pixelsPerSecond(): number {
+    return this._pixelsPerSecond;
+  }
+
+  public set pixelsPerSecond(v: number) {
+    this._pixelsPerSecond = Math.max(10, Math.min(200, v));
+    this.render();
+    this.syncZoomUI();
+  }
+
+  public zoomIn(): void {
+    this._pixelsPerSecond = Math.min(200, this._pixelsPerSecond + 15);
+    this.render();
+    this.syncZoomUI();
+  }
+
+  public zoomOut(): void {
+    this._pixelsPerSecond = Math.max(10, this._pixelsPerSecond - 15);
+    this.render();
+    this.syncZoomUI();
+  }
+
+  public syncZoomUI(): void {
+    const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
+    const btnZoomMode = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-mode"]');
+    const iconTimeline = btnZoomMode?.querySelector<HTMLElement>('.icon-zoom-timeline');
+    const iconCanvas = btnZoomMode?.querySelector<HTMLElement>('.icon-zoom-canvas');
+    const preview = this._getPreviewManager?.();
+
+    if (this._zoomMode === 'timeline') {
+      if (inputZoom) {
+        inputZoom.min = '10';
+        inputZoom.max = '200';
+        inputZoom.step = '5';
+        inputZoom.value = String(this._pixelsPerSecond);
+        inputZoom.setAttribute('aria-label', 'Zoom de línea de tiempo');
+      }
+      if (btnZoomMode) {
+        btnZoomMode.setAttribute('data-tooltip', 'Modo: Zoom de Línea de Tiempo (clic para alternar a Zoom de Lienzo)');
+      }
+      iconTimeline?.classList.remove('is-hidden');
+      iconCanvas?.classList.add('is-hidden');
+    } else {
+      const zoomPct = preview ? Math.round(preview.contentZoom * 100) : 100;
+      if (inputZoom) {
+        inputZoom.min = '20';
+        inputZoom.max = '300';
+        inputZoom.step = '5';
+        inputZoom.value = String(zoomPct);
+        inputZoom.setAttribute('aria-label', 'Zoom de Lienzo de Video');
+      }
+      if (btnZoomMode) {
+        btnZoomMode.setAttribute('data-tooltip', 'Modo: Zoom de Lienzo de Video (clic para alternar a Línea de Tiempo)');
+      }
+      iconTimeline?.classList.add('is-hidden');
+      iconCanvas?.classList.remove('is-hidden');
+    }
+  }
+
+  public updateTimelineHeights(): void {
+    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
+    const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
+    const hoverLine = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-line"]');
+    const playheadLine = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
+    if (!tracksArea || !lanesList) return;
+
+    const totalH = Math.max(tracksArea.clientHeight, lanesList.scrollHeight + 32, lanesList.offsetHeight + 32);
+    if (hoverLine) {
+      hoverLine.style.height = `${totalH}px`;
+    }
+    if (playheadLine) {
+      playheadLine.style.height = `${totalH}px`;
+    }
   }
 
   private snapTime(time: number, ignoreClipId?: string, clipDuration = 0): number {
@@ -148,6 +289,7 @@ export class VideoTimelineManager {
     this.renderTrackLanes();
     const project = this._getProject();
     this.setPlayheadPosition(project.currentTime || 0);
+    this.updateTimelineHeights();
   }
 
   private renderRuler(): void {
@@ -261,7 +403,7 @@ export class VideoTimelineManager {
         ${track.clips.map((clip) => {
           const leftPx = clip.startTime * this._pixelsPerSecond;
           const widthPx = Math.max(20, clip.duration * this._pixelsPerSecond);
-          const isSelected = clip.id === this._selectedClipId;
+          const isSelected = this._selectedClipIds.has(clip.id) || clip.id === this._selectedClipId;
           const clipTypeClass = clip.mediaType === 'audio' ? 'clip--audio' : (clip.mediaType === 'text' ? 'clip--text' : (clip.mediaType === 'image' ? 'clip--overlay' : ''));
 
           const badges: string[] = [];
@@ -297,28 +439,79 @@ export class VideoTimelineManager {
   }
 
   private renderWaveformSvg(clip: VideoClip, widthPx: number): string {
-    const barsCount = Math.max(10, Math.min(120, Math.floor(widthPx / 4)));
-    const peaks: number[] = [];
-    let seed = 0;
-    for (let i = 0; i < clip.id.length; i++) seed += clip.id.charCodeAt(i);
+    const barsCount = Math.max(10, Math.min(180, Math.floor(widthPx / 4)));
+    const peaks = (clip.assetUrl ? this._waveformCache.get(clip.assetUrl) : null) || clip.waveformPeaks;
 
-    for (let i = 0; i < barsCount; i++) {
-      const p = Math.abs(Math.sin((i + 1) * 0.35 + seed) * 0.75) + 0.2;
-      peaks.push(p);
+    if (!peaks && clip.assetUrl) {
+      void this.loadClipWaveform(clip);
     }
 
-    const bars = peaks.map((h, idx) => {
-      const x = idx * 4 + 2;
-      const barH = Math.round(h * 32);
-      const y = Math.round((48 - barH) / 2);
-      return `<rect x="${x}" y="${y}" width="2" height="${barH}" rx="1" fill="currentColor" opacity="0.45" />`;
-    }).join('');
+    let bars = '';
+    if (peaks && peaks.length > 0) {
+      const sourceDur = Math.max(0.1, clip.sourceDuration || clip.duration || 10);
+      const startRatio = Math.max(0, Math.min(1, (clip.trimStart || 0) / sourceDur));
+      const endRatio = Math.max(startRatio + 0.001, Math.min(1, ((clip.trimStart || 0) + clip.duration) / sourceDur));
+      const startIdx = Math.floor(startRatio * peaks.length);
+      const endIdx = Math.min(peaks.length, Math.ceil(endRatio * peaks.length));
+      const slice = peaks.slice(startIdx, Math.max(startIdx + 1, endIdx));
+
+      const step = slice.length / barsCount;
+      const sampledPeaks: number[] = [];
+      for (let i = 0; i < barsCount; i++) {
+        const idx = Math.min(slice.length - 1, Math.floor(i * step));
+        sampledPeaks.push(slice[idx] || 0.1);
+      }
+
+      bars = sampledPeaks.map((h, idx) => {
+        const x = idx * 4 + 2;
+        const barH = Math.max(3, Math.round(h * 38));
+        const y = Math.round((48 - barH) / 2);
+        return `<rect x="${x}" y="${y}" width="2" height="${barH}" rx="1" fill="currentColor" opacity="0.65" />`;
+      }).join('');
+    } else {
+      const placeholderPeaks = Array.from({ length: barsCount }, (_, idx) => 0.15 + (idx % 2 === 0 ? 0.08 : 0));
+      bars = placeholderPeaks.map((h, idx) => {
+        const x = idx * 4 + 2;
+        const barH = Math.round(h * 32);
+        const y = Math.round((48 - barH) / 2);
+        return `<rect x="${x}" y="${y}" width="2" height="${barH}" rx="1" fill="currentColor" opacity="0.35" />`;
+      }).join('');
+    }
 
     return `
-      <svg class="video-clip-waveform-svg" viewBox="0 0 ${barsCount * 4 + 4} 48" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; color: #818cf8;">
+      <svg class="video-clip-waveform-svg" data-ref="waveform-svg-${clip.id}" viewBox="0 0 ${barsCount * 4 + 4} 48" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; color: #818cf8;">
         ${bars}
       </svg>
     `;
+  }
+
+  private async loadClipWaveform(clip: VideoClip): Promise<void> {
+    if (!clip.assetUrl || this._fetchingWaveforms.has(clip.assetUrl)) return;
+    this._fetchingWaveforms.add(clip.assetUrl);
+
+    try {
+      const peaks = await this._audioEngine.getAudioWaveformPeaks(clip.assetUrl);
+      if (peaks && peaks.length > 0) {
+        this._waveformCache.set(clip.assetUrl, peaks);
+        clip.waveformPeaks = peaks;
+
+        const clipEl = this._container.querySelector<HTMLElement>(`[data-clip-id="${clip.id}"]`);
+        if (clipEl) {
+          const widthPx = clipEl.clientWidth || Math.max(20, clip.duration * this._pixelsPerSecond);
+          const oldSvg = clipEl.querySelector<SVGElement>('.video-clip-waveform-svg');
+          if (oldSvg) {
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = this.renderWaveformSvg(clip, widthPx);
+            const newSvg = tempContainer.firstElementChild;
+            if (newSvg) {
+              oldSvg.replaceWith(newSvg);
+            }
+          }
+        }
+      }
+    } catch {} finally {
+      this._fetchingWaveforms.delete(clip.assetUrl);
+    }
   }
 
   private bindTrackLaneEvents(lanesList: HTMLElement): void {
@@ -400,7 +593,14 @@ export class VideoTimelineManager {
 
       clipEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.selectClip(clipId);
+        const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+        this.selectClip(clipId, true, isMulti);
+      });
+
+      clipEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showContextMenu(e, clipId);
       });
 
       this.bindClipDragging(clipEl, clipId);
@@ -412,40 +612,113 @@ export class VideoTimelineManager {
     clipEl.addEventListener('mousedown', (e) => {
       if ((e.target as HTMLElement).classList.contains('clip-trim-handle')) return;
       e.stopPropagation();
-      this.selectClip(clipId);
+
+      const isMultiKey = e.shiftKey || e.ctrlKey || e.metaKey;
+      if (!this._selectedClipIds.has(clipId) && !isMultiKey) {
+        this.selectClip(clipId);
+      } else if (isMultiKey) {
+        this.selectClip(clipId, true, true);
+      }
 
       const project = this._getProject();
-      let targetTrack: VideoTrack | null = null;
+      let sourceTrack: VideoTrack | null = null;
       let targetClip: VideoClip | null = null;
 
       for (const track of project.tracks) {
         const found = track.clips.find((c) => c.id === clipId);
         if (found) {
-          targetTrack = track;
+          sourceTrack = track;
           targetClip = found;
           break;
         }
       }
 
-      if (!targetClip) return;
+      if (!targetClip || !sourceTrack) return;
 
       const initialMouseX = e.clientX;
       const initialStartTime = targetClip.startTime;
+      let currentTrackId = sourceTrack.id;
+
+      const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
+      const lanes = lanesList ? Array.from(lanesList.querySelectorAll<HTMLElement>('.video-track-lane')) : [];
+
+      const isMultiDrag = this._selectedClipIds.size > 1 && this._selectedClipIds.has(clipId);
+      const multiClips: { clip: VideoClip; el: HTMLElement | null; initialStart: number }[] = [];
+
+      if (isMultiDrag) {
+        for (const track of project.tracks) {
+          for (const c of track.clips) {
+            if (this._selectedClipIds.has(c.id)) {
+              const el = lanesList?.querySelector<HTMLElement>(`[data-clip-id="${c.id}"]`) || null;
+              multiClips.push({ clip: c, el, initialStart: c.startTime });
+            }
+          }
+        }
+      }
 
       const onMouseMove = (moveEvent: MouseEvent) => {
         const deltaX = moveEvent.clientX - initialMouseX;
         const deltaSeconds = deltaX / this._pixelsPerSecond;
-        let newStartTime = Math.max(0, initialStartTime + deltaSeconds);
-        newStartTime = this.snapTime(newStartTime, clipId, targetClip!.duration);
 
-        targetClip!.startTime = newStartTime;
-        clipEl.style.left = `${newStartTime * this._pixelsPerSecond}px`;
+        if (isMultiDrag && multiClips.length > 0) {
+          const minInitialStart = Math.min(...multiClips.map((m) => m.initialStart));
+          let clampedDelta = Math.max(-minInitialStart, deltaSeconds);
+          const snappedTargetStart = this.snapTime(initialStartTime + clampedDelta, clipId, targetClip!.duration);
+          clampedDelta = Math.max(-minInitialStart, snappedTargetStart - initialStartTime);
+
+          for (const item of multiClips) {
+            item.clip.startTime = Math.max(0, item.initialStart + clampedDelta);
+            if (item.el) {
+              item.el.style.left = `${item.clip.startTime * this._pixelsPerSecond}px`;
+            }
+          }
+        } else {
+          let newStartTime = Math.max(0, initialStartTime + deltaSeconds);
+          newStartTime = this.snapTime(newStartTime, clipId, targetClip!.duration);
+
+          targetClip!.startTime = newStartTime;
+          clipEl.style.left = `${newStartTime * this._pixelsPerSecond}px`;
+
+          for (const lane of lanes) {
+            const rect = lane.getBoundingClientRect();
+            if (moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) {
+              const laneTrackId = lane.getAttribute('data-track-id');
+              const candidateTrack = project.tracks.find((t) => t.id === laneTrackId);
+              if (candidateTrack) {
+                const isAudioClip = targetClip!.mediaType === 'audio';
+                const isAudioTrack = candidateTrack.type === 'audio';
+                if ((isAudioClip && isAudioTrack) || (!isAudioClip && !isAudioTrack)) {
+                  currentTrackId = candidateTrack.id;
+                }
+              }
+              break;
+            }
+          }
+
+          lanes.forEach((lane) => {
+            lane.classList.toggle('is-drag-target', lane.getAttribute('data-track-id') === currentTrackId && currentTrackId !== sourceTrack!.id);
+          });
+        }
+
         this.recomputeProjectDuration();
       };
 
       const onMouseUp = () => {
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
+        lanes.forEach((lane) => lane.classList.remove('is-drag-target'));
+
+        if (!isMultiDrag && currentTrackId !== sourceTrack!.id) {
+          const destTrack = project.tracks.find((t) => t.id === currentTrackId);
+          if (destTrack) {
+            const idx = sourceTrack!.clips.findIndex((c) => c.id === clipId);
+            if (idx !== -1) {
+              sourceTrack!.clips.splice(idx, 1);
+              destTrack.clips.push(targetClip!);
+            }
+          }
+        }
+
         this.render();
         this._onProjectChanged();
       };
@@ -547,6 +820,29 @@ export class VideoTimelineManager {
     });
   }
 
+  private bindTimelineScroll(signal: AbortSignal): void {
+    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
+    const headersScrollable = this._container.querySelector<HTMLElement>('[data-ref="timeline-headers-scrollable"]');
+    const headersContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-headers"]');
+
+    if (tracksArea && headersScrollable) {
+      tracksArea.addEventListener('scroll', () => {
+        headersScrollable.scrollTop = tracksArea.scrollTop;
+        this.updateTimelineHeights();
+      }, { signal });
+    }
+
+    if (tracksArea && headersContainer) {
+      headersContainer.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          tracksArea.scrollTop += e.deltaY;
+          this.updateTimelineHeights();
+        }
+      }, { passive: false, signal });
+    }
+  }
+
   private bindPlayheadEvents(signal: AbortSignal): void {
     const ruler = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-ruler-wrapper"]');
     const playheadHandle = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-handle"]');
@@ -566,9 +862,10 @@ export class VideoTimelineManager {
     };
 
     const startScrubbing = (initialClientX: number) => {
+      this._isScrubbingPlayhead = true;
+      this._hoverLineElement?.classList.add('is-hidden');
       this._onScrubStart?.();
       const initialTime = getTimeFromClientX(initialClientX);
-      this.logDebug('Scrub', `Scrub started at clientX=${initialClientX} -> initialTime=${initialTime.toFixed(3)}s`);
       this.setPlayheadPosition(initialTime);
       this._onSeek(initialTime, true);
 
@@ -581,7 +878,6 @@ export class VideoTimelineManager {
           scrubRafId = requestAnimationFrame(() => {
             scrubRafId = null;
             if (pendingScrubTime !== null) {
-              this.logDebug('Scrub', `Scrub RAF seek to ${pendingScrubTime.toFixed(3)}s`);
               this._onSeek(pendingScrubTime, true);
               pendingScrubTime = null;
             }
@@ -592,12 +888,12 @@ export class VideoTimelineManager {
       const onUp = (me: MouseEvent) => {
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
+        this._isScrubbingPlayhead = false;
         if (scrubRafId !== null) {
           cancelAnimationFrame(scrubRafId);
           scrubRafId = null;
         }
         const finalTime = getTimeFromClientX(me.clientX);
-        this.logDebug('Scrub', `Scrub finished -> finalTime=${finalTime.toFixed(3)}s`);
         this.setPlayheadPosition(finalTime);
         this._onSeek(finalTime, false);
         this._onScrubEnd?.();
@@ -617,11 +913,156 @@ export class VideoTimelineManager {
     }, { signal });
 
     lanesArea?.addEventListener('click', (e) => {
+      if (this._isDraggingMarquee) return;
       if ((e.target as HTMLElement).closest('.video-clip-item')) return;
       this.selectClip('');
       const time = getTimeFromClientX(e.clientX);
       this.setPlayheadPosition(time);
       this._onSeek(time, false);
+    }, { signal });
+  }
+
+  private bindHoverPreview(signal: AbortSignal): void {
+    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
+    this._hoverLineElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-line"]');
+    this._hoverTooltipElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-tooltip"]');
+
+    if (!tracksArea || !this._hoverLineElement) return;
+
+    const formatHoverTime = (seconds: number): string => {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      const tenths = Math.floor((seconds % 1) * 10);
+      return `${mins}:${String(secs).padStart(2, '0')}.${tenths}`;
+    };
+
+    tracksArea.addEventListener('mousemove', (e) => {
+      if (this._isDraggingMarquee || this._isScrubbingPlayhead) {
+        this._hoverLineElement?.classList.add('is-hidden');
+        return;
+      }
+
+      const rect = tracksArea.getBoundingClientRect();
+      const x = e.clientX - rect.left + tracksArea.scrollLeft;
+      if (x < 0) {
+        this._hoverLineElement?.classList.add('is-hidden');
+        return;
+      }
+
+      const project = this._getProject();
+      const maxTotalWidth = Math.max(1200, (project.duration + 5) * this._pixelsPerSecond);
+      if (x > maxTotalWidth) {
+        this._hoverLineElement?.classList.add('is-hidden');
+        return;
+      }
+
+      const hoverTime = Math.max(0, x / this._pixelsPerSecond);
+      if (this._hoverTooltipElement) {
+        this._hoverTooltipElement.textContent = formatHoverTime(hoverTime);
+      }
+
+      this._hoverLineElement!.style.transform = `translateX(${x}px)`;
+      this._hoverLineElement!.classList.remove('is-hidden');
+    }, { signal });
+
+    tracksArea.addEventListener('mouseleave', () => {
+      this._hoverLineElement?.classList.add('is-hidden');
+    }, { signal });
+  }
+
+  private bindMarqueeSelection(signal: AbortSignal): void {
+    const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
+    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
+    this._marqueeElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-marquee"]');
+
+    if (!lanesContainer || !tracksArea || !this._marqueeElement) return;
+
+    lanesContainer.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.video-clip-item') || target.closest('.clip-trim-handle') || target.closest('.video-playhead-handle')) {
+        return;
+      }
+
+      const containerRect = lanesContainer.getBoundingClientRect();
+      const startX = e.clientX - containerRect.left + (tracksArea.scrollLeft || 0);
+      const startY = e.clientY - containerRect.top + (tracksArea.scrollTop || 0);
+
+      const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
+      const initialSelectedIds = isAdditive ? new Set(this._selectedClipIds) : new Set<string>();
+      let newlySelectedIds = new Set<string>();
+      let hasDragged = false;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const currX = moveEvent.clientX - containerRect.left + (tracksArea.scrollLeft || 0);
+        const currY = moveEvent.clientY - containerRect.top + (tracksArea.scrollTop || 0);
+        const dx = currX - startX;
+        const dy = currY - startY;
+
+        if (!hasDragged && Math.hypot(dx, dy) > 4) {
+          hasDragged = true;
+          this._isDraggingMarquee = true;
+          this._hoverLineElement?.classList.add('is-hidden');
+          this._marqueeElement?.classList.remove('is-hidden');
+        }
+
+        if (hasDragged && this._marqueeElement) {
+          const minX = Math.min(startX, currX);
+          const maxX = Math.max(startX, currX);
+          const minY = Math.min(startY, currY);
+          const maxY = Math.max(startY, currY);
+
+          this._marqueeElement.style.left = `${minX}px`;
+          this._marqueeElement.style.top = `${minY}px`;
+          this._marqueeElement.style.width = `${maxX - minX}px`;
+          this._marqueeElement.style.height = `${maxY - minY}px`;
+
+          newlySelectedIds = new Set(initialSelectedIds);
+          const project = this._getProject();
+          const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
+          const laneEls = lanesList ? Array.from(lanesList.querySelectorAll<HTMLElement>('.video-track-lane')) : [];
+
+          laneEls.forEach((laneEl) => {
+            const laneTop = laneEl.offsetTop;
+            const laneBottom = laneTop + laneEl.offsetHeight;
+
+            if (maxY >= laneTop && minY <= laneBottom) {
+              const trackId = laneEl.getAttribute('data-track-id');
+              const track = project.tracks.find((t) => t.id === trackId);
+              if (track) {
+                track.clips.forEach((clip) => {
+                  const clipLeft = clip.startTime * this._pixelsPerSecond;
+                  const clipRight = clipLeft + Math.max(20, clip.duration * this._pixelsPerSecond);
+
+                  if (maxX >= clipLeft && minX <= clipRight) {
+                    newlySelectedIds.add(clip.id);
+                  }
+                });
+              }
+            }
+          });
+
+          const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
+          allClipEls.forEach((el) => {
+            const id = el.getAttribute('data-clip-id') || '';
+            el.classList.toggle('is-selected', newlySelectedIds.has(id));
+          });
+        }
+      };
+
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+
+        if (hasDragged) {
+          this._isDraggingMarquee = false;
+          this._marqueeElement?.classList.add('is-hidden');
+          this.selectClips(Array.from(newlySelectedIds));
+        }
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
     }, { signal });
   }
 
@@ -642,12 +1083,46 @@ export class VideoTimelineManager {
     }, { signal });
   }
 
-  public selectClip(clipId: string, emit = true): void {
-    this._selectedClipId = clipId || null;
+  public selectClip(clipId: string, emit = true, multi = false): void {
+    if (multi && clipId) {
+      if (this._selectedClipIds.has(clipId)) {
+        this._selectedClipIds.delete(clipId);
+      } else {
+        this._selectedClipIds.add(clipId);
+      }
+      const ids = Array.from(this._selectedClipIds);
+      this._selectedClipId = ids.length > 0 ? ids[ids.length - 1] : null;
+    } else {
+      this._selectedClipIds.clear();
+      if (clipId) {
+        this._selectedClipIds.add(clipId);
+        this._selectedClipId = clipId;
+      } else {
+        this._selectedClipId = null;
+      }
+    }
+
     const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
     allClipEls.forEach((el) => {
-      el.classList.toggle('is-selected', el.getAttribute('data-clip-id') === clipId);
+      const id = el.getAttribute('data-clip-id') || '';
+      el.classList.toggle('is-selected', this._selectedClipIds.has(id));
     });
+
+    if (emit) {
+      this._onClipSelected?.(this._selectedClipId);
+    }
+  }
+
+  public selectClips(clipIds: string[], emit = true): void {
+    this._selectedClipIds = new Set(clipIds);
+    this._selectedClipId = clipIds.length > 0 ? clipIds[clipIds.length - 1] : null;
+
+    const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
+    allClipEls.forEach((el) => {
+      const id = el.getAttribute('data-clip-id') || '';
+      el.classList.toggle('is-selected', this._selectedClipIds.has(id));
+    });
+
     if (emit) {
       this._onClipSelected?.(this._selectedClipId);
     }
@@ -755,29 +1230,141 @@ export class VideoTimelineManager {
   }
 
   public deleteSelectedClip(): void {
-    if (!this._selectedClipId) return;
+    if (this._selectedClipIds.size === 0 && !this._selectedClipId) return;
     const project = this._getProject();
+    const idsToDelete = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
 
+    let modified = false;
     for (const track of project.tracks) {
-      const idx = track.clips.findIndex((c) => c.id === this._selectedClipId);
-      if (idx !== -1) {
-        track.clips.splice(idx, 1);
-        this._selectedClipId = null;
-        this.recomputeProjectDuration();
-        this.render();
-        this._onProjectChanged();
-        break;
+      const initialCount = track.clips.length;
+      track.clips = track.clips.filter((c) => !idsToDelete.has(c.id));
+      if (track.clips.length !== initialCount) {
+        modified = true;
       }
+    }
+
+    if (modified) {
+      this._selectedClipIds.clear();
+      this._selectedClipId = null;
+      this.recomputeProjectDuration();
+      this.render();
+      this._onClipSelected?.(null);
+      this._onProjectChanged();
     }
   }
 
-  public duplicateSelectedClip(): void {
-    if (!this._selectedClipId) return;
+  public rippleDeleteSelectedClip(): void {
+    if (this._selectedClipIds.size === 0 && !this._selectedClipId) return;
     const project = this._getProject();
+    const idsToDelete = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
+
+    let modified = false;
+    for (const track of project.tracks) {
+      const toDelete = track.clips.filter((c) => idsToDelete.has(c.id)).sort((a, b) => a.startTime - b.startTime);
+      if (toDelete.length > 0) {
+        modified = true;
+        for (const del of toDelete) {
+          const delStart = del.startTime;
+          const delDur = del.duration;
+          const idx = track.clips.findIndex((c) => c.id === del.id);
+          if (idx !== -1) {
+            track.clips.splice(idx, 1);
+            for (const c of track.clips) {
+              if (c.startTime > delStart) {
+                c.startTime = Math.max(0, c.startTime - delDur);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (modified) {
+      this._selectedClipIds.clear();
+      this._selectedClipId = null;
+      this.recomputeProjectDuration();
+      this.render();
+      this._onClipSelected?.(null);
+      this._onProjectChanged();
+      showToast('Clips eliminados y huecos cerrados automáticamente.', 'info');
+    }
+  }
+
+  public detachAudioFromClip(clipId?: string): void {
+    const targetId = clipId || this._selectedClipId;
+    if (!targetId) {
+      showToast('Selecciona un clip de video para separar su audio.', 'info');
+      return;
+    }
+
+    const project = this._getProject();
+    let sourceTrack: VideoTrack | null = null;
+    let sourceClip: VideoClip | null = null;
+
+    for (const t of project.tracks) {
+      const found = t.clips.find((c) => c.id === targetId);
+      if (found) {
+        sourceTrack = t;
+        sourceClip = found;
+        break;
+      }
+    }
+
+    if (!sourceClip || !sourceTrack) return;
+    if (sourceClip.mediaType !== 'video' || !sourceClip.assetUrl) {
+      showToast('El clip seleccionado no es un video con audio separable.', 'warning');
+      return;
+    }
+
+    sourceClip.muted = true;
+
+    let targetAudioTrack = project.tracks.find((t) => t.type === 'audio');
+    if (!targetAudioTrack) {
+      const count = project.tracks.filter((t) => t.type === 'audio').length + 1;
+      targetAudioTrack = {
+        clips: [],
+        id: `track-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: `Pista de Audio ${count}`,
+        type: 'audio',
+      };
+      project.tracks.push(targetAudioTrack);
+    }
+
+    const newAudioClip: VideoClip = {
+      assetUrl: sourceClip.assetUrl,
+      audioFadeIn: sourceClip.audioFadeIn,
+      audioFadeOut: sourceClip.audioFadeOut,
+      duration: sourceClip.duration,
+      id: `clip-audio-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      mediaType: 'audio',
+      name: `${sourceClip.name} (Audio)`,
+      sourceDuration: sourceClip.sourceDuration || sourceClip.duration,
+      startTime: sourceClip.startTime,
+      trimEnd: sourceClip.trimEnd,
+      trimStart: sourceClip.trimStart,
+      volume: sourceClip.volume ?? 1,
+    };
+
+    targetAudioTrack.clips.push(newAudioClip);
+    this._selectedClipId = newAudioClip.id;
+    this._selectedClipIds.clear();
+    this._selectedClipIds.add(newAudioClip.id);
+    this.recomputeProjectDuration();
+    this.render();
+    this._onClipSelected?.(newAudioClip.id);
+    this._onProjectChanged();
+    showToast('Audio separado del video con éxito.', 'success');
+  }
+
+  public duplicateSelectedClip(): void {
+    if (this._selectedClipIds.size === 0 && !this._selectedClipId) return;
+    const project = this._getProject();
+    const idsToDup = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
+    const newSelectedIds: string[] = [];
 
     for (const track of project.tracks) {
-      const found = track.clips.find((c) => c.id === this._selectedClipId);
-      if (found) {
+      const matched = track.clips.filter((c) => idsToDup.has(c.id));
+      for (const found of matched) {
         const copy: VideoClip = {
           ...found,
           id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -785,12 +1372,87 @@ export class VideoTimelineManager {
           startTime: found.startTime + found.duration,
         };
         track.clips.push(copy);
-        this._selectedClipId = copy.id;
-        this.recomputeProjectDuration();
-        this.render();
-        this._onProjectChanged();
-        break;
+        newSelectedIds.push(copy.id);
       }
+    }
+
+    if (newSelectedIds.length > 0) {
+      this.selectClips(newSelectedIds);
+      this.recomputeProjectDuration();
+      this.render();
+      this._onProjectChanged();
+    }
+  }
+
+  private bindContextMenu(signal: AbortSignal): void {
+    this._contextMenuEl = this._container.querySelector<HTMLElement>('[data-ref="video-clip-context-menu"]');
+    if (!this._contextMenuEl) return;
+
+    window.addEventListener('click', (e) => {
+      if (this._contextMenuEl && !this._contextMenuEl.contains(e.target as Node)) {
+        this.hideContextMenu();
+      }
+    }, { signal });
+
+    const btnDetach = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-detach-audio"]');
+    const btnSplit = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-split"]');
+    const btnDuplicate = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-duplicate"]');
+    const btnRipple = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-ripple-delete"]');
+    const btnDelete = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-delete"]');
+
+    btnDetach?.addEventListener('click', () => {
+      this.hideContextMenu();
+      this.detachAudioFromClip();
+    }, { signal });
+
+    btnSplit?.addEventListener('click', () => {
+      this.hideContextMenu();
+      this.splitSelectedClip();
+    }, { signal });
+
+    btnDuplicate?.addEventListener('click', () => {
+      this.hideContextMenu();
+      this.duplicateSelectedClip();
+    }, { signal });
+
+    btnRipple?.addEventListener('click', () => {
+      this.hideContextMenu();
+      this.rippleDeleteSelectedClip();
+    }, { signal });
+
+    btnDelete?.addEventListener('click', () => {
+      this.hideContextMenu();
+      this.deleteSelectedClip();
+    }, { signal });
+  }
+
+  private showContextMenu(e: MouseEvent, clipId: string): void {
+    if (!this._contextMenuEl) {
+      this._contextMenuEl = this._container.querySelector<HTMLElement>('[data-ref="video-clip-context-menu"]');
+    }
+    if (!this._contextMenuEl) return;
+
+    this.selectClip(clipId);
+    const clip = this.getSelectedClip();
+
+    const btnDetach = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-detach-audio"]');
+    if (btnDetach) {
+      btnDetach.style.display = (clip && clip.mediaType === 'video' && clip.assetUrl) ? 'flex' : 'none';
+    }
+
+    const menuW = 220;
+    const menuH = 180;
+    const x = Math.min(window.innerWidth - menuW - 10, Math.max(10, e.clientX));
+    const y = Math.min(window.innerHeight - menuH - 10, Math.max(10, e.clientY));
+
+    this._contextMenuEl.style.left = `${x}px`;
+    this._contextMenuEl.style.top = `${y}px`;
+    this._contextMenuEl.style.display = 'flex';
+  }
+
+  private hideContextMenu(): void {
+    if (this._contextMenuEl) {
+      this._contextMenuEl.style.display = 'none';
     }
   }
 
@@ -812,10 +1474,11 @@ export class VideoTimelineManager {
   }
 
   private getSelectedClip(): VideoClip | null {
-    if (!this._selectedClipId) return null;
+    const id = this._selectedClipId || (this._selectedClipIds.size > 0 ? Array.from(this._selectedClipIds)[0] : null);
+    if (!id) return null;
     const project = this._getProject();
     for (const track of project.tracks) {
-      const found = track.clips.find((c) => c.id === this._selectedClipId);
+      const found = track.clips.find((c) => c.id === id);
       if (found) return found;
     }
     return null;
@@ -1304,6 +1967,14 @@ export class VideoTimelineManager {
       this._abortController = null;
     }
     this._playheadElement = null;
+    this._hoverLineElement = null;
+    this._hoverTooltipElement = null;
+    this._marqueeElement = null;
+    this._contextMenuEl = null;
+    this._selectedClipIds.clear();
     this._clipBufferProgress.clear();
+    this._waveformCache.clear();
+    this._fetchingWaveforms.clear();
+    this._audioEngine.destroy();
   }
 }

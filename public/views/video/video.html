@@ -175,114 +175,63 @@
             </div>
           </div>
         </div>
-
-        <div class="video-preview-transport" data-ref="video-preview-transport">
-          <div class="video-transport-left">
-            <div class="video-timecode-badge" data-ref="video-timecode-badge">
-              <span class="timecode-current" data-ref="timecode-current">00:00.00</span>
-              <span class="timecode-divider">/</span>
-              <span class="timecode-duration" data-ref="timecode-duration">00:30.00</span>
-            </div>
-          </div>
-
-          <div class="video-transport-center">
-            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-step-back" data-tooltip="Retroceder 1s" aria-label="Retroceder 1s">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#replay_10"></use></svg>
-            </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--primary" data-ref="btn-transport-play-pause" data-tooltip="Reproducir / Pausa (Espacio)" aria-label="Reproducir">
-              <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
-              <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
-            </button>
-            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-step-forward" data-tooltip="Avanzar 1s" aria-label="Avanzar 1s">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#forward_10"></use></svg>
-            </button>
-          </div>
-
-          <div class="video-transport-right">
-            <div class="video-volume-control" data-ref="video-volume-control">
-              <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-mute" data-tooltip="Silenciar" aria-label="Silenciar">
-                <svg class="component-icon icon-vol-on" aria-hidden="true"><use href="/icons.svg#volume_up"></use></svg>
-                <svg class="component-icon icon-vol-off is-hidden" aria-hidden="true"><use href="/icons.svg#volume_off"></use></svg>
-              </button>
-              <input class="video-volume-slider" data-ref="input-transport-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen" />
-            </div>
-
-            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-fullscreen" data-tooltip="Pantalla Completa" aria-label="Pantalla Completa">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
-            </button>
-          </div>
-        </div>
       </main>
     </div>
 
     <div class="video-workspace-bottom" data-ref="video-workspace-bottom">
-      <div class="video-timeline-toolbar" data-ref="video-timeline-toolbar">
-        <div class="timeline-toolbar-left">
-          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-play-pause" data-tooltip="Reproducir (Espacio)" aria-label="Reproducir">
-            <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
-            <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
-          </button>
+      <div class="video-timeline-toolbar-wrapper" data-ref="video-timeline-toolbar-wrapper">
+        <div class="video-timeline-toolbar" data-ref="video-timeline-toolbar">
+          <div class="design-toolbar-group" data-ref="video-timeline-group-edit">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-split" data-tooltip="Cortar / Dividir en cabezal (S)" aria-label="Cortar clip">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
+              <span>Cortar</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-delete" data-tooltip="Eliminar clip seleccionado (Supr)" aria-label="Eliminar clip">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              <span>Eliminar</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-ripple-delete" data-tooltip="Eliminar con Ripple y cerrar hueco (Shift+Supr)" aria-label="Eliminar con Ripple">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_delete"></use></svg>
+              <span>Ripple</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-detach-audio" data-tooltip="Separar pista de audio del video seleccionado" aria-label="Separar audio">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_split"></use></svg>
+              <span>Separar Audio</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-duplicate" data-tooltip="Duplicar clip (Ctrl+D)" aria-label="Duplicar clip">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              <span>Duplicar</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-add-track" data-tooltip="Añadir nueva pista" aria-label="Añadir pista">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Pista</span>
+            </button>
+          </div>
 
-          <div class="timeline-toolbar-divider" aria-hidden="true"></div>
+          <div class="design-toolbar-group" data-ref="video-timeline-group-snap">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="btn-tl-snap" data-tooltip="Ajuste magnético inteligente (N)" aria-label="Ajuste magnético">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            </button>
+          </div>
 
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-split" data-tooltip="Cortar / Dividir en cabezal (S)" aria-label="Cortar clip">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
-            <span>Cortar</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-delete" data-tooltip="Eliminar clip seleccionado (Supr)" aria-label="Eliminar clip">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-            <span>Eliminar</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-duplicate" data-tooltip="Duplicar clip (Ctrl+D)" aria-label="Duplicar clip">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-            <span>Duplicar</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-add-track" data-tooltip="Añadir nueva pista" aria-label="Añadir pista">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span>Pista</span>
-          </button>
-
-          <div class="timeline-toolbar-divider" aria-hidden="true"></div>
-
-          <button type="button" class="component-button component-button--h32 component-button--icon-only is-active" data-ref="btn-tl-snap" data-tooltip="Ajuste magnético inteligente (N)" aria-label="Ajuste magnético">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-filters" data-tooltip="Filtros y Ajustes de Color" aria-label="Filtros">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-            <span>Filtros</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-transitions" data-tooltip="Transición entre clips" aria-label="Transición">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flare"></use></svg>
-            <span>Transición</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-audio-fade" data-tooltip="Fundido de audio (Fade In/Out)" aria-label="Fundido de audio">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-            <span>Fundido</span>
-          </button>
-
-          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-subtitles" data-tooltip="Generar Subtítulos con IA" aria-label="Subtítulos con IA">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
-            <span>Subtítulos IA</span>
-          </button>
-        </div>
-
-        <div class="timeline-toolbar-right">
-          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_out"></use></svg>
-          </button>
-          <input class="timeline-zoom-slider" data-ref="input-tl-zoom" type="range" min="10" max="200" step="5" value="50" aria-label="Zoom de línea de tiempo" />
-          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_in"></use></svg>
-          </button>
-          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-fit" data-tooltip="Ajustar escala al contenido" aria-label="Ajustar al contenido">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fit_screen"></use></svg>
-          </button>
+          <div class="design-toolbar-group" data-ref="video-timeline-group-effects">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-filters" data-tooltip="Filtros y Ajustes de Color" aria-label="Filtros">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+              <span>Filtros</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-transitions" data-tooltip="Transición entre clips" aria-label="Transición">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flare"></use></svg>
+              <span>Transición</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-audio-fade" data-tooltip="Fundido de audio (Fade In/Out)" aria-label="Fundido de audio">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              <span>Fundido</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-subtitles" data-tooltip="Generar Subtítulos con IA" aria-label="Subtítulos con IA">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
+              <span>Subtítulos IA</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -291,10 +240,16 @@
           <div class="timeline-ruler-corner" data-ref="timeline-ruler-corner">
             <span class="timeline-corner-label">Pistas</span>
           </div>
-          <div class="timeline-header-list" data-ref="timeline-header-list"></div>
+          <div class="timeline-headers-scrollable" data-ref="timeline-headers-scrollable">
+            <div class="timeline-header-list" data-ref="timeline-header-list"></div>
+          </div>
         </div>
 
         <div class="video-timeline-tracks-area" data-ref="video-timeline-tracks-area">
+          <div class="video-timeline-hover-line is-hidden" data-ref="video-timeline-hover-line">
+            <div class="video-timeline-hover-tooltip" data-ref="video-timeline-hover-tooltip">00:00.0</div>
+          </div>
+
           <div class="video-timeline-ruler-wrapper" data-ref="video-timeline-ruler-wrapper">
             <canvas class="video-timeline-ruler-canvas" data-ref="video-timeline-ruler-canvas" height="30"></canvas>
           </div>
@@ -303,7 +258,71 @@
             <div class="video-playhead-line" data-ref="video-playhead-line">
               <div class="video-playhead-handle" data-ref="video-playhead-handle"></div>
             </div>
+            <div class="video-timeline-marquee is-hidden" data-ref="video-timeline-marquee"></div>
             <div class="video-timeline-lanes-list" data-ref="video-timeline-lanes-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-bottom-toolbar-wrapper" data-ref="video-bottom-toolbar-wrapper">
+        <div class="design-bottom-toolbar video-bottom-toolbar" data-ref="video-bottom-toolbar">
+          <div class="design-bottom-toolbar__section video-bottom-toolbar__section--timecode" data-ref="video-section-timecode">
+            <div class="design-toolbar-group" data-ref="video-group-timecode">
+              <div class="design-toolbar-badge" data-ref="video-timecode-badge">
+                <span class="timecode-current" data-ref="timecode-current">00:00.00</span>
+                <span class="timecode-divider" style="opacity: 0.5; margin: 0 4px;">/</span>
+                <span class="timecode-duration" data-ref="timecode-duration" style="opacity: 0.7;">00:30.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="design-bottom-toolbar__section video-bottom-toolbar__section--playback" data-ref="video-section-playback">
+            <div class="design-toolbar-group" data-ref="video-group-playback">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-back" data-tooltip="Retroceder 1s" aria-label="Retroceder 1s">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#replay_10"></use></svg>
+              </button>
+              <button type="button" class="design-toolbar-btn is-active" data-ref="btn-transport-play-pause" data-tooltip="Reproducir / Pausa (Espacio)" aria-label="Reproducir">
+                <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+                <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-forward" data-tooltip="Avanzar 1s" aria-label="Avanzar 1s">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#forward_10"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="design-bottom-toolbar__section video-bottom-toolbar__section--right" data-ref="video-section-right">
+            <div class="design-toolbar-group" data-ref="video-group-volume">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-mute" data-tooltip="Silenciar" aria-label="Silenciar">
+                <svg class="component-icon icon-vol-on" aria-hidden="true"><use href="/icons.svg#volume_up"></use></svg>
+                <svg class="component-icon icon-vol-off is-hidden" aria-hidden="true"><use href="/icons.svg#volume_off"></use></svg>
+              </button>
+              <div class="design-zoom-slider-container video-volume-slider-container" data-ref="video-volume-slider-container">
+                <input class="design-zoom-slider video-volume-slider" data-ref="input-transport-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen" />
+              </div>
+            </div>
+
+            <div class="design-toolbar-group" data-ref="video-group-zoom">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-mode" data-tooltip="Modo: Zoom de Línea de Tiempo (clic para alternar a Zoom de Lienzo)" aria-label="Cambiar modo de zoom">
+                <svg class="component-icon icon-zoom-timeline" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+                <svg class="component-icon icon-zoom-canvas is-hidden" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_out"></use></svg>
+              </button>
+              <div class="design-zoom-slider-container" data-ref="video-zoom-slider-container">
+                <input class="design-zoom-slider" data-ref="input-tl-zoom" type="range" min="10" max="200" step="5" value="50" aria-label="Zoom de línea de tiempo" />
+              </div>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_in"></use></svg>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-fit" data-tooltip="Ajustar escala al contenido" aria-label="Ajustar al contenido">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fit_screen"></use></svg>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-fullscreen" data-tooltip="Pantalla Completa" aria-label="Pantalla Completa">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -540,5 +559,29 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="menu-panel menu-panel--dropdown video-clip-context-menu" data-ref="video-clip-context-menu" style="display: none;">
+    <button type="button" class="menu-item" data-ref="ctx-btn-detach-audio" data-action="detach-audio">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_split"></use></svg>
+      <span>Separar Audio</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="ctx-btn-split" data-action="split">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
+      <span>Dividir en Cabezal (S)</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="ctx-btn-duplicate" data-action="duplicate">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+      <span>Duplicar (Ctrl+D)</span>
+    </button>
+    <div class="menu-divider" aria-hidden="true"></div>
+    <button type="button" class="menu-item" data-ref="ctx-btn-ripple-delete" data-action="ripple-delete">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_delete"></use></svg>
+      <span>Eliminar con Ripple (Shift+Supr)</span>
+    </button>
+    <button type="button" class="menu-item menu-item--danger" data-ref="ctx-btn-delete" data-action="delete">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+      <span>Eliminar (Supr)</span>
+    </button>
   </div>
 </div>

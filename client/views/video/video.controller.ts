@@ -241,6 +241,9 @@ export class VideoController {
         this._historyManager.pushState(this._project);
         this.scheduleAutoSave();
       },
+      onContentZoomChange: () => {
+        this._timelineManager?.syncZoomUI();
+      },
       onTimeUpdate: (currentTime) => {
         this._project.currentTime = currentTime;
         this._timelineManager?.setPlayheadPosition(currentTime);
@@ -251,6 +254,7 @@ export class VideoController {
 
     this._timelineManager = new VideoTimelineManager({
       container: this._container,
+      getPreviewManager: () => this._previewManager,
       getProject: () => this._project,
       onClipSelected: (clipId) => {
         this._previewManager?.selectClip(clipId, false);

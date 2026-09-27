@@ -8,6 +8,7 @@ export class WebAudioPlaybackEngine {
   private _context: AudioContext | null = null;
   private _masterGain: GainNode | null = null;
   private _audioBufferCache: Map<string, AudioBuffer> = new Map();
+  private _waveformPeaksCache: Map<string, number[]> = new Map();
   private _activeSources: Map<string, ActiveAudioSource> = new Map();
   private _isPlaying = false;
   private _masterVolume = 1;
@@ -45,6 +46,36 @@ export class WebAudioPlaybackEngine {
     } catch {
       return null;
     }
+  }
+
+  public async getAudioWaveformPeaks(url: string, totalBuckets = 300): Promise<number[] | null> {
+    if (this._waveformPeaksCache.has(url)) {
+      return this._waveformPeaksCache.get(url)!;
+    }
+    const buffer = await this.preloadAudio(url);
+    if (!buffer) return null;
+
+    const channelData = buffer.getChannelData(0);
+    const step = Math.max(1, Math.floor(channelData.length / totalBuckets));
+    const peaks: number[] = [];
+
+    for (let i = 0; i < totalBuckets; i++) {
+      const start = i * step;
+      const end = Math.min(channelData.length, start + step);
+      let sum = 0;
+      let count = 0;
+      for (let j = start; j < end; j += 4) {
+        const val = channelData[j];
+        sum += val * val;
+        count++;
+      }
+      const rms = count > 0 ? Math.sqrt(sum / count) : 0;
+      const amplified = Math.min(1, Math.max(0.05, rms * 3.8));
+      peaks.push(amplified);
+    }
+
+    this._waveformPeaksCache.set(url, peaks);
+    return peaks;
   }
 
   public async playClip(params: {
@@ -150,5 +181,6 @@ export class WebAudioPlaybackEngine {
       this._context = null;
     }
     this._audioBufferCache.clear();
+    this._waveformPeaksCache.clear();
   }
 }
