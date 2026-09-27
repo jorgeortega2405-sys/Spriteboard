@@ -424,6 +424,28 @@ class HomeController {
       { signal }
     );
 
+    window.addEventListener(
+      'spriteboard:folders-updated',
+      () => {
+        void this.loadFolders().then(() => {
+          this.filterFolders();
+          this.renderGrid();
+        });
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'spriteboard:uploads-updated',
+      () => {
+        void this.loadFolders().then(() => {
+          this.filterFolders();
+          this.renderGrid();
+        });
+      },
+      { signal }
+    );
+
     document.addEventListener(
       'click',
       (e: MouseEvent) => {
@@ -1932,7 +1954,7 @@ class HomeController {
     }
 
     try {
-      const res = await getApi(API_ROUTES.folders.base);
+      const res = await getApi(`${API_ROUTES.folders.base}?include_default=true`);
       if (res.ok) {
         const data = await res.json();
         this.folders = Array.isArray(data?.folders) ? data.folders : [];
@@ -1948,25 +1970,25 @@ class HomeController {
     card.setAttribute('data-ref', `folder-card-${folder.uuid}`);
     card.setAttribute('data-folder-uuid', folder.uuid);
 
-    card.innerHTML = `
-      <div class="canvas-card__thumbnail" data-ref="folder-thumbnail">
-        <div class="folder-card__back" data-ref="folder-back-${folder.uuid}">
-          <svg class="folder-card__back-svg" viewBox="0 0 300 50" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 10C0 4.5 4.5 0 10 0H105C110 0 115 2 118 6L124 14C127 18 132 20 137 20H290C295.5 20 300 24.5 300 30V50H0Z" fill="currentColor" />
-          </svg>
-        </div>
+    const isDefaultFolder = Boolean(folder.is_default || folder.name === 'Mis proyectos' || folder.name === 'Subidos');
 
-        <div class="folder-card__front" data-ref="folder-front-${folder.uuid}">
-          <div class="folder-card__content" data-ref="folder-content-${folder.uuid}">
-            <div class="folder-card__icon-box" data-ref="folder-icon-${folder.uuid}">
-              <svg class="folder-card__cloud-icon" viewBox="0 0 32 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M8 21C5.2 21 3 18.8 3 16C3 13.4 4.9 11.3 7.5 11C8.5 7 12 4 16 4C20.2 4 23.6 7.2 24 11.3C26.3 12 28 14 28 16.5C28 19 26 21 23.5 21H8Z" />
-                <path d="M16 17V10M12.5 13.5L16 10L19.5 13.5" />
-              </svg>
-            </div>
-          </div>
-        </div>
+    let iconSvg = `
+      <svg class="folder-card__cloud-icon" viewBox="0 0 32 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 21C5.2 21 3 18.8 3 16C3 13.4 4.9 11.3 7.5 11C8.5 7 12 4 16 4C20.2 4 23.6 7.2 24 11.3C26.3 12 28 14 28 16.5C28 19 26 21 23.5 21H8Z" />
+        <path d="M16 17V10M12.5 13.5L16 10L19.5 13.5" />
+      </svg>
+    `;
+    if (folder.name === 'Mis proyectos') {
+      iconSvg = `
+        <svg class="folder-card__cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      `;
+    }
 
+    const actionsHtml = isDefaultFolder
+      ? ''
+      : `
         <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
           <div class="canvas-card__actions" data-ref="card-actions">
             <button type="button" class="canvas-card__action-btn" data-ref="btn-folder-more" data-tooltip="Opciones" aria-label="Opciones">
@@ -1990,6 +2012,25 @@ class HomeController {
             </div>
           </div>
         </div>
+      `;
+
+    card.innerHTML = `
+      <div class="canvas-card__thumbnail" data-ref="folder-thumbnail">
+        <div class="folder-card__back" data-ref="folder-back-${folder.uuid}">
+          <svg class="folder-card__back-svg" viewBox="0 0 300 50" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 10C0 4.5 4.5 0 10 0H105C110 0 115 2 118 6L124 14C127 18 132 20 137 20H290C295.5 20 300 24.5 300 30V50H0Z" fill="currentColor" />
+          </svg>
+        </div>
+
+        <div class="folder-card__front" data-ref="folder-front-${folder.uuid}">
+          <div class="folder-card__content" data-ref="folder-content-${folder.uuid}">
+            <div class="folder-card__icon-box" data-ref="folder-icon-${folder.uuid}">
+              ${iconSvg}
+            </div>
+          </div>
+        </div>
+
+        ${actionsHtml}
       </div>
 
       <div class="canvas-card__info" data-ref="folder-info-${folder.uuid}">
@@ -1998,7 +2039,7 @@ class HomeController {
         </span>
         <div class="canvas-card__meta">
           <svg class="canvas-card__meta-icon" viewBox="0 0 24 24" fill="#F59E0B" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-          <span>Carpeta</span>
+          <span>${isDefaultFolder ? 'Carpeta del sistema' : 'Carpeta'}</span>
           ${folder.items_count !== undefined ? `<span class="canvas-card__meta-dot">·</span><span>${folder.items_count} ${folder.items_count === 1 ? 'elemento' : 'elementos'}</span>` : ''}
         </div>
       </div>

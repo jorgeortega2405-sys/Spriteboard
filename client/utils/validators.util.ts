@@ -125,21 +125,57 @@ export function validateVerificationCode(code: unknown): ValidationResult {
   return { valid: true };
 }
 
+export const ALLOWED_MEDIA_EXTENSIONS = [
+  'aac',
+  'avif',
+  'flac',
+  'gif',
+  'jpeg',
+  'jpg',
+  'm4a',
+  'm4v',
+  'mov',
+  'mp3',
+  'mp4',
+  'ogg',
+  'ogv',
+  'png',
+  'svg',
+  'wav',
+  'webm',
+  'webp',
+];
+
 export const DEFAULT_ALLOWED_MEDIA_MIMES = [
-  'image/png',
+  'audio/aac',
+  'audio/flac',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/webm',
+  'audio/x-m4a',
+  'image/avif',
+  'image/gif',
   'image/jpeg',
   'image/jpg',
-  'image/webp',
-  'image/gif',
-  'image/avif',
+  'image/png',
   'image/svg+xml',
+  'image/webp',
   'video/mp4',
-  'video/webm',
+  'video/ogg',
   'video/quicktime',
+  'video/webm',
   'video/x-m4v',
   'video/x-matroska',
-  'video/ogg',
 ];
+
+export function isAudioMime(mime?: string): boolean {
+  if (!mime) return false;
+  const clean = mime.toLowerCase().split(';')[0].trim();
+  return clean.startsWith('audio/') || ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/flac'].includes(clean);
+}
 
 export function isVideoMime(mime?: string): boolean {
   if (!mime) return false;
@@ -151,6 +187,14 @@ export function isImageMime(mime?: string): boolean {
   if (!mime) return false;
   const clean = mime.toLowerCase().split(';')[0].trim();
   return clean.startsWith('image/');
+}
+
+export function isCompatibleMediaFile(file: File): boolean {
+  if (!file || file.size <= 0) return false;
+  const mime = file.type ? file.type.toLowerCase().split(';')[0].trim() : '';
+  if (mime && DEFAULT_ALLOWED_MEDIA_MIMES.includes(mime)) return true;
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  return ALLOWED_MEDIA_EXTENSIONS.includes(ext);
 }
 
 export function formatVideoDuration(seconds?: number | null): string {
@@ -204,11 +248,16 @@ export function validateAndSanitizeFile(
     };
   }
 
+  const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+  const fileMime = file.type ? file.type.toLowerCase().split(';')[0].trim() : '';
   const allowedMimes = options.allowedMimes || options.allowedTypes || DEFAULT_ALLOWED_MEDIA_MIMES;
 
-  if (allowedMimes.length > 0 && !allowedMimes.includes(file.type.toLowerCase())) {
+  const matchesMime = fileMime ? allowedMimes.includes(fileMime) : false;
+  const matchesExt = ALLOWED_MEDIA_EXTENSIONS.includes(fileExt);
+
+  if (!matchesMime && !matchesExt) {
     return {
-      error: `El formato de «${file.name}» (${file.type || 'desconocido'}) no es compatible. Usa PNG, JPG, WEBP, GIF, AVIF, SVG, MP4, WebM o MOV.`,
+      error: `El formato de «${file.name}» (${file.type || 'desconocido'}) no es compatible. Usa PNG, JPG, WEBP, GIF, AVIF, SVG, MP4, WebM, MOV o MP3/WAV/OGG.`,
       valid: false,
     };
   }

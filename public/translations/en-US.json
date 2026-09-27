@@ -1281,5 +1281,14 @@
     "how_pool_works_1": "Sustainable & Zero-Risk: The pool is funded exclusively with 25% of monthly PRO subscription revenues.",
     "how_pool_works_2": "Merit-Based: The more users create with your PRO templates, the higher your share of the monthly pool.",
     "how_pool_works_3": "100% in USD: Withdraw directly to your local bank account or supported debit card via Stripe."
+  },
+  "uploads": {
+    "drop_to_add": "Drop to add",
+    "drop_to_add_subtitle": "Compatible images, videos and audio",
+    "uploading_files": "Uploading file(s)...",
+    "upload_success": "Files uploaded successfully.",
+    "upload_success_single": "File uploaded successfully.",
+    "upload_error": "Failed to upload files.",
+    "login_required": "You must log in to upload photos and videos."
   }
 }

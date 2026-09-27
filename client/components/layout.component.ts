@@ -1136,7 +1136,7 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`;
 }
 
-function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
+export function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
 
   if (canvasType === 'video') {
@@ -1534,6 +1534,15 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
   searchInput?.addEventListener('input', () => {
     renderGrid(searchInput.value);
   });
+
+  const handleExternalUploads = (e: Event) => {
+    const customEvent = e as CustomEvent<UserUploadItem[]>;
+    if (customEvent.detail && Array.isArray(customEvent.detail) && customEvent.detail.length > 0) {
+      uploads = [...customEvent.detail, ...uploads];
+      renderGrid(searchInput?.value || '');
+    }
+  };
+  window.addEventListener('spriteboard:uploads-updated', handleExternalUploads);
 
   if (!currentUser) {
     uploads = [];

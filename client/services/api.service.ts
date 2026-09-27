@@ -523,7 +523,10 @@ export async function getUploadsApi(type: 'all' | 'image' | 'video' = 'all'): Pr
   }
 }
 
-export async function uploadFilesApi(files: File[]): Promise<UploadsResponse> {
+export async function uploadFilesApi(
+  files: File[],
+  options?: { folderName?: string; folderUuid?: string }
+): Promise<UploadsResponse> {
   const validation = validateAndSanitizeFiles(files, { maxMb: 1024 });
   if (!validation.valid) {
     return { message: validation.error || 'Archivo no válido.', success: false, uploads: [] };
@@ -534,9 +537,16 @@ export async function uploadFilesApi(files: File[]): Promise<UploadsResponse> {
     for (const file of validation.files) {
       formData.append('files', file);
     }
+    if (options?.folderUuid) {
+      formData.append('folder_uuid', options.folderUuid);
+    }
+    if (options?.folderName) {
+      formData.append('folder_name', options.folderName);
+    }
     const res = await postFormApi(API_ROUTES.uploads.base, formData);
     const data = await res.json();
     return {
+      folder: data.folder,
       message: data.message || data.error,
       storage: data.storage,
       success: res.ok,

@@ -1,6 +1,7 @@
 import { navigate, render, showEarlySkeleton } from './app-router.js';
 import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service.js';
 import { initCookieBanner } from './services/bottom-banner.service.js';
+import { initGlobalDropzone } from './services/global-dropzone.service.js';
 import { getCurrentLanguage, initI18n, setLanguage } from './services/i18n.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { initWebVitals } from './services/telemetry.service.js';
@@ -138,6 +139,7 @@ async function init(): Promise<void> {
   initTooltips();
   initScrollShadow();
   initLinkInterception();
+  initGlobalDropzone();
   initWebVitals();
 
   const urlParams = new URLSearchParams(window.location.search);

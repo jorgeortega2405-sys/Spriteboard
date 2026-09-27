@@ -1,6 +1,7 @@
 import { pool } from '../config/database.config.js';
 import { getTierLimits, normalizeTierKey } from '../config/plans.config.js';
 import { redis } from '../config/redis.config.js';
+import { ensureUploadsDefaultFolder } from './folder.service.js';
 import { sanitizeImage } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
@@ -15,6 +16,7 @@ import path from 'path';
 export interface UserUploadRecord {
   created_at: string;
   duration_seconds: number | null;
+  folder_uuid?: string | null;
   height: number | null;
   id: number;
   media_type: 'audio' | 'image' | 'video';
@@ -42,9 +44,19 @@ async function safeUnlink(filePath: string): Promise<void> {
   } catch {}
 }
 
-export async function getUserUploads(userId: number, mediaType: 'all' | 'audio' | 'image' | 'video' = 'all'): Promise<UserUploadRecord[]> {
-  let query = 'SELECT id, uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height, created_at FROM user_uploads WHERE user_id = ?';
+export async function getUserUploads(
+  userId: number,
+  mediaType: 'all' | 'audio' | 'image' | 'video' = 'all',
+  folderUuid?: string | null
+): Promise<UserUploadRecord[]> {
+  let query =
+    'SELECT id, uuid, user_id, folder_uuid, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height, created_at FROM user_uploads WHERE user_id = ?';
   const params: any[] = [userId];
+
+  if (folderUuid) {
+    query += ' AND folder_uuid = ?';
+    params.push(folderUuid);
+  }
 
   if (mediaType === 'image' || mediaType === 'video' || mediaType === 'audio') {
     query += ' AND media_type = ?';
@@ -58,6 +70,7 @@ export async function getUserUploads(userId: number, mediaType: 'all' | 'audio' 
   return rows.map((row) => ({
     created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
     duration_seconds: row.duration_seconds !== null && row.duration_seconds !== undefined ? Number(row.duration_seconds) : null,
+    folder_uuid: row.folder_uuid ? String(row.folder_uuid) : null,
     height: row.height !== null ? Number(row.height) : null,
     id: Number(row.id),
     media_type: (row.media_type === 'video' ? 'video' : (row.media_type === 'audio' ? 'audio' : 'image')) as 'audio' | 'image' | 'video',
@@ -76,7 +89,8 @@ export async function saveUserUpload(
   userId: number,
   file: Express.Multer.File,
   _ip?: string | null,
-  _ua?: string | null
+  _ua?: string | null,
+  folderUuid?: string | null
 ): Promise<{ error?: string; success: boolean; upload?: UserUploadRecord }> {
   if (!file) {
     return { error: 'No se ha proporcionado ningún archivo.', success: false };
@@ -118,6 +132,14 @@ export async function saveUserUpload(
   }
 
   await ensureMediaDir();
+
+  let resolvedFolderUuid: string | null = folderUuid || null;
+  if (!resolvedFolderUuid) {
+    try {
+      const defaultUploadsFolder = await ensureUploadsDefaultFolder(userId);
+      resolvedFolderUuid = defaultUploadsFolder.uuid;
+    } catch {}
+  }
 
   const fileUuid = crypto.randomUUID();
   const rawOriginalName = path.basename(file.originalname || 'archivo').replace(/[^\w.-]/gi, '_');
@@ -194,10 +216,11 @@ export async function saveUserUpload(
     const publicThumbUrl = getPublicUrl(s3ThumbKey);
 
     const [insertRes] = await pool.query<mysql.ResultSetHeader>(
-      'INSERT INTO user_uploads (uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO user_uploads (uuid, user_id, folder_uuid, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         fileUuid,
         userId,
+        resolvedFolderUuid,
         safeOriginalName,
         publicVideoUrl,
         publicThumbUrl,
@@ -228,6 +251,7 @@ export async function saveUserUpload(
     const uploadRecord: UserUploadRecord = {
       created_at: new Date().toISOString(),
       duration_seconds: videoProcessed.duration ? Number(videoProcessed.duration.toFixed(2)) : null,
+      folder_uuid: resolvedFolderUuid,
       height: videoProcessed.height || null,
       id: insertRes.insertId,
       media_type: 'video',
@@ -302,10 +326,11 @@ export async function saveUserUpload(
     const publicThumbUrl = getPublicUrl(s3ThumbKey);
 
     const [insertRes] = await pool.query<mysql.ResultSetHeader>(
-      'INSERT INTO user_uploads (uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO user_uploads (uuid, user_id, folder_uuid, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         fileUuid,
         userId,
+        resolvedFolderUuid,
         safeOriginalName,
         publicAudioUrl,
         publicThumbUrl,
@@ -323,6 +348,7 @@ export async function saveUserUpload(
     const uploadRecord: UserUploadRecord = {
       created_at: new Date().toISOString(),
       duration_seconds: audioProcessed.duration ? Number(audioProcessed.duration.toFixed(2)) : null,
+      folder_uuid: resolvedFolderUuid,
       height: null,
       id: insertRes.insertId,
       media_type: 'audio',
@@ -393,10 +419,11 @@ export async function saveUserUpload(
   const publicUrl = getPublicUrl(s3Key);
 
   const [insertRes] = await pool.query<mysql.ResultSetHeader>(
-    'INSERT INTO user_uploads (uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO user_uploads (uuid, user_id, folder_uuid, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       fileUuid,
       userId,
+      resolvedFolderUuid,
       safeOriginalName,
       publicUrl,
       null,
@@ -414,6 +441,7 @@ export async function saveUserUpload(
   const uploadRecord: UserUploadRecord = {
     created_at: new Date().toISOString(),
     duration_seconds: null,
+    folder_uuid: resolvedFolderUuid,
     height: sanitized.height || null,
     id: insertRes.insertId,
     media_type: 'image',

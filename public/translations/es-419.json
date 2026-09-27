@@ -1286,5 +1286,14 @@
     "how_pool_works_1": "Sostenible y sin riesgo: El fondo está garantizado por el 25% de los ingresos de suscripciones PRO del mes.",
     "how_pool_works_2": "Meritocrático: Mientras más valor aporten tus plantillas PRO a los usuarios, mayor es tu porcentaje del fondo común.",
     "how_pool_works_3": "100% en Dólares (USD): Retira tus fondos a cualquier banco o tarjeta de débito compatible con Stripe en tu país."
+  },
+  "uploads": {
+    "drop_to_add": "Suelta para agregar",
+    "drop_to_add_subtitle": "Imágenes, videos y audios compatibles",
+    "uploading_files": "Subiendo archivo(s)...",
+    "upload_success": "Archivos subidos correctamente.",
+    "upload_success_single": "Archivo subido correctamente.",
+    "upload_error": "Error al subir los archivos.",
+    "login_required": "Debes iniciar sesión para subir fotos y videos."
   }
 }

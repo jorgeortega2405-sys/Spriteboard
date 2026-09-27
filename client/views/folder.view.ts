@@ -15,7 +15,9 @@ import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
+import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
+import { formatVideoDuration } from '../utils/validators.util.js';
 import { exportDocWord } from './doc/doc-export.service.js';
 
 const BATCH_SIZE = 20;
@@ -45,6 +47,7 @@ class FolderController {
   private abortController: AbortController;
   private folder: FolderItem | null = null;
   private allCanvases: CanvasItem[] = [];
+  private uploads: UserUploadItem[] = [];
   private currentEntityFilter: 'all' | 'designs' = 'all';
   private currentSort: 'activity' | 'alpha-asc' | 'alpha-desc' = 'activity';
   private currentPage = 1;
@@ -217,6 +220,14 @@ class FolderController {
       this.handlePointerUp(e);
     }, { signal });
 
+    window.addEventListener(
+      'spriteboard:uploads-updated',
+      () => {
+        void this.loadCanvases(false);
+      },
+      { signal }
+    );
+
     document.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (this.activeOpenDropdown) {
@@ -352,6 +363,7 @@ class FolderController {
       if (res.ok) {
         const data = await res.json();
         this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
+        this.uploads = Array.isArray(data.uploads) ? data.uploads : [];
         this.currentPage = data.pagination?.page || 1;
         this.totalPages = data.pagination?.totalPages || 1;
         this.hasMore = Boolean(data.pagination?.hasMore);
@@ -359,6 +371,14 @@ class FolderController {
           this.folder = data.folder;
           if (this.folderTitleName) {
             this.folderTitleName.textContent = data.folder.name;
+          }
+          const isDefault = Boolean(data.folder.is_default || data.folder.name === 'Mis proyectos' || data.folder.name === 'Subidos');
+          if (isDefault) {
+            if (this.btnFolderRename) this.btnFolderRename.style.display = 'none';
+            if (this.btnFolderDelete) this.btnFolderDelete.style.display = 'none';
+          } else {
+            if (this.btnFolderRename) this.btnFolderRename.style.display = '';
+            if (this.btnFolderDelete) this.btnFolderDelete.style.display = '';
           }
         }
       } else {
@@ -368,12 +388,14 @@ class FolderController {
           return;
         }
         this.allCanvases = [];
+        this.uploads = [];
         this.currentPage = 1;
         this.totalPages = 1;
         this.hasMore = false;
       }
     } catch {
       this.allCanvases = [];
+      this.uploads = [];
     }
 
     this.renderGrid();
@@ -383,7 +405,8 @@ class FolderController {
   private renderGrid(): void {
     if (!this.gridEl) return;
 
-    if (this.allCanvases.length === 0) {
+    const totalItems = this.allCanvases.length + this.uploads.length;
+    if (totalItems === 0) {
       this.gridEl.innerHTML = '';
       this.gridEl.style.display = 'none';
       if (this.sentinelEl) this.sentinelEl.style.display = 'none';
@@ -398,6 +421,11 @@ class FolderController {
     const fragment = document.createDocumentFragment();
     this.allCanvases.forEach((canvas) => {
       const card = this.createCardElement(canvas);
+      fragment.appendChild(card);
+    });
+
+    this.uploads.forEach((upload) => {
+      const card = this.createUploadCardElement(upload);
       fragment.appendChild(card);
     });
 
@@ -416,7 +444,7 @@ class FolderController {
     renderEmptyState({
       container: section,
       dataRef: 'folder-empty-state',
-      desc: t('canvas.folder_empty_desc') || 'Esta carpeta aún no contiene ningún lienzo.',
+      desc: t('canvas.folder_empty_desc') || 'Esta carpeta aún no contiene ningún elemento.',
       graphicType: 'canvas',
       title: t('canvas.folder_empty_title') || 'Carpeta vacía',
     });
@@ -922,6 +950,174 @@ class FolderController {
           return true;
         } catch {
           inst.showError(t('canvas.folder_delete_error') || 'Error al eliminar carpeta');
+          inst.setConfirmLoading(false);
+          return false;
+        }
+      },
+    });
+  }
+
+  private createUploadCardElement(upload: UserUploadItem): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'canvas-card canvas-card--upload';
+    card.setAttribute('data-ref', `upload-card-${upload.uuid}`);
+    card.setAttribute('data-upload-uuid', upload.uuid);
+
+    const isVideo = upload.media_type === 'video';
+    const isAudio = upload.media_type === 'audio';
+    const isImage = upload.media_type === 'image';
+    const editedTime = formatEditedTime(upload.created_at);
+
+    let thumbnailHtml = '';
+    if (isImage) {
+      thumbnailHtml = `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(upload.thumbnail_url || upload.url)}" alt="${escapeHtml(upload.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`;
+    } else if (isVideo) {
+      const poster = upload.thumbnail_url || '';
+      thumbnailHtml = `
+        <div class="canvas-card__video-preview" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; background: #0f172a;">
+          ${poster ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(poster)}" alt="${escapeHtml(upload.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />` : ''}
+          <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: #fff;">
+            <svg class="component-icon" style="width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+          </div>
+          ${upload.duration_seconds ? `<span style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.75); color: #fff; font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 4px;">${formatVideoDuration(upload.duration_seconds)}</span>` : ''}
+        </div>
+      `;
+    } else if (isAudio) {
+      thumbnailHtml = `
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1e293b; color: #94a3b8; gap: 8px;">
+          <svg class="component-icon" style="width: 38px; height: 38px; color: var(--accent-pink, #ec4899);" aria-hidden="true"><use href="/icons.svg#music_note"></use></svg>
+          ${upload.duration_seconds ? `<span style="font-size: 11px; font-weight: 500; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 4px; color: #e2e8f0;">${formatVideoDuration(upload.duration_seconds)}</span>` : ''}
+        </div>
+      `;
+    }
+
+    let typeLabel = 'Imagen';
+    if (isVideo) {
+      typeLabel = 'Video';
+    } else if (isAudio) {
+      typeLabel = 'Audio';
+    }
+
+    card.innerHTML = `
+      <div class="canvas-card__thumbnail" data-ref="card-thumbnail">
+        ${thumbnailHtml}
+
+        <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
+          <div class="canvas-card__actions" data-ref="card-actions">
+            <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="Opciones">
+              <span class="material-symbols-rounded">more_vert</span>
+            </button>
+          </div>
+
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto" data-ref="card-menu-dropdown" style="display: none;">
+            <div class="menu-panel__drag-zone" data-ref="card-menu-drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list" data-ref="card-menu-list">
+              <button type="button" class="menu-item" data-ref="action-open-media">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+                <span class="menu-item__text">Abrir en nueva pestaña</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="action-copy-media-url">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+                <span class="menu-item__text">Copiar enlace</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-delete-upload">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                <span class="menu-item__text">Eliminar archivo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-card__info" data-ref="canvas-info">
+        <span class="canvas-card__name" data-ref="canvas-title" title="${escapeHtml(upload.original_filename)}">
+          ${escapeHtml(upload.original_filename)}
+        </span>
+        <div class="canvas-card__meta" data-ref="canvas-meta">
+          <svg class="canvas-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>${typeLabel} · Subido ${editedTime}</span>
+        </div>
+      </div>
+    `;
+
+    const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
+    const btnMore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-more"]');
+    const menuDropdown = card.querySelector<HTMLElement>('[data-ref="card-menu-dropdown"]');
+    const actionOpen = card.querySelector<HTMLButtonElement>('[data-ref="action-open-media"]');
+    const actionCopy = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-media-url"]');
+    const actionDelete = card.querySelector<HTMLButtonElement>('[data-ref="action-delete-upload"]');
+
+    actionsWrapper?.addEventListener('click', (e) => e.stopPropagation());
+
+    card.addEventListener('click', () => {
+      if (this.activeOpenDropdown) {
+        this.closeAllDropdowns();
+        return;
+      }
+      window.open(upload.url, '_blank');
+    });
+
+    btnMore?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!menuDropdown) return;
+      this.openCardDropdown(card, menuDropdown, actionsWrapper, btnMore);
+    });
+
+    actionOpen?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      window.open(upload.url, '_blank');
+    });
+
+    actionCopy?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      try {
+        await navigator.clipboard.writeText(upload.url);
+        showToast('Enlace copiado al portapapeles.');
+      } catch {
+        showToast('No se pudo copiar el enlace.', 'danger');
+      }
+    });
+
+    actionDelete?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      this.confirmDeleteUpload(upload);
+    });
+
+    return card;
+  }
+
+  private confirmDeleteUpload(upload: UserUploadItem): void {
+    openModal({
+      confirmClass: 'component-button--danger',
+      confirmText: 'Eliminar',
+      description: `¿Estás seguro de que deseas eliminar «${upload.original_filename}»? Esta acción no se puede deshacer.`,
+      size: 'sm',
+      titleKey: 'Eliminar archivo',
+      onConfirm: async (inst) => {
+        inst.setConfirmLoading(true);
+        try {
+          const res = await deleteApi(API_ROUTES.uploads.byUuid(upload.uuid));
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            inst.showError(err?.error || 'No se pudo eliminar el archivo.');
+            inst.setConfirmLoading(false);
+            return false;
+          }
+
+          inst.close();
+          showToast('Archivo eliminado exitosamente.', 'success');
+          this.uploads = this.uploads.filter((u) => u.uuid !== upload.uuid);
+          this.renderGrid();
+          window.dispatchEvent(new CustomEvent('spriteboard:uploads-updated'));
+          return true;
+        } catch {
+          inst.showError('Error al eliminar el archivo.');
           inst.setConfirmLoading(false);
           return false;
         }

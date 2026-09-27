@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { ensureUploadsDefaultFolder, getFolderByUuid, getOrCreateFolderByName } from '../services/folder.service.js';
 import { getUserStorageUsage } from '../services/storage.service.js';
 import { deleteUserUpload, getUserUploads, saveUserUpload, UserUploadRecord } from '../services/upload.service.js';
 import { sendBadRequest, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
@@ -14,8 +15,9 @@ export async function listUploadsHandler(req: Request, res: Response): Promise<v
 
     const typeQuery = (req.query.type as string)?.toLowerCase();
     const mediaType: 'all' | 'audio' | 'image' | 'video' = typeQuery === 'image' || typeQuery === 'video' || typeQuery === 'audio' ? typeQuery : 'all';
+    const folderUuidQuery = typeof req.query.folder_uuid === 'string' && req.query.folder_uuid.trim() ? req.query.folder_uuid.trim() : undefined;
 
-    const uploads = await getUserUploads(user.id, mediaType);
+    const uploads = await getUserUploads(user.id, mediaType, folderUuidQuery);
     const storage = await getUserStorageUsage(user.id);
     sendSuccess(res, { storage, uploads });
   } catch (err) {
@@ -50,13 +52,30 @@ export async function uploadFilesHandler(req: Request, res: Response): Promise<v
       return;
     }
 
+    let targetFolder = null;
+    const folderNameParam = typeof req.body.folder_name === 'string' && req.body.folder_name.trim() ? req.body.folder_name.trim() : null;
+    const folderUuidParam = typeof req.body.folder_uuid === 'string' && req.body.folder_uuid.trim() ? req.body.folder_uuid.trim() : null;
+
+    if (folderNameParam) {
+      targetFolder = await getOrCreateFolderByName(user.id, folderNameParam);
+    } else if (folderUuidParam) {
+      targetFolder = await getFolderByUuid(folderUuidParam, user.id);
+    }
+
+    if (!targetFolder) {
+      targetFolder = await ensureUploadsDefaultFolder(user.id);
+    }
+
+    const targetFolderUuid = targetFolder?.uuid || null;
+
     const savedUploads: UserUploadRecord[] = [];
     for (const file of files) {
       const result = await saveUserUpload(
         user.id,
         file,
         req.ip,
-        req.headers['user-agent'] as string
+        req.headers['user-agent'] as string,
+        targetFolderUuid
       );
 
       if (!result.success || !result.upload) {
@@ -69,6 +88,7 @@ export async function uploadFilesHandler(req: Request, res: Response): Promise<v
 
     const storage = await getUserStorageUsage(user.id);
     sendCreated(res, {
+      folder: targetFolder,
       message: savedUploads.length === 1 ? 'Archivo subido exitosamente.' : 'Archivos subidos exitosamente.',
       storage,
       uploads: savedUploads,

@@ -684,6 +684,7 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid VARCHAR(36) NOT NULL UNIQUE,
     user_id INT NOT NULL,
+    folder_uuid VARCHAR(36) NULL DEFAULT NULL,
     original_filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(512) NOT NULL,
     thumbnail_path VARCHAR(512) NULL,
@@ -697,6 +698,8 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_uploads_user (user_id),
     INDEX idx_user_uploads_uuid (uuid),
+    INDEX idx_user_uploads_folder_uuid (folder_uuid),
+    INDEX idx_user_uploads_user_folder (user_id, folder_uuid, created_at DESC),
     INDEX idx_user_uploads_user_created (user_id, created_at DESC),
     INDEX idx_user_uploads_media_type (user_id, media_type, created_at DESC),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
