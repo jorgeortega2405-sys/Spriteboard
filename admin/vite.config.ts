@@ -59,7 +59,6 @@ export default defineConfig({
             return 'domain-admin-hr';
           }
           if (
-            normalized.includes('/views/ads') ||
             normalized.includes('/views/billing') ||
             normalized.includes('/views/compliance') ||
             normalized.includes('/views/backups')

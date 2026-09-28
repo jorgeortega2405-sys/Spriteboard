@@ -891,12 +891,7 @@ export async function getDatabaseSchemaMetadata(): Promise<DatabaseSchemaRespons
         ttl: '10 minutos',
         type: 'String',
       },
-      {
-        description: 'Caché de listas de anuncios públicos activos',
-        pattern: 'cache:ads:public',
-        ttl: '15 minutos',
-        type: 'JSON String',
-      },
+
     ];
 
     return { databases, redisKeys };

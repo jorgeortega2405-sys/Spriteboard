@@ -11,7 +11,6 @@ import { openTemplatePreviewModal } from '../components/template-preview-modal.c
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
-import { buildAdCardHtml, createAdCardElement, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
@@ -545,17 +544,6 @@ class HomeController {
       'click',
       (e) => {
         const target = e.target as HTMLElement;
-        const adCard = target.closest<HTMLElement>('[data-ad-url]');
-        if (adCard) {
-          if (target.closest('a')) return;
-          const adUrl = adCard.getAttribute('data-ad-url');
-          if (adUrl) {
-            e.preventDefault();
-            e.stopPropagation();
-            handleAdClick(adUrl);
-          }
-          return;
-        }
 
         const bookmarkBtn = target.closest<HTMLButtonElement>('[data-bookmark-preset]');
         if (bookmarkBtn) {
@@ -1048,13 +1036,8 @@ class HomeController {
 
     if (this.currentCanvases.length > 0) {
       const canvasFragment = document.createDocumentFragment();
-      let adIndex = 0;
-      this.currentCanvases.forEach((canvas, index) => {
+      this.currentCanvases.forEach((canvas) => {
         canvasFragment.appendChild(this.createCardElement(canvas));
-        if (shouldShowAds() && (index + 1) % DEFAULT_AD_FREQUENCY === 0) {
-          const ad = getAdByIndex(adIndex++);
-          canvasFragment.appendChild(createAdCardElement(ad));
-        }
       });
       this.gridEl.appendChild(canvasFragment);
     }
@@ -1143,19 +1126,12 @@ class HomeController {
 
     if (newCanvases.length > 0) {
       const fragment = document.createDocumentFragment();
-      const previousTotal = this.currentCanvases.length;
-      newCanvases.forEach((canvas, index) => {
+      newCanvases.forEach((canvas) => {
         this.currentCanvases.push(canvas);
         if (currentUser) {
           this.allCanvases.push(canvas);
         }
         fragment.appendChild(this.createCardElement(canvas));
-        const currentTotalIndex = previousTotal + index + 1;
-        if (shouldShowAds() && currentTotalIndex % DEFAULT_AD_FREQUENCY === 0) {
-          const adIndex = Math.floor(currentTotalIndex / DEFAULT_AD_FREQUENCY) - 1;
-          const ad = getAdByIndex(adIndex);
-          fragment.appendChild(createAdCardElement(ad));
-        }
       });
       this.gridEl.appendChild(fragment);
       translateElement(this.gridEl);
@@ -1375,14 +1351,8 @@ class HomeController {
     this.isRenderingTemplateBatch = true;
     const batch = this.currentTemplates.slice(this.templatesRenderedCount, this.templatesRenderedCount + BATCH_SIZE);
     const htmlChunks: string[] = [];
-    batch.forEach((item, index) => {
+    batch.forEach((item) => {
       htmlChunks.push(this.buildTemplateCardHtml(item));
-      const overallIndex = this.templatesRenderedCount + index + 1;
-      if (shouldShowAds() && overallIndex % DEFAULT_AD_FREQUENCY === 0) {
-        const adIndex = Math.floor(overallIndex / DEFAULT_AD_FREQUENCY) - 1;
-        const ad = getAdByIndex(adIndex);
-        htmlChunks.push(buildAdCardHtml(ad));
-      }
     });
     this.templatesGridEl.insertAdjacentHTML('beforeend', htmlChunks.join(''));
     this.templatesRenderedCount += batch.length;

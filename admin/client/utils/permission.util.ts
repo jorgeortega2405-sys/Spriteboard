@@ -73,17 +73,6 @@ export const ALL_NAV_MODULES: readonly NavModuleItem[] = [
     route: '/internal-tickets',
   },
   {
-    btnDrawerRef: 'btn-drawer-ads',
-    btnRailRef: 'btn-rail-ads',
-    category: 'operations',
-    icon: 'campaign',
-    id: 'ads',
-    label: 'Gestión de Anuncios',
-    railItemRef: 'rail-item-ads',
-    requiredPermissions: ['ads:read', 'ads:manage'],
-    route: '/ads',
-  },
-  {
     btnDrawerRef: 'btn-drawer-hr',
     btnRailRef: 'btn-rail-hr',
     category: 'operations',
@@ -232,9 +221,6 @@ export function canAccessRoute(path: string, user: UserPayload | null = currentU
   }
   if (path === '/users' || path.startsWith('/users/')) {
     return canAccessModule('users', user);
-  }
-  if (path === '/ads' || path.startsWith('/ads/')) {
-    return canAccessModule('ads', user);
   }
   if (path === '/hr' || path.startsWith('/hr/')) {
     return canAccessModule('hr', user);

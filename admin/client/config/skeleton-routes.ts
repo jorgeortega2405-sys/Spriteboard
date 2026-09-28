@@ -1,6 +1,5 @@
 export const SKELETON_ROUTES: Record<string, string> = {
   '/': 'dashboard-layout',
-  '/ads': 'table-layout',
   '/analytics': 'dashboard-layout',
   '/backups': 'table-layout',
   '/billing': 'table-layout',
@@ -35,8 +34,6 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     template = 'split-layout';
   } else if (
     pathname === '/users' ||
-    pathname === '/ads' ||
-    pathname.startsWith('/ads') ||
     pathname === '/hr' ||
     pathname === '/backups' ||
     pathname === '/billing' ||

@@ -108,9 +108,7 @@ export async function render(): Promise<void> {
     } else if (path === '/users') {
       const { createUsersView } = await import('./views/users.view.js');
       viewElement = await createUsersView();
-    } else if (path === '/ads' || path.startsWith('/ads/')) {
-      const { createAdsView } = await import('./views/ads.view.js');
-      viewElement = await createAdsView();
+
     } else if (path === '/hr') {
       const { createHrView } = await import('./views/hr.view.js');
       viewElement = await createHrView();

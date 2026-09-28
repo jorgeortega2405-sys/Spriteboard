@@ -342,8 +342,6 @@ INSERT INTO permissions (name, display_name, description, module) VALUES
 ('hr:hire', 'Contratar Personal', 'Dar de alta y contratar nuevos colaboradores', 'hr'),
 ('hr:contracts', 'Gestionar Contratos', 'Subir, visualizar y descargar contratos y NDAs', 'hr'),
 ('hr:salary_view', 'Ver Salarios', 'Consultar datos de salarios y compensación', 'hr'),
-('ads:read', 'Ver Anuncios', 'Consultar campañas publicitarias y métricas', 'ads'),
-('ads:manage', 'Gestionar Anuncios', 'Crear, editar y pausar campañas publicitarias', 'ads'),
 ('templates:read', 'Ver Plantillas', 'Consultar catálogo de plantillas públicas', 'templates'),
 ('templates:create', 'Crear Plantillas', 'Crear borradores de plantillas', 'templates'),
 ('templates:publish', 'Publicar Plantillas', 'Publicar plantillas en la galería comunitaria', 'templates'),
