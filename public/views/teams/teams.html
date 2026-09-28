@@ -155,12 +155,12 @@
         </div>
         <div class="modal-card__body">
           <div class="field-group">
-            <div style="display: flex; gap: 8px; align-items: stretch;">
-              <label class="field" data-ref="field-add-member" style="flex: 1; margin: 0;">
+            <div class="field-group--row">
+              <label class="field field--flex-1" data-ref="field-add-member">
                 <input class="field__input" data-ref="input-add-member" type="text" placeholder=" " autocomplete="off" />
                 <span class="field__label" data-ref="label-add-member" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
               </label>
-              <button type="button" class="component-button component-button--h55 component-button--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
+              <button type="button" class="component-button component-button--h55 component-button--black component-button--nowrap" data-ref="btn-add-member">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
                 <span data-i18n="teams.btn_add_member">Agregar</span>
               </button>
@@ -172,7 +172,7 @@
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-members">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="members-trigger-text">Integrantes</span>
+                  <span class="dropdown-trigger__text" data-ref="members-trigger-text" data-i18n="teams.btn_members">Integrantes</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>

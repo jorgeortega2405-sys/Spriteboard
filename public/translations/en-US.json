@@ -55,6 +55,7 @@
     "create_team": "Create team",
     "plans_and_pricing": "Plans & pricing",
     "purchase_history": "Purchase history",
+    "open_in_desktop": "Open in desktop app",
     "admin_panel": "Admin panel"
   },
   "topbar": {
@@ -490,7 +491,46 @@
     }
   },
   "home": {
-    "welcome": "Bienvenido a Spriteboard"
+    "welcome": "Welcome to Spriteboard",
+    "hero_title": "What would you like to create today?",
+    "hero_search_placeholder": "Search anything you want",
+    "hero_clear_search": "Clear search",
+    "scroll_categories_left": "Scroll categories left",
+    "scroll_categories_right": "Scroll categories right",
+    "section_recents": "Recents",
+    "filter_tooltip": "Filter",
+    "sort_tooltip": "Sort",
+    "filter_all": "Any",
+    "filter_designs": "Designs",
+    "filter_folders": "Folders",
+    "sort_activity": "Last activity",
+    "sort_alpha_asc": "Alphabetical (A-Z)",
+    "sort_alpha_desc": "Alphabetical (Z-A)",
+    "badge_templates": "Templates",
+    "badge_presentation": "Presentation",
+    "badge_social": "Social",
+    "badge_doc": "Doc",
+    "badge_board": "Whiteboard",
+    "badge_sheet": "Spreadsheet",
+    "badge_photos": "Photos",
+    "badge_videos": "Videos",
+    "badge_custom": "Custom",
+    "badge_upload": "Upload",
+    "badge_more": "More"
+  },
+  "time": {
+    "just_now": "just now",
+    "minute_ago": "1 minute ago",
+    "minutes_ago": "{count} minutes ago",
+    "hour_ago": "1 hour ago",
+    "hours_ago": "{count} hours ago",
+    "day_ago": "1 day ago",
+    "days_ago": "{count} days ago",
+    "week_ago": "1 week ago",
+    "weeks_ago": "{count} weeks ago",
+    "month_ago": "1 month ago",
+    "months_ago": "{count} months ago",
+    "over_year_ago": "over 1 year ago"
   },
   "templates": {
     "title": "Templates",
@@ -1162,7 +1202,10 @@
     "drop_photo_title": "Drag and drop your photos here",
     "drop_photo_desc": "Supported formats: JPG, PNG, WebP up to 20 MB",
     "drop_element_title": "Drag and drop your vectors or icons here",
-    "drop_element_desc": "Supported formats: SVG vector or transparent PNG"
+    "drop_element_desc": "Supported formats: SVG vector or transparent PNG",
+    "btn_upload_font": "Upload a font",
+    "uploaded_fonts_title": "Uploaded fonts",
+    "text_styles_title": "Brand text styles"
   },
   "your_apps": {
     "title": "Apps",

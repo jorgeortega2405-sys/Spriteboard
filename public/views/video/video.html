@@ -130,7 +130,7 @@
               </div>
 
               <div class="field-group" data-ref="field-video-fps">
-                <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Fotogramas por segundo (FPS)</span>
+                <span class="field-group__label">Fotogramas por segundo (FPS)</span>
                 <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-video-fps">
                   <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="btn-trigger-video-fps" aria-label="Fotogramas por segundo">
                     <div class="dropdown-trigger__left">
@@ -365,8 +365,8 @@
 
         <div class="modal-card__body" data-ref="modal-body">
           <div class="video-export-options-view" data-ref="export-options-view">
-            <div class="field-group" data-ref="group-export-quality" style="margin-bottom: 12px;">
-              <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Calidad de Renderizado</span>
+            <div class="field-group field-group--mb12" data-ref="group-export-quality">
+              <span class="field-group__label">Calidad de Renderizado</span>
               <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-quality">
                 <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-quality" aria-label="Calidad de Renderizado">
                   <div class="dropdown-trigger__left">
@@ -393,8 +393,8 @@
               </div>
             </div>
 
-            <div class="field-group" data-ref="group-export-fps" style="margin-bottom: 12px;">
-              <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Fotogramas por Segundo</span>
+            <div class="field-group field-group--mb12" data-ref="group-export-fps">
+              <span class="field-group__label">Fotogramas por Segundo</span>
               <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-fps">
                 <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-fps" aria-label="Fotogramas por Segundo">
                   <div class="dropdown-trigger__left">
@@ -469,10 +469,10 @@
           <p class="modal-card__desc" data-ref="modal-desc">Aplica efectos visuales y gradación de color al clip seleccionado.</p>
         </div>
 
-        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
-          <div class="video-filter-presets-section" style="display: flex; flex-direction: column; gap: 6px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Efectos Preestablecidos</span>
-            <div class="video-filter-presets-grid" data-ref="video-filter-presets" style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
+          <div class="video-filter-presets-section">
+            <span class="video-filter-presets-title">Efectos Preestablecidos</span>
+            <div class="video-filter-presets-grid" data-ref="video-filter-presets">
               <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-filter-preset-none" data-preset="none">Normal</button>
               <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cinema" data-preset="cinema">Cine</button>
               <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-retro" data-preset="retro">Retro</button>
@@ -523,9 +523,9 @@
           <p class="modal-card__desc" data-ref="modal-desc">Efecto visual al entrar el clip en la reproducción.</p>
         </div>
 
-        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <div class="field-group" data-ref="field-transition-type">
-            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Tipo de Transición</span>
+            <span class="field-group__label">Tipo de Transición</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-transition-type">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-transition-type" aria-label="Tipo de Transición">
                 <div class="dropdown-trigger__left">
@@ -589,7 +589,7 @@
           <p class="modal-card__desc" data-ref="modal-desc">Atenuación suave de entrada (Fade In) y salida (Fade Out).</p>
         </div>
 
-        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <label class="field field--sm" data-ref="field-audio-fade-in">
             <span class="field__label">Aparición (Fade In): <span data-ref="val-audio-fade-in">0.0s</span></span>
             <input class="field__input" data-ref="input-audio-fade-in" type="range" min="0" max="5" step="0.2" value="0" />
@@ -626,9 +626,9 @@
           <p class="modal-card__desc" data-ref="modal-desc">Transcribe y sincroniza la voz del video automáticamente con Gemini IA.</p>
         </div>
 
-        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <div class="field-group" data-ref="field-subtitles-source">
-            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Clip de Origen</span>
+            <span class="field-group__label">Clip de Origen</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-source">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-source" aria-label="Clip de Origen">
                 <div class="dropdown-trigger__left">
@@ -646,7 +646,7 @@
           </div>
 
           <div class="field-group" data-ref="field-subtitles-lang">
-            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Idioma del Audio</span>
+            <span class="field-group__label">Idioma del Audio</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-lang">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-lang" aria-label="Idioma del Audio">
                 <div class="dropdown-trigger__left">
@@ -686,7 +686,7 @@
           </div>
 
           <div class="field-group" data-ref="field-subtitles-style">
-            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Estilo Visual</span>
+            <span class="field-group__label">Estilo Visual</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-style">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-style" aria-label="Estilo Visual">
                 <div class="dropdown-trigger__left">

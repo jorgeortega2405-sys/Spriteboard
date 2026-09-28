@@ -28,22 +28,22 @@ import { exportDocWord } from './doc/doc-export.service.js';
 const BATCH_SIZE = 20;
 
 function formatEditedTime(dateStr?: string | null): string {
-  if (!dateStr) return 'hace un momento';
+  if (!dateStr) return t('time.just_now');
   const date = new Date(dateStr);
   const now = new Date();
   const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (isNaN(diffSec) || diffSec < 60) return 'hace un momento';
+  if (isNaN(diffSec) || diffSec < 60) return t('time.just_now');
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return diffMin === 1 ? 'hace 1 minuto' : `hace ${diffMin} minutos`;
+  if (diffMin < 60) return diffMin === 1 ? t('time.minute_ago') : t('time.minutes_ago', { count: diffMin });
   const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return diffHours === 1 ? 'hace 1 hora' : `hace ${diffHours} horas`;
+  if (diffHours < 24) return diffHours === 1 ? t('time.hour_ago') : t('time.hours_ago', { count: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`;
+  if (diffDays < 7) return diffDays === 1 ? t('time.day_ago') : t('time.days_ago', { count: diffDays });
   const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 4) return diffWeeks === 1 ? 'hace 1 semana' : `hace ${diffWeeks} semanas`;
+  if (diffWeeks < 4) return diffWeeks === 1 ? t('time.week_ago') : t('time.weeks_ago', { count: diffWeeks });
   const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) return diffMonths === 1 ? 'hace 1 mes' : `hace ${diffMonths} meses`;
-  return diffDays > 365 ? 'hace más de 1 año' : date.toLocaleDateString();
+  if (diffMonths < 12) return diffMonths === 1 ? t('time.month_ago') : t('time.months_ago', { count: diffMonths });
+  return diffDays > 365 ? t('time.over_year_ago') : date.toLocaleDateString();
 }
 
 class HomeController {

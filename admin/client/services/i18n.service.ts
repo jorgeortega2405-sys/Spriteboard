@@ -1,9 +1,8 @@
-import { API_ROUTES, currentUser, postApi } from './api.service.js';
 import { detectBrowserLanguage } from '../utils/languages.util.js';
+import { API_ROUTES, currentUser, postApi } from './api.service.js';
 
 let currentLanguage = 'es-419';
 let currentTranslations: Record<string, unknown> = {};
-let fallbackTranslations: Record<string, unknown> = {};
 
 function getNestedValue(obj: unknown, path: string): unknown {
   if (!obj || typeof obj !== 'object' || !path) return undefined;
@@ -20,11 +19,7 @@ function getNestedValue(obj: unknown, path: string): unknown {
 
 export function t(key: string, params: Record<string, string | number> = {}): string {
   if (!key) return '';
-  let val = getNestedValue(currentTranslations, key);
-
-  if (val === undefined || val === null) {
-    val = getNestedValue(fallbackTranslations, key);
-  }
+  const val = getNestedValue(currentTranslations, key);
 
   if (val === undefined || val === null) {
     return key;
@@ -44,31 +39,16 @@ export function getCurrentLanguage(): string {
   return currentLanguage;
 }
 
-async function loadFallbackTranslations(): Promise<void> {
-  if (Object.keys(fallbackTranslations).length > 0) return;
-  try {
-    const res = await fetch('/translations/es-419.json');
-    if (res.ok) {
-      fallbackTranslations = await res.json();
-    }
-  } catch (_) {}
-}
-
 async function loadTranslationFile(code: string): Promise<void> {
-  await loadFallbackTranslations();
-  if (code === 'es-419') {
-    currentTranslations = fallbackTranslations;
-    return;
-  }
   try {
     const res = await fetch(`/translations/${encodeURIComponent(code)}.json`);
     if (res.ok) {
       currentTranslations = await res.json();
     } else {
-      currentTranslations = fallbackTranslations;
+      currentTranslations = {};
     }
   } catch (_) {
-    currentTranslations = fallbackTranslations;
+    currentTranslations = {};
   }
 }
 

@@ -34,25 +34,25 @@ function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
 function getFormatOptionsForKind(kind: DownloadCanvasKind): ExportFormatOption[] {
   if (kind === 'doc') {
     return [
-      { icon: 'picture_as_pdf', id: 'pdf', label: t('download.type_pdf') || 'Documento PDF (.pdf)' },
-      { icon: 'article', id: 'word', label: t('download.type_word') || 'Documento Word (.doc)' },
-      { icon: 'markdown', id: 'markdown', label: t('download.type_markdown') || 'Documento Markdown (.md)' },
-      { icon: 'text_snippet', id: 'txt', label: t('download.type_txt') || 'Texto sin formato (.txt)' },
-      { icon: 'code', id: 'html', label: t('download.type_html') || 'Página web (.html)' },
-      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+      { icon: 'picture_as_pdf', id: 'pdf', label: t('canvas.download.type_pdf') || 'Documento PDF (.pdf)' },
+      { icon: 'article', id: 'word', label: t('canvas.download.type_word') || 'Documento Word (.doc)' },
+      { icon: 'markdown', id: 'markdown', label: t('canvas.download.type_markdown') || 'Documento Markdown (.md)' },
+      { icon: 'text_snippet', id: 'txt', label: t('canvas.download.type_txt') || 'Texto sin formato (.txt)' },
+      { icon: 'code', id: 'html', label: t('canvas.download.type_html') || 'Página web (.html)' },
+      { icon: 'data_object', id: 'project-json', label: t('canvas.download.type_project_json') || 'Proyecto Spriteboard (.json)' },
     ];
   }
   if (kind === 'presentation') {
     return [
-      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
-      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
-      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+      { icon: 'image', id: 'png', label: t('canvas.download.type_png') || 'Imagen PNG (.png)' },
+      { icon: 'polyline', id: 'svg', label: t('canvas.download.type_svg') || 'Vectorial SVG (.svg)' },
+      { icon: 'data_object', id: 'project-json', label: t('canvas.download.type_project_json') || 'Proyecto Spriteboard (.json)' },
     ];
   }
   return [
-    { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
-    { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
-    { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+    { icon: 'image', id: 'png', label: t('canvas.download.type_png') || 'Imagen PNG (.png)' },
+    { icon: 'polyline', id: 'svg', label: t('canvas.download.type_svg') || 'Vectorial SVG (.svg)' },
+    { icon: 'data_object', id: 'project-json', label: t('canvas.download.type_project_json') || 'Proyecto Spriteboard (.json)' },
   ];
 }
 

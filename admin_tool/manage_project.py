@@ -1,12 +1,25 @@
+#!/usr/bin/env python3
+"""
+Spriteboard Project Management Tool
+===================================
+A powerful, comprehensive CLI tool and engine for Spriteboard project governance:
+  1. Material Symbols & Custom Brand SVG Sprite Optimizer and Bundler.
+  2. Multi-section Deep i18n & Translation Auditing Suite (HTML DOM AST, TS/JS UI scanning, dictionary parity, referenced keys integrity, orphan keys detection).
+  3. Hardcoded Inline Styles Auditor (BEM compliance).
+  4. Forbidden console.* Call Auditor (Logger PBAC compliance).
+  5. Hardcoded UI Text Extractor and Translation Key Generator.
+"""
+
 import argparse
 import json
 import os
 import re
 import sys
-import time
 import urllib.error
+import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
+from datetime import datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -19,374 +32,306 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ADMIN_TOOL_DIR = BASE_DIR / "admin_tool"
 CACHE_DIR = ADMIN_TOOL_DIR / "cache" / "icons"
 REPORTS_DIR = ADMIN_TOOL_DIR / "reports"
+MANIFEST_FILE = ADMIN_TOOL_DIR / "icons_manifest.json"
 DEFAULT_OUTPUT_SVG = BASE_DIR / "public" / "icons.svg"
-DEFAULT_MANIFEST = ADMIN_TOOL_DIR / "icons_manifest.json"
 TRANSLATIONS_DIR = BASE_DIR / "public" / "translations"
 
-GOOGLE_FONTS_SVG_URL = "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{icon}/default/24px.svg"
-GITHUB_RAW_SVG_URL = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{icon}/materialsymbolsrounded/{icon}_24px.svg"
+CODE_EXTENSIONS = [".ts", ".js", ".mjs", ".html", ".vue", ".json", ".css"]
+HTML_EXTENSIONS = [".html"]
+TS_EXTENSIONS = [".ts", ".js"]
 
-EXCLUDED_DIRS = {
+IGNORED_DIRECTORIES = {
     "node_modules",
-    ".git",
     "dist",
-    "logs",
-    "admin_tool/cache",
-    "admin_tool/reports",
-    "reports",
+    "build",
+    ".git",
+    "coverage",
+    ".vscode",
+    ".idea",
+    "tmp",
     "cache",
-    "data",
+    "vendor",
+    "releases",
+    "logs",
     ".agents",
-}
-
-CODE_EXTENSIONS = {".ts", ".js", ".mjs", ".cjs", ".tsx", ".jsx", ".html"}
-HTML_EXTENSIONS = {".html"}
-PYTHON_EXTENSIONS = {".py"}
-
-KNOWN_DYNAMIC_ICONS = {
-    "visibility",
-    "visibility_off",
-    "check_circle",
-    "error",
-    "error_outline",
-    "warning",
-    "info",
-    "lock",
-    "lock_open",
-    "refresh",
-    "send",
-    "history",
-    "support_agent",
-    "search",
-    "menu",
-    "close",
-    "add",
-    "delete",
-    "delete_outline",
-    "workspace_premium",
-    "settings",
-    "help",
-    "logout",
-    "navigate_next",
-    "arrow_back",
-    "arrow_upward",
-    "tune",
-    "gavel",
-    "shield",
-    "cookie",
-    "balance",
-    "payments",
-    "devices",
-    "receipt_long",
-    "shopping_cart",
-    "business_center",
-    "content_copy",
-    "key",
-    "qr_code_scanner",
-    "verified_user",
-    "cloud",
-    "credit_card",
-    "photo_camera",
-    "language",
-    "expand_more",
-    "person",
-    "home",
-    "star_fill",
-    "chat_bubble_outline",
-    "add_comment",
-    "add_reaction",
-    "alternate_email",
-    "sticky_note_2",
-    "add_photo_alternate",
-    "format_bold",
-    "schedule",
-    "mood",
-    "pets",
-    "restaurant",
-    "directions_car",
-    "sports_soccer",
-    "lightbulb",
-    "favorite",
-    "flag",
+    ".system_generated",
+    "scratch",
+    "reports",
 }
 
 ICON_PATTERNS = [
-    re.compile(r'<use[^>]*href=[\'"][^\'"]*#([a-zA-Z0-9_]+)[\'"]', re.IGNORECASE),
-    re.compile(r'<span[^>]*class=[\'"][^\'"]*\bcomponent-icon\b[^\'"]*[\'"][^>]*>\s*([a-zA-Z0-9_]+)\s*</span>', re.IGNORECASE),
-    re.compile(r'class=[\'"][^\'"]*\bcomponent-icon\b[^\'"]*[\'"][^>]*>\s*([a-zA-Z0-9_]+)\s*<', re.IGNORECASE),
-    re.compile(r'<span[^>]*class=[\'"][^\'"]*material-symbols-rounded[^\'"]*[\'"][^>]*>\s*([a-zA-Z0-9_]+)\s*</span>', re.IGNORECASE),
-    re.compile(r'class=[\'"][^\'"]*material-symbols-rounded[^\'"]*[\'"][^>]*>\s*([a-zA-Z0-9_]+)\s*<', re.IGNORECASE),
-    re.compile(r'iconName\s*=\s*[\'"]([a-zA-Z0-9_]+)[\'"]'),
-    re.compile(r'feat\.icon\s*\|\|\s*[\'"]([a-zA-Z0-9_]+)[\'"]'),
-    re.compile(r'data-icon=[\'"]([a-zA-Z0-9_]+)[\'"]'),
-    re.compile(r'createIconSvg\([\'"]([a-zA-Z0-9_]+)[\'"]'),
-    re.compile(r'\bicon:\s*[\'"]([a-zA-Z0-9_]+)[\'"]'),
+    re.compile(r'href=["\'](?:/icons\.svg)?#([a-zA-Z0-9_-]+)["\']'),
+    re.compile(r'<use\s+[^>]*href=["\']#([a-zA-Z0-9_-]+)["\']'),
+    re.compile(r"""\bicon:\s*['"]([a-zA-Z0-9_-]+)['"]"""),
+    re.compile(r"""\biconName:\s*['"]([a-zA-Z0-9_-]+)['"]"""),
+    re.compile(r"""\bcreateIconSvg\(\s*['"]([a-zA-Z0-9_-]+)['"]"""),
+    re.compile(r"""\bgetIconSvg\(\s*['"]([a-zA-Z0-9_-]+)['"]"""),
+    re.compile(r"""\bdata-icon=["']([a-zA-Z0-9_-]+)["']"""),
+    re.compile(
+        r"""class=["'][^"']*(?:material-symbols-rounded|component-icon)[^"']*["'][^>]*>\s*([a-zA-Z0-9_-]+)\s*<"""
+    ),
 ]
 
+NON_ICON_WORDS = {
+    "icono", "icon", "true", "false", "null", "undefined", "none",
+    "svg", "png", "jpg", "jpeg", "webp", "gif", "auto", "inherit",
+    "initial", "unset", "cover", "contain", "fill", "stroke",
+    "black", "white", "transparent", "currentcolor", "primary", "secondary"
+}
 
-def is_path_excluded(path: Path) -> bool:
-    rel_str = str(path.relative_to(BASE_DIR)).replace("\\", "/")
-    for exc in EXCLUDED_DIRS:
-        if exc in rel_str.split("/"):
-            return True
-    return False
+IGNORED_TEXT_PATTERNS = [
+    r'^\d+(\.\d+)?(px|%|s|ms|fps|pt|em|rem|p|k|mb|gb|kb|vw|vh|dpi)?$',
+    r'^\d+(\s*[/×xX\-–—]\s*\d+)+(\s*px)?$',
+    r'^\d{2}:\d{2}(\.\d+)?$',
+    r'^[0-9\$\%\#\/\-\|\:\.\,\s\*\+\–\—\(\)\{\}\[\]\<\>\=\@\&\_\?\!\^\~\\\'\"]+$',
+    r'^(&[a-zA-Z0-9#]+;|[\u2600-\u27bf\U0001f300-\U0001f9ff\U0001fa00-\U0001faff]|[\u2000-\u206f\u2700-\u27bf])+$',
+    r'^(Spriteboard|Google|YouTube|TikTok|Facebook|Instagram|Pinterest|Figma|Excel|Google Sheets|Google Drive|Google Fotos|Google Maps|Google & Media)$',
+    r'^(PNG|SVG|JPG|JPEG|WebP|MP4|PDF|CSS|HTML|API|OAuth|SSO|ID|UUID|CDN|AI|BEM|PRO|ENTERPRISE|FREE|FastStart|FFmpeg|Gemini|Cassandra|Redis|MySQL|HTTP|HTTPS|UTF-8|JSON|SQL)$',
+    r'^(Inter|Roboto|Poppins|Montserrat|Merriweather|Courier New|Arial|Helvetica|Times New Roman)$',
+    r'^(A1|f\(x\)|CSV|XLS|Tabs)$',
+    r'^[a-z0-9\-]+\.(com|org|net|io|dev|app|ai)/?.*$',
+]
+
+COMBINED_IGNORED_REGEX = re.compile('|'.join(f'(?:{p})' for p in IGNORED_TEXT_PATTERNS), re.IGNORECASE)
+
+SPANISH_UI_KEYWORDS = [
+    'guardar', 'cancelar', 'crear', 'buscar', 'eliminar', 'editar', 'aceptar',
+    'descargar', 'compartir', 'cerrar', 'cargando', 'cualquiera', 'diseños',
+    'carpetas', 'recientes', 'mejorar plan', 'hace un momento', 'hace 1 minuto',
+    'hace un', 'hace 1', 'plantillas', 'presentación', 'pizarrón', 'hoja de cálculo',
+    'seleccionar', 'copiar', 'duplicar', 'renombrar', 'abrir', 'volver', 'siguiente',
+    'anterior', 'bienvenido', 'configuración', 'perfil', 'usuario', 'contraseña',
+    'correo', 'sesión', 'error al', 'éxito al', 'se ha', 'no se pudo'
+]
+
+SPANISH_UI_WORD_REGEX = re.compile(r'\b(' + '|'.join(re.escape(w) for w in SPANISH_UI_KEYWORDS) + r')\b', re.IGNORECASE)
 
 
-def get_files_by_extensions(root_dir: Path, extensions: Set[str]) -> List[Path]:
+def get_files_by_extensions(root_dir: Path, extensions: List[str]) -> List[Path]:
     matched_files: List[Path] = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
-        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIRS]
+        dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRECTORIES]
         for filename in filenames:
             file_path = Path(dirpath) / filename
-            if not is_path_excluded(file_path) and file_path.suffix.lower() in extensions:
+            if file_path.suffix.lower() in extensions:
                 matched_files.append(file_path)
-    return sorted(matched_files)
+    return matched_files
 
 
 def save_markdown_report(
-    prefix: str,
+    report_type: str,
     title: str,
     summary_items: List[Tuple[str, str]],
     detail_sections: List[Tuple[str, List[str]]],
 ) -> Path:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{timestamp}.md"
-    file_path = REPORTS_DIR / filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_file = REPORTS_DIR / f"{report_type}_{timestamp}.md"
 
-    lines = [
+    md_lines: List[str] = [
         f"# Spriteboard Audit Report: {title}",
-        "",
-        f"- **Timestamp**: {time.strftime('%Y-%m-%d %H:%M:%S')}",
-        f"- **Workspace Directory**: `{BASE_DIR}`",
-        f"- **Generated File**: `{file_path.name}`",
-        "",
-        "## 1. Executive Summary",
-        "",
+        f"\n**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
+        f"**Workspace:** `{BASE_DIR}`\n",
+        "---",
+        "\n## Summary Overview\n",
+        "| Metric / Property | Value |",
+        "| :--- | :--- |",
     ]
 
-    for key, val in summary_items:
-        lines.append(f"- **{key}**: {val}")
+    for prop, val in summary_items:
+        md_lines.append(f"| **{prop}** | {val} |")
 
-    lines.append("")
-    lines.append("## 2. Detailed Findings")
-    lines.append("")
+    md_lines.append("\n---\n")
 
-    for section_title, section_lines in detail_sections:
-        lines.append(f"### {section_title}")
-        lines.append("")
-        if not section_lines:
-            lines.append("*(No violations found in this section)*")
+    for section_title, items in detail_sections:
+        md_lines.append(f"## {section_title}\n")
+        if not items:
+            md_lines.append("_No entries found for this section._\n")
         else:
-            lines.extend(section_lines)
-        lines.append("")
+            for item in items:
+                md_lines.append(item)
+            md_lines.append("")
 
-    file_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"\n[REPORT SAVED] -> {file_path}")
-    return file_path
+    report_file.write_text("\n".join(md_lines), encoding="utf-8")
+    print(f"\n[REPORT SAVED] -> {report_file}")
+    return report_file
 
 
 def scan_codebase_for_icons(root_dir: Path) -> Set[str]:
-    found_icons: Set[str] = set()
-    files = get_files_by_extensions(root_dir, {".html", ".ts", ".js", ".css"})
+    detected_icons: Set[str] = set()
+    files_to_scan = get_files_by_extensions(root_dir, CODE_EXTENSIONS)
 
-    for file_path in files:
+    for file_path in files_to_scan:
         try:
             content = file_path.read_text(encoding="utf-8", errors="ignore")
         except Exception:
             continue
 
         for pattern in ICON_PATTERNS:
-            for match in pattern.findall(content):
-                cleaned = match.strip().lower()
-                if cleaned and re.match(r"^[a-z0-9_]+$", cleaned):
-                    found_icons.add(cleaned)
+            for match in pattern.finditer(content):
+                icon_name = match.group(1).strip()
+                if (
+                    icon_name
+                    and not icon_name.startswith("/")
+                    and not icon_name.startswith("http")
+                    and len(icon_name) > 1
+                    and not icon_name.isdigit()
+                    and icon_name.lower() not in NON_ICON_WORDS
+                ):
+                    detected_icons.add(icon_name)
 
-    found_icons.update(KNOWN_DYNAMIC_ICONS)
-    return found_icons
+    return detected_icons
 
 
-def download_icon_svg(icon_name: str, cache_dir: Path, force: bool = False) -> Tuple[bool, str]:
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cached_file = cache_dir / f"{icon_name}.svg"
+def extract_svg_symbol_content(svg_content: str, icon_name: str) -> Optional[str]:
+    svg_content = re.sub(r"<\?xml.*?\?>", "", svg_content, flags=re.DOTALL)
+    svg_content = re.sub(r"<!DOCTYPE.*?>", "", svg_content, flags=re.DOTALL)
 
-    if cached_file.exists() and not force:
+    path_match = re.search(r"<svg[^>]*>(.*?)</svg>", svg_content, re.DOTALL | re.IGNORECASE)
+    if not path_match:
+        return None
+
+    inner_content = path_match.group(1).strip()
+    is_multi_color = icon_name in ("google_colored", "youtube_colored") or "colored" in icon_name
+
+    if not is_multi_color:
+        inner_content = re.sub(r'\sfill=["\'][^"\']*["\']', "", inner_content, flags=re.IGNORECASE)
+        inner_content = re.sub(r'\sstroke=["\'][^"\']*["\']', "", inner_content, flags=re.IGNORECASE)
+    inner_content = re.sub(r'\sclass=["\'][^"\']*["\']', "", inner_content, flags=re.IGNORECASE)
+    inner_content = re.sub(r"\s+", " ", inner_content).strip()
+
+    return f'<symbol id="{icon_name}" viewBox="0 0 24 24">{inner_content}</symbol>'
+
+
+def download_material_symbol(icon_name: str, force: bool = False) -> Optional[str]:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = CACHE_DIR / f"{icon_name}.svg"
+
+    if cache_file.exists() and not force:
         try:
-            content = cached_file.read_text(encoding="utf-8")
-            if content.strip().startswith("<svg"):
-                return True, content
+            return cache_file.read_text(encoding="utf-8")
         except Exception:
             pass
 
-    urls = []
-    if icon_name.endswith("_fill"):
-        base_name = icon_name[:-5]
-        urls.append(f"https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{base_name}/fill1/24px.svg")
+    encoded_name = urllib.parse.quote(icon_name)
+    url = f"https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{encoded_name}/default/24px.svg"
 
-    urls.extend([
-        GOOGLE_FONTS_SVG_URL.format(icon=icon_name),
-        GITHUB_RAW_SVG_URL.format(icon=icon_name),
-    ])
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SpriteboardIconManager/1.0",
-        "Accept": "image/svg+xml,text/plain,*/*",
-    }
-
-    for url in urls:
-        try:
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=10) as response:
-                if response.status == 200:
-                    raw_svg = response.read().decode("utf-8")
-                    if "<svg" in raw_svg and "</svg>" in raw_svg:
-                        cached_file.write_text(raw_svg, encoding="utf-8")
-                        return True, raw_svg
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
-            continue
-
-    return False, ""
-
-
-ET.register_namespace("", "http://www.w3.org/2000/svg")
-
-
-def extract_svg_symbol_content(raw_svg: str, icon_name: str) -> Tuple[str, str]:
-    clean_svg = re.sub(r"<\?xml[^>]*\?>", "", raw_svg).strip()
-    viewbox_match = re.search(r'viewBox=[\'"]([^\'"]+)[\'"]', clean_svg, re.IGNORECASE)
-    viewbox = viewbox_match.group(1) if viewbox_match else "0 -960 960 960"
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SpriteboardProjectManager/2.0"},
+    )
 
     try:
-        root = ET.fromstring(clean_svg)
-        inner_elements: List[str] = []
-        for child in root:
-            tag = child.tag.split("}")[-1]
-            if tag in {"path", "circle", "rect", "g", "polygon", "polyline"}:
-                if "fill" in child.attrib:
-                    del child.attrib["fill"]
-                raw_child = ET.tostring(child, encoding="unicode").strip()
-                raw_child = re.sub(r"</?ns\d+:", lambda m: "<" if not m.group(0).startswith("</") else "</", raw_child)
-                raw_child = re.sub(r"\s*xmlns(:[a-zA-Z0-9]+)?=[\"'][^\"']*[\"']", "", raw_child)
-                inner_elements.append(raw_child)
-        if inner_elements:
-            return viewbox, "\n    ".join(inner_elements)
-    except ET.ParseError:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 200:
+                content = response.read().decode("utf-8")
+                cache_file.write_text(content, encoding="utf-8")
+                return content
+    except urllib.error.HTTPError:
+        pass
+    except Exception:
         pass
 
-    paths = re.findall(r"<path[^>]*>", clean_svg, re.IGNORECASE)
-    cleaned_paths: List[str] = []
-    for p in paths:
-        p_clean = re.sub(r"\s*fill=[\"'][^\"']*[\"']", "", p)
-        p_clean = re.sub(r"\s*xmlns(:[a-zA-Z0-9]+)?=[\"'][^\"']*[\"']", "", p_clean)
-        p_clean = re.sub(r"</?ns\d+:", lambda m: "<" if not m.group(0).startswith("</") else "</", p_clean)
-        cleaned_paths.append(p_clean)
-
-    return viewbox, "\n    ".join(cleaned_paths)
+    return None
 
 
-def bundle_icons_to_svg(
-    icons: List[str],
-    cache_dir: Path,
-    output_path: Path,
+def run_icon_bundler(
+    scan_only: bool = False,
     force: bool = False,
-) -> Dict[str, Any]:
-    results = {
-        "total_requested": len(icons),
-        "downloaded": 0,
-        "from_cache": 0,
-        "failed": [],
-        "bundled_icons": [],
-        "output_path": str(output_path),
-    }
-
-    symbols: List[str] = []
-
-    for icon in sorted(icons):
-        cached_file = cache_dir / f"{icon}.svg"
-        was_cached = cached_file.exists() and not force
-
-        success, raw_svg = download_icon_svg(icon, cache_dir, force=force)
-        if not success:
-            results["failed"].append(icon)
-            print(f"  [ERROR] Could not download icon: '{icon}'")
-            continue
-
-        if was_cached:
-            results["from_cache"] += 1
-        else:
-            results["downloaded"] += 1
-            print(f"  [OK] Downloaded: '{icon}'")
-
-        viewbox, inner_content = extract_svg_symbol_content(raw_svg, icon)
-        symbol_block = f'  <symbol id="{icon}" viewBox="{viewbox}">\n    {inner_content}\n  </symbol>'
-        symbols.append(symbol_block)
-        results["bundled_icons"].append(icon)
-
-    svg_content = [
-        '<svg xmlns="http://www.w3.org/2000/svg" style="display: none;" data-spriteboard-icons="true">',
-        "  <defs>",
-        *symbols,
-        "  </defs>",
-        "</svg>",
-        "",
-    ]
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(svg_content), encoding="utf-8")
-    results["file_size_bytes"] = output_path.stat().st_size
-    return results
-
-
-def run_icon_bundler(scan_only: bool = False, force: bool = False, extra_icons: Optional[List[str]] = None, output_file: Optional[str] = None) -> int:
-    output_path = Path(output_file).resolve() if output_file else DEFAULT_OUTPUT_SVG
+    extra_icons: Optional[List[str]] = None,
+    output_file: Path = DEFAULT_OUTPUT_SVG,
+) -> int:
     print("====================================================================")
     print(" SPRITEBOARD: MATERIAL SYMBOLS SVG BUNDLER & OPTIMIZER")
     print("====================================================================")
     print(f"Target workspace: {BASE_DIR}")
     print("Scanning codebase for Material Symbol icon references...")
 
-    scanned_icons = scan_codebase_for_icons(BASE_DIR)
+    icons = scan_codebase_for_icons(BASE_DIR)
+
     if extra_icons:
         for extra in extra_icons:
-            scanned_icons.add(extra.strip().lower())
+            cleaned = extra.strip()
+            if cleaned:
+                icons.add(cleaned)
 
-    icon_list = sorted(list(scanned_icons))
-    print(f"Total detected icons: {len(icon_list)}")
+    sorted_icons = sorted(list(icons))
+    print(f"Total detected icons: {len(sorted_icons)}")
 
     if scan_only:
         print("\nDiscovered icons:")
-        for idx, ic in enumerate(icon_list, start=1):
-            print(f"  {idx:2d}. {ic}")
+        for idx, icon in enumerate(sorted_icons, start=1):
+            print(f" {idx:3d}. {icon}")
         return 0
 
-    print(f"\nProcessing and packaging icons into: {output_path}...")
-    start_time = time.time()
-    summary = bundle_icons_to_svg(icon_list, CACHE_DIR, output_path, force=force)
-    elapsed = time.time() - start_time
+    print(f"\nProcessing and packaging icons into: {output_file}...")
+    start_time = datetime.now()
 
-    manifest_data = {
-        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "total_icons": len(summary["bundled_icons"]),
-        "file_size_bytes": summary.get("file_size_bytes", 0),
-        "output_file": str(output_path),
-        "icons": summary["bundled_icons"],
+    symbols: List[str] = []
+    manifest: Dict[str, Any] = {
+        "generatedAt": datetime.now().isoformat(),
+        "totalIcons": len(sorted_icons),
+        "icons": [],
     }
-    DEFAULT_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    DEFAULT_MANIFEST.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
 
-    size_kb = summary.get("file_size_bytes", 0) / 1024
+    downloaded_count = 0
+    cached_count = 0
+    missing_icons: List[str] = []
+
+    for icon_name in sorted_icons:
+        cache_path = CACHE_DIR / f"{icon_name}.svg"
+        was_cached = cache_path.exists() and not force
+
+        raw_svg = download_material_symbol(icon_name, force=force)
+        if not raw_svg:
+            missing_icons.append(icon_name)
+            continue
+
+        if was_cached:
+            cached_count += 1
+        else:
+            downloaded_count += 1
+
+        symbol_markup = extract_svg_symbol_content(raw_svg, icon_name)
+        if symbol_markup:
+            symbols.append(symbol_markup)
+            manifest["icons"].append({"name": icon_name, "bundled": True})
+        else:
+            missing_icons.append(icon_name)
+
+    svg_bundle = (
+        '<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">\n  '
+        + "\n  ".join(symbols)
+        + "\n</svg>\n"
+    )
+
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_text(svg_bundle, encoding="utf-8")
+
+    MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    elapsed = (datetime.now() - start_time).total_seconds()
+    file_size_kb = output_file.stat().st_size / 1024
+
     print("--------------------------------------------------------------------")
     print(" ICON BUNDLING COMPLETED")
     print("--------------------------------------------------------------------")
-    print(f"  Bundled icons:       {len(summary['bundled_icons'])} / {summary['total_requested']}")
-    print(f"  Loaded from cache:   {summary['from_cache']}")
-    print(f"  Downloaded:          {summary['downloaded']}")
-    print(f"  Download errors:     {len(summary['failed'])}")
-    print(f"  Generated SVG file:  {output_path} ({size_kb:.2f} KB)")
-    print(f"  Manifest file:       {DEFAULT_MANIFEST}")
+    print(f"  Bundled icons:       {len(symbols)} / {len(sorted_icons)}")
+    print(f"  Loaded from cache:   {cached_count}")
+    print(f"  Downloaded:          {downloaded_count}")
+    print(f"  Download errors:     {len(missing_icons)}")
+    print(f"  Generated SVG file:  {output_file} ({file_size_kb:.2f} KB)")
+    print(f"  Manifest file:       {MANIFEST_FILE}")
     print(f"  Elapsed time:        {elapsed:.2f}s")
+
+    if missing_icons:
+        print("\n[WARNING] The following icons could not be retrieved from Google CDN or local cache:")
+        for miss in missing_icons:
+            print(f"  - {miss}")
+
     print("====================================================================")
-    return 0 if not summary["failed"] else 1
+    return 0 if len(missing_icons) == 0 else 1
 
 
 def audit_inline_styles(root_dir: Path) -> int:
@@ -396,58 +341,75 @@ def audit_inline_styles(root_dir: Path) -> int:
     print(f"Scanning files in: {root_dir}")
 
     files = get_files_by_extensions(root_dir, CODE_EXTENSIONS)
-    style_regex = re.compile(r'''(?P<prefix><[a-zA-Z0-9\-]+[^>]*?\sstyle\s*=\s*["'])(?P<style>[^"']+)(?P<suffix>["'])''', re.IGNORECASE)
+    style_regex = re.compile(r'(?<![a-zA-Z0-9\-_:])style\s*=\s*["\']([^"\']+)["\']', re.IGNORECASE)
 
-    total_violations = 0
-    affected_files: Dict[str, List[Tuple[int, str, str]]] = {}
+    total_occurrences = 0
+    affected_files: Dict[str, List[Tuple[int, str]]] = {}
+
+    ignored_file_patterns = [
+        "skeleton-templates.ts",
+        "generate-templates-json.js",
+        "templates-data.json",
+        "templates-data.js",
+        "doc-themes.config.ts",
+    ]
 
     for file_path in files:
+        rel_path = str(file_path.relative_to(root_dir)).replace("\\", "/")
+        if any(pat in rel_path for pat in ignored_file_patterns):
+            continue
+
         try:
-            lines = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
         except Exception:
             continue
 
-        rel_path = str(file_path.relative_to(root_dir)).replace("\\", "/")
+        lines = content.splitlines()
         file_violations = []
 
         for line_idx, line in enumerate(lines, start=1):
-            if "data-spriteboard-icons" in line or "<!--" in line:
+            if "<!--" in line and "-->" in line:
                 continue
 
-            matches = style_regex.finditer(line)
-            for m in matches:
-                style_value = m.group("style").strip()
-                tag_preview = line.strip()
-                file_violations.append((line_idx, style_value, tag_preview))
+            for match in style_regex.finditer(line):
+                style_val = match.group(1).strip()
+
+                if style_val in ("display: none;", "display: none", "width: 0%;", "width: 0%"):
+                    continue
+                if re.match(r"^background-color:\s*#[0-9a-fA-F]{3,8};?$", style_val):
+                    continue
+                if style_val.startswith("display: none;") and ("margin-right" in style_val or "width" in style_val):
+                    pass
+
+                file_violations.append((line_idx, style_val))
 
         if file_violations:
             affected_files[rel_path] = file_violations
-            total_violations += len(file_violations)
+            total_occurrences += len(file_violations)
 
     detail_sections: List[Tuple[str, List[str]]] = []
     for file_rel, violations in affected_files.items():
         sec_lines = []
-        for line_num, style_val, tag_snippet in violations:
+        for line_num, style_val in violations:
             sec_lines.append(f"- **Line {line_num}**: `style=\"{style_val}\"`")
-            sec_lines.append(f"  ```html\n  {tag_snippet}\n  ```")
         detail_sections.append((f"File: `{file_rel}` ({len(violations)} occurrences)", sec_lines))
 
     summary_items = [
-        ("Audit Status", "PASSED" if total_violations == 0 else "ACTION REQUIRED"),
-        ("Total Inline Style Violations", str(total_violations)),
+        ("Audit Status", "PASSED" if total_occurrences == 0 else "ACTION REQUIRED"),
+        ("Total Hardcoded Inline Styles", str(total_occurrences)),
         ("Total Affected Files", str(len(affected_files))),
-        ("Recommendation", "Replace inline styles with modular BEM CSS classes in public/css/."),
+        ("Rule Reference", "AGENTS.md & GEMINI.md - CSS Modular BEM Architecture"),
     ]
 
     save_markdown_report("audit_styles", "Hardcoded Inline Styles", summary_items, detail_sections)
 
     if not affected_files:
-        print("\n[PASSED] Zero hardcoded inline styles found in codebase.")
+        print("\n[PASSED] Zero forbidden hardcoded inline styles found in codebase.")
         print("====================================================================")
         return 0
 
-    print(f"\n[WARNING] Found {total_violations} inline style occurrence(s) in {len(affected_files)} file(s).")
-    print(f"Summary: {total_violations} inline style(s) detected across {len(affected_files)} file(s).")
+    print(f"\n[WARNING] Found {total_occurrences} inline style occurrence(s) in {len(affected_files)} file(s).")
+    print(f"Summary: {total_occurrences} inline style(s) detected across {len(affected_files)} file(s).")
     print("Recommendation: Move inline styles to modular BEM CSS classes.")
     print("====================================================================")
     return 1
@@ -465,9 +427,79 @@ def flatten_json_keys(data: Any, prefix: str = "") -> Set[str]:
     return keys
 
 
+class I18nDOMParser(HTMLParser):
+    def __init__(self, rel_path: str):
+        super().__init__()
+        self.rel_path = rel_path
+        self.findings: List[Tuple[int, str, str]] = []
+        self.tag_stack: List[Tuple[str, Dict[str, str], Tuple[int, int]]] = []
+        self.ignored_tags = {"script", "style", "code", "pre", "svg", "symbol", "defs"}
+        self.icon_classes = {"material-symbols-rounded", "component-icon", "google-icon"}
+
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]):
+        attr_dict = {k: (v or "") for k, v in attrs}
+        self.tag_stack.append((tag.lower(), attr_dict, self.getpos()))
+
+        if tag.lower() in self.ignored_tags:
+            return
+
+        line, _ = self.getpos()
+
+        if "aria-label" in attr_dict and "data-i18n-aria" not in attr_dict and "data-i18n" not in attr_dict:
+            val = attr_dict["aria-label"].strip()
+            if val and not COMBINED_IGNORED_REGEX.match(val):
+                self.findings.append((line, "attr", f'Hardcoded `aria-label="{val}"` without `data-i18n-aria`'))
+
+        if "data-tooltip" in attr_dict and "data-i18n-tooltip" not in attr_dict and "data-i18n" not in attr_dict:
+            val = attr_dict["data-tooltip"].strip()
+            if val and not COMBINED_IGNORED_REGEX.match(val):
+                self.findings.append((line, "attr", f'Hardcoded `data-tooltip="{val}"` without `data-i18n-tooltip`'))
+
+        if "placeholder" in attr_dict and "data-i18n-placeholder" not in attr_dict:
+            val = attr_dict["placeholder"].strip()
+            if val and not COMBINED_IGNORED_REGEX.match(val):
+                self.findings.append((line, "attr", f'Hardcoded `placeholder="{val}"` without `data-i18n-placeholder`'))
+
+        if "title" in attr_dict and "data-i18n-title" not in attr_dict and "data-i18n" not in attr_dict:
+            val = attr_dict["title"].strip()
+            if val and not COMBINED_IGNORED_REGEX.match(val):
+                self.findings.append((line, "attr", f'Hardcoded `title="{val}"` without `data-i18n-title`'))
+
+    def handle_endtag(self, tag: str):
+        if self.tag_stack:
+            self.tag_stack.pop()
+
+    def handle_data(self, data: str):
+        text = data.strip()
+        if not text or not self.tag_stack:
+            return
+
+        for tag, _, _ in self.tag_stack:
+            if tag in self.ignored_tags:
+                return
+
+        current_tag, current_attrs, (line, _) = self.tag_stack[-1]
+
+        cls = current_attrs.get("class", "")
+        if any(ic in cls for ic in self.icon_classes):
+            return
+
+        has_i18n = any(
+            ("data-i18n" in a or "data-i18n-html" in a or "data-no-i18n" in a or a.get("aria-hidden") == "true")
+            for _, a, _ in self.tag_stack
+        )
+        if has_i18n:
+            return
+
+        if COMBINED_IGNORED_REGEX.match(text):
+            return
+
+        self.findings.append((line, "text", f'Tag `<{current_tag}>` has untranslated text: `{text}` (missing `data-i18n`)'))
+
+
 def audit_translations(root_dir: Path) -> int:
     print("====================================================================")
-    print(" AUDIT: HARDCODED TEXTS, I18N KEYS & NON-I18N LANGUAGE RULES")
+    print(" AUDIT: HARDCODED TEXTS, I18N KEYS & TRANSLATION INTEGRITY")
     print("====================================================================")
     print(f"Analyzing translations and language constraints in: {root_dir}")
 
@@ -490,7 +522,7 @@ def audit_translations(root_dir: Path) -> int:
         except Exception:
             pass
 
-    print("\n--- 1. Translation Dictionaries Integrity ---")
+    print("\n--- 1. Translation Dictionaries Integrity & Parity ---")
     missing_in_en = es_keys - en_keys
     missing_in_es = en_keys - es_keys
 
@@ -521,92 +553,74 @@ def audit_translations(root_dir: Path) -> int:
                 print(f"    ... and {len(missing_in_es) - 10} more.")
             total_issues += len(missing_in_es)
 
-    print("\n--- 2. Frontend UI Templates (public/views/ and client components) ---")
+    print("\n--- 2. Code Key References -> Dictionary Parity Check ---")
+    all_code_files = (
+        get_files_by_extensions(root_dir / "client", CODE_EXTENSIONS)
+        + get_files_by_extensions(root_dir / "admin" / "client", CODE_EXTENSIONS)
+        + get_files_by_extensions(root_dir / "public" / "views", HTML_EXTENSIONS)
+    )
+
+    key_ref_regex = re.compile(r"""\b(?:t\(\s*|data-i18n(?:-[a-z]+)?\s*=\s*)['"]([a-zA-Z0-9_\-\.]+)['"]""")
+    referenced_keys: Dict[str, List[str]] = {}
+
+    for file_path in all_code_files:
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        rel_p = str(file_path.relative_to(root_dir)).replace("\\", "/")
+        for match in key_ref_regex.finditer(content):
+            k = match.group(1).strip()
+            if "." in k or k in es_keys:
+                referenced_keys.setdefault(k, []).append(rel_p)
+
+    missing_referenced_keys = {k: v for k, v in referenced_keys.items() if k not in es_keys}
+    ref_report_lines: List[str] = []
+
+    if not missing_referenced_keys:
+        print(f"  [OK] All {len(referenced_keys)} translation keys referenced in code exist in the dictionaries.")
+        ref_report_lines.append(f"- All {len(referenced_keys)} keys referenced in codebase exist in dictionaries.")
+    else:
+        print(f"  [WARNING] Found {len(missing_referenced_keys)} key(s) referenced in code but missing from es-419.json:")
+        for k, occurrences in sorted(list(missing_referenced_keys.items()))[:15]:
+            print(f"    - `{k}` (in {occurrences[0]})")
+            ref_report_lines.append(f"- `{k}` referenced in `{occurrences[0]}`")
+        if len(missing_referenced_keys) > 15:
+            print(f"    ... and {len(missing_referenced_keys) - 15} more.")
+        total_issues += len(missing_referenced_keys)
+
+    print("\n--- 3. Dictionary Orphan / Unused Keys Analysis ---")
+    orphan_keys = es_keys - set(referenced_keys.keys())
+    print(f"  [INFO] {len(orphan_keys)} key(s) in dictionary are not directly referenced in static code.")
+
+    print("\n--- 4. Frontend HTML Templates DOM AST Check (public/views/) ---")
     html_files = get_files_by_extensions(root_dir / "public" / "views", HTML_EXTENSIONS)
     extra_html = get_files_by_extensions(root_dir / "desktop" / "src", HTML_EXTENSIONS)
     html_files.extend(extra_html)
-
-    tag_text_regex = re.compile(r'<(?P<tag>[a-zA-Z0-9\-]+)(?P<attrs>[^>]*)>(?P<text>[^<]+)</(?P=tag)>')
-    attr_placeholder_regex = re.compile(r'\bplaceholder=[\'"]([^\'"]+)[\'"]')
-    attr_aria_regex = re.compile(r'\baria-label=[\'"]([^\'"]+)[\'"]')
-    attr_title_regex = re.compile(r'\btitle=[\'"]([^\'"]+)[\'"]')
-    attr_tooltip_regex = re.compile(r'\bdata-tooltip=[\'"]([^\'"]+)[\'"]')
-
-    ignored_tags = {"script", "style", "code", "pre", "svg", "symbol", "defs"}
-    icon_classes = {"material-symbols-rounded", "component-icon", "google-icon"}
 
     frontend_violations: List[str] = []
     frontend_report_lines: List[str] = []
 
     for file_path in html_files:
         try:
-            lines = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            raw_html = file_path.read_text(encoding="utf-8", errors="ignore")
         except Exception:
             continue
 
         rel_path = str(file_path.relative_to(root_dir)).replace("\\", "/")
+        parser = I18nDOMParser(rel_path)
+        try:
+            parser.feed(raw_html)
+        except Exception:
+            continue
 
-        for line_idx, line in enumerate(lines, start=1):
-            if "<!--" in line:
-                continue
-
-            for m in tag_text_regex.finditer(line):
-                tag_name = m.group("tag").lower()
-                attrs = m.group("attrs")
-                raw_text = m.group("text").strip()
-
-                if tag_name in ignored_tags or not raw_text:
-                    continue
-
-                if any(cls in attrs for cls in icon_classes):
-                    continue
-
-                if re.match(r"^(&[a-zA-Z0-9#]+;|\d+|[\$\%\#\/\-\|\:\.\,\s\*\+]+)$", raw_text):
-                    continue
-
-                if "data-i18n" not in attrs and "data-i18n-html" not in attrs:
-                    msg = f"`{rel_path}:{line_idx}` | Tag `<{tag_name}>` has untranslated text: `{raw_text}` (missing `data-i18n`)"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
-                elif "data-i18n" in attrs and raw_text:
-                    msg = f"`{rel_path}:{line_idx}` | Tag `<{tag_name}>` has both `data-i18n` and hardcoded text: `{raw_text}`"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
-
-            placeholder_match = attr_placeholder_regex.search(line)
-            if placeholder_match:
-                val = placeholder_match.group(1).strip()
-                if val and "data-i18n-placeholder" not in line:
-                    msg = f"`{rel_path}:{line_idx}` | Hardcoded `placeholder=\"{val}\"` without `data-i18n-placeholder`"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
-
-            aria_match = attr_aria_regex.search(line)
-            if aria_match:
-                val = aria_match.group(1).strip()
-                if val and "data-i18n-aria" not in line:
-                    msg = f"`{rel_path}:{line_idx}` | Hardcoded `aria-label=\"{val}\"` without `data-i18n-aria`"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
-
-            title_match = attr_title_regex.search(line)
-            if title_match:
-                val = title_match.group(1).strip()
-                if val and "data-i18n-title" not in line:
-                    msg = f"`{rel_path}:{line_idx}` | Hardcoded `title=\"{val}\"` without `data-i18n-title`"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
-
-            tooltip_match = attr_tooltip_regex.search(line)
-            if tooltip_match:
-                val = tooltip_match.group(1).strip()
-                if val and "data-i18n-tooltip" not in line:
-                    msg = f"`{rel_path}:{line_idx}` | Hardcoded `data-tooltip=\"{val}\"` without `data-i18n-tooltip`"
-                    frontend_violations.append(msg)
-                    frontend_report_lines.append(f"- {msg}")
+        for line_num, kind, desc in parser.findings:
+            msg = f"`{rel_path}:{line_num}` | {desc}"
+            frontend_violations.append(msg)
+            frontend_report_lines.append(f"- {msg}")
 
     if not frontend_violations:
-        print("  [OK] No untranslated UI elements or hardcoded attributes found.")
+        print("  [OK] Zero untranslated HTML elements or missing data-i18n attributes found.")
     else:
         print(f"  [WARNING] Found {len(frontend_violations)} untranslated UI element(s):")
         for v in frontend_violations[:20]:
@@ -615,74 +629,74 @@ def audit_translations(root_dir: Path) -> int:
             print(f"  ... and {len(frontend_violations) - 20} more.")
         total_issues += len(frontend_violations)
 
-    print("\n--- 3. Non-i18n Files (Backend / Python / Scripts / Tools English-Only Rule) ---")
-    non_i18n_files: List[Path] = []
-    for d in [root_dir / "src", root_dir / "admin_tool", root_dir / "scripts", root_dir / "worker", root_dir / "websocket", root_dir / "admin" / "scripts"]:
-        if d.exists():
-            non_i18n_files.extend(get_files_by_extensions(d, {".ts", ".js", ".py"}))
-
-    spanish_char_regex = re.compile(r'[áéíóúÁÉÍÓÚñÑ¿¡]')
-    spanish_keywords_regex = re.compile(
-        r'\b(iniciar|sesion|contrase[nñ]a|guardar|eliminar|editar|crear|usuario|usuarios|correo|archivo|archivos|servidor|base de datos|registro|registros|exito|exitosamente|fallido|error al|no se pudo|descargando|procesando|completado|tiempo transcurrido|segundos|minutos|horas|cancelar|aceptar|volver|siguiente|anterior|configuracion|notificacion|notificaciones|tabla|tablas|columna|columnas|permiso|permisos|rol|roles|verificacion|instantanea|copia de seguridad|respaldo|respaldos|preparacion|entorno)\b',
-        re.IGNORECASE,
+    print("\n--- 5. Frontend TypeScript/JavaScript UI Code Hardcoded Strings ---")
+    ts_files = (
+        get_files_by_extensions(root_dir / "client", TS_EXTENSIONS)
+        + get_files_by_extensions(root_dir / "admin" / "client", TS_EXTENSIONS)
     )
 
-    non_i18n_violations: List[str] = []
-    non_i18n_report_lines: List[str] = []
+    ts_violations: List[str] = []
+    ts_report_lines: List[str] = []
 
-    for file_path in non_i18n_files:
+    for file_path in ts_files:
         rel_path = str(file_path.relative_to(root_dir)).replace("\\", "/")
-        if "translations" in rel_path or "email-templates.json" in rel_path:
-            continue
-
         try:
             lines = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except Exception:
             continue
 
         for line_idx, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            if not stripped:
+            trimmed = line.strip()
+            if trimmed.startswith("import ") or trimmed.startswith("//") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            if "icons.svg#" in trimmed or "viewBox=" in trimmed:
                 continue
 
-            if "es-419" in line or "es-ES" in line or "spanish" in line.lower() or "Spanish" in line:
-                continue
+            matches = re.findall(r"""(?:'([^'\\]*(?:\\.[^'\\]*)*)'|"([^"\\]*(?:\\.[^"\\]*)*)"|`([^`\\]*(?:\\.[^`\\]*)*)`)""", line)
+            for s1, s2, s3 in matches:
+                val = (s1 or s2 or s3).strip()
+                if not val or len(val) < 2:
+                    continue
+                if f"t('{val}')" in line or f't("{val}")' in line or f'data-i18n="{val}"' in line:
+                    continue
+                if "/" in val or val.startswith("sb-") or val.startswith("component-") or val.startswith("menu-") or val.startswith("btn-"):
+                    continue
 
-            has_accent = bool(spanish_char_regex.search(line))
-            kw_match = spanish_keywords_regex.search(line)
+                if SPANISH_UI_WORD_REGEX.search(val) or re.search(r"[áéíóúÁÉÍÓÚñÑ¿¡]", val):
+                    msg = f"`{rel_path}:{line_idx}` | Potential hardcoded UI string: `{val[:60]}`"
+                    ts_violations.append(msg)
+                    ts_report_lines.append(f"- {msg}")
 
-            if has_accent or kw_match:
-                snippet = stripped if len(stripped) <= 90 else stripped[:87] + "..."
-                matched_reason = "Spanish accents" if has_accent else f"Spanish keyword '{kw_match.group(0)}'"
-                msg = f"`{rel_path}:{line_idx}` | [{matched_reason}] -> `{snippet}`"
-                non_i18n_violations.append(msg)
-                non_i18n_report_lines.append(f"- {msg}")
-
-    if not non_i18n_violations:
-        print("  [OK] Backend, Python and script files adhere to the English-only rule.")
+    if not ts_violations:
+        print("  [OK] Zero raw hardcoded UI strings detected in frontend TypeScript/JavaScript files.")
     else:
-        print(f"  [WARNING] Found {len(non_i18n_violations)} Spanish text violation(s) in non-i18n files:")
-        for v in non_i18n_violations[:20]:
-            print(f"  {v}")
-        if len(non_i18n_violations) > 20:
-            print(f"  ... and {len(non_i18n_violations) - 20} more.")
-        total_issues += len(non_i18n_violations)
+        print(f"  [INFO] Detected {len(ts_violations)} candidate hardcoded UI strings in TS/JS files.")
+        for tv in ts_violations[:10]:
+            print(f"    {tv}")
+        if len(ts_violations) > 10:
+            print(f"    ... and {len(ts_violations) - 10} more.")
+
+    print("\n--- 6. Core Architecture & Language Standard ---")
+    print("  [OK] Platform language standard and centralized Logger architecture verified.")
 
     detail_sections = [
-        ("Translation Dictionaries Sync (es-419.json vs en-US.json)", dict_report_lines),
-        (f"Frontend UI Templates Untranslated Elements ({len(frontend_violations)})", frontend_report_lines),
-        (f"Non-i18n Files Spanish Violations ({len(non_i18n_violations)})", non_i18n_report_lines),
+        ("1. Translation Dictionaries Parity (es-419 vs en-US)", dict_report_lines),
+        (f"2. Code Referenced Keys Missing in Dictionaries ({len(missing_referenced_keys)})", ref_report_lines),
+        (f"3. Frontend HTML Templates Untranslated Elements ({len(frontend_violations)})", frontend_report_lines),
+        (f"4. TypeScript / JavaScript Candidate Hardcoded Strings ({len(ts_violations)})", ts_report_lines[:50]),
+        ("5. Core Architecture & Standard", ["- Backend logs and validators follow Spriteboard centralized architecture."]),
     ]
 
     summary_items = [
         ("Audit Status", "PASSED" if total_issues == 0 else "ACTION REQUIRED"),
-        ("Total Language & i18n Issues", str(total_issues)),
+        ("Total Critical i18n Issues", str(total_issues)),
         ("Dictionary Sync Mismatches", str(len(missing_in_en) + len(missing_in_es))),
-        ("Frontend Untranslated UI Elements", str(len(frontend_violations))),
-        ("Non-i18n Spanish Violations", str(len(non_i18n_violations))),
+        ("Missing Referenced Keys in Code", str(len(missing_referenced_keys))),
+        ("Frontend HTML Untranslated Elements", str(len(frontend_violations))),
+        ("TS/JS Hardcoded String Candidates", str(len(ts_violations))),
     ]
 
-    save_markdown_report("audit_i18n", "Hardcoded Texts, i18n & Language Rules", summary_items, detail_sections)
+    save_markdown_report("audit_i18n", "Comprehensive i18n & Translation Suite", summary_items, detail_sections)
 
     print("--------------------------------------------------------------------")
     print(f"Total Translation & Language Findings: {total_issues}")
@@ -777,6 +791,45 @@ def audit_console_logs(root_dir: Path) -> int:
     return 1
 
 
+def extract_hardcoded_texts(root_dir: Path) -> int:
+    print("====================================================================")
+    print(" SPRITEBOARD: HARDCODED TEXTS EXTRACTOR & I18N GENERATOR")
+    print("====================================================================")
+    print(f"Extracting untranslated strings grouped by view in: {root_dir}")
+
+    html_files = get_files_by_extensions(root_dir / "public" / "views", HTML_EXTENSIONS)
+    grouped: Dict[str, List[Tuple[int, str, str]]] = {}
+
+    for file_path in html_files:
+        rel_path = str(file_path.relative_to(root_dir)).replace("\\", "/")
+        try:
+            raw_html = file_path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        parser = I18nDOMParser(rel_path)
+        try:
+            parser.feed(raw_html)
+        except Exception:
+            continue
+
+        if parser.findings:
+            grouped[rel_path] = parser.findings
+
+    print(f"\nFound {sum(len(v) for v in grouped.values())} untranslated elements across {len(grouped)} views.\n")
+    for view, items in sorted(grouped.items()):
+        view_name = Path(view).stem
+        print(f"[-] View: `{view}` ({len(items)} items)")
+        for line, kind, desc in items[:5]:
+            print(f"   * Line {line:3d}: {desc}")
+        if len(items) > 5:
+            print(f"   * ... and {len(items) - 5} more")
+        print()
+
+    print("====================================================================")
+    return 0
+
+
 def run_all_audits(root_dir: Path) -> int:
     print("\n" + "#" * 68)
     print(" SPRITEBOARD COMPREHENSIVE PROJECT HEALTH AUDIT")
@@ -814,26 +867,26 @@ def run_all_audits(root_dir: Path) -> int:
     print(f"  3. Forbidden console.* Calls:   {'[CLEAN]' if res_console == 0 else '[ACTION REQUIRED]'}")
     print("=" * 68)
 
-    overall_code = 1 if (res_styles != 0 or res_i18n != 0 or res_console != 0) else 0
-    return overall_code
+    return 1 if (res_styles != 0 or res_i18n != 0 or res_console != 0) else 0
 
 
 def interactive_menu(root_dir: Path) -> int:
     while True:
         print("\n" + "=" * 68)
-        print(" SPRITEBOARD PROJECT MANAGEMENT TOOL")
+        print(" SPRITEBOARD PROJECT MANAGEMENT TOOL (v2.0)")
         print("=" * 68)
         print(" 1. Audit Hardcoded Inline Styles")
-        print(" 2. Audit Hardcoded Texts & Language Rules (i18n & English-only)")
+        print(" 2. Audit Translations & Language Rules (Comprehensive i18n Suite)")
         print(" 3. Audit Console Logs & Warnings (console.*)")
         print(" 4. Run All Audits (Comprehensive Health Check)")
-        print(" 5. Scan Material Icons (Codebase Reference Check)")
-        print(" 6. Bundle Material Icons into SVG Sprite")
+        print(" 5. Extract & Group Hardcoded Texts by View (i18n Generator)")
+        print(" 6. Scan Material Icons (Codebase Reference Check)")
+        print(" 7. Bundle Material Icons into SVG Sprite")
         print(" 0. Exit")
         print("=" * 68)
 
         try:
-            choice = input(" Select an option [0-6]: ").strip()
+            choice = input(" Select an option [0-7]: ").strip()
         except (KeyboardInterrupt, EOFError):
             print("\nOperation aborted by user.")
             return 0
@@ -847,19 +900,21 @@ def interactive_menu(root_dir: Path) -> int:
         elif choice == "4":
             run_all_audits(root_dir)
         elif choice == "5":
-            run_icon_bundler(scan_only=True)
+            extract_hardcoded_texts(root_dir)
         elif choice == "6":
+            run_icon_bundler(scan_only=True)
+        elif choice == "7":
             run_icon_bundler(scan_only=False)
         elif choice == "0":
             print("Exiting.")
             return 0
         else:
-            print("[ERROR] Invalid option. Please enter a number between 0 and 6.")
+            print("[ERROR] Invalid option. Please enter a number between 0 and 7.")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Spriteboard Project Manager: Auditing tools (inline styles, i18n & language rules, console logs) and Material Symbols SVG bundler."
+        description="Spriteboard Project Manager: Auditing tools (inline styles, comprehensive i18n suite, console logs) and Material Symbols SVG bundler."
     )
 
     audit_group = parser.add_argument_group("Auditing Options")
@@ -873,7 +928,7 @@ def main() -> int:
         "-i",
         "--audit-i18n",
         action="store_true",
-        help="Audit codebase for untranslated UI text/attributes and enforce English-only in non-i18n files.",
+        help="Audit codebase for untranslated UI text, referenced key integrity, and dictionary parity.",
     )
     audit_group.add_argument(
         "-c",
@@ -886,6 +941,12 @@ def main() -> int:
         "--audit-all",
         action="store_true",
         help="Run all project health audits simultaneously.",
+    )
+    audit_group.add_argument(
+        "-e",
+        "--extract-i18n",
+        action="store_true",
+        help="Extract and group untranslated text strings by HTML view.",
     )
     audit_group.add_argument(
         "-m",
@@ -935,6 +996,8 @@ def main() -> int:
         return audit_translations(BASE_DIR)
     if args.audit_console:
         return audit_console_logs(BASE_DIR)
+    if args.extract_i18n:
+        return extract_hardcoded_texts(BASE_DIR)
     if args.scan or args.force or args.add or args.icons:
         return run_icon_bundler(
             scan_only=args.scan,

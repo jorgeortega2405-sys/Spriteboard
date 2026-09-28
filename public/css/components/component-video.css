@@ -1326,3 +1326,28 @@ html:not([data-theme="dark"]):not(.dark-theme) .video-clip-item.clip--text {
   background-color: rgba(99, 102, 241, 0.1) !important;
   border: 1.5px dashed var(--action-primary, #6366f1) !important;
 }
+
+.modal-card__body--gap14 {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.video-filter-presets-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.video-filter-presets-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.video-filter-presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+

@@ -1050,3 +1050,42 @@ body[data-theme="dark"] .login-logo-img {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.field-group--mb12 {
+  margin-bottom: 12px;
+}
+
+.field-group--row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.field-group__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.field--flex-1 {
+  flex: 1;
+  margin: 0;
+}
+
+.component-button--nowrap {
+  white-space: nowrap;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
