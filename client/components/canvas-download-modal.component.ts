@@ -86,7 +86,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
 
   const menuItemsHtml = formatOptions.map((opt, index) => `
     <button type="button" class="menu-item${index === 0 ? ' is-active' : ''}" data-ref="btn-download-type-${opt.id}" data-value="${opt.id}">
-      <span class="material-symbols-rounded menu-item__icon">${opt.icon}</span>
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
       <span class="menu-item__text">${escapeHtml(opt.label)}</span>
     </button>
   `).join('');
@@ -110,13 +110,13 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
           <div class="design-share-menu__content">
             <div class="design-share-section" data-ref="section-download-type">
               <span class="design-share-section__label">Tipo de archivo</span>
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-type">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-type" aria-label="Tipo de archivo">
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-download-type">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-download-type" aria-label="Tipo de archivo">
                   <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-type-selected-icon">${firstOption.icon}</span>
+                    <svg class="component-icon dropdown-trigger__icon" data-ref="download-type-selected-icon" aria-hidden="true"><use href="/icons.svg#${firstOption.icon}"></use></svg>
                     <span class="dropdown-trigger__text" data-ref="download-type-selected-text">${escapeHtml(firstOption.label)}</span>
                   </div>
-                  <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-type">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-type">
@@ -133,7 +133,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
 
             <div class="design-share-link-row">
               <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-confirm-download">
-                <span class="material-symbols-rounded">download</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                 <span data-ref="btn-confirm-download-text">Descargar</span>
               </button>
             </div>

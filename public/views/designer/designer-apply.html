@@ -298,34 +298,46 @@
                         <span class="field__label">Nombre completo *</span>
                       </label>
 
-                      <label class="field field--has-select" data-ref="field-country">
-                        <select class="field__input field__select" data-ref="select-country" required>
-                          <option value="" disabled selected>Selecciona tu país de residencia *</option>
-                          <option value="Argentina">Argentina</option>
-                          <option value="Bolivia">Bolivia</option>
-                          <option value="Brasil">Brasil</option>
-                          <option value="Chile">Chile</option>
-                          <option value="Colombia">Colombia</option>
-                          <option value="Costa Rica">Costa Rica</option>
-                          <option value="Ecuador">Ecuador</option>
-                          <option value="El Salvador">El Salvador</option>
-                          <option value="España">España</option>
-                          <option value="Estados Unidos">Estados Unidos</option>
-                          <option value="Guatemala">Guatemala</option>
-                          <option value="Honduras">Honduras</option>
-                          <option value="México">México</option>
-                          <option value="Nicaragua">Nicaragua</option>
-                          <option value="Panamá">Panamá</option>
-                          <option value="Paraguay">Paraguay</option>
-                          <option value="Perú">Perú</option>
-                          <option value="Puerto Rico">Puerto Rico</option>
-                          <option value="República Dominicana">República Dominicana</option>
-                          <option value="Uruguay">Uruguay</option>
-                          <option value="Venezuela">Venezuela</option>
-                          <option value="Otro">Otro país</option>
-                        </select>
-                        <span class="field__label field__label--always-float">País de residencia *</span>
-                      </label>
+                      <div class="field-group" data-ref="field-country">
+                        <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">País de residencia *</span>
+                        <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-country">
+                          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-country" aria-label="País de residencia">
+                            <div class="dropdown-trigger__left">
+                              <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+                              <span class="dropdown-trigger__text" data-ref="country-selected-text">Selecciona tu país de residencia *</span>
+                            </div>
+                            <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                          </button>
+                          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-country">
+                            <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-country" style="max-height: 240px; overflow-y: auto;">
+                              <div class="menu-panel__list" data-ref="list-country">
+                                <button type="button" class="menu-item" data-ref="btn-country-ar" data-value="Argentina"><span class="menu-item__text">Argentina</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-bo" data-value="Bolivia"><span class="menu-item__text">Bolivia</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-br" data-value="Brasil"><span class="menu-item__text">Brasil</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-cl" data-value="Chile"><span class="menu-item__text">Chile</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-co" data-value="Colombia"><span class="menu-item__text">Colombia</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-cr" data-value="Costa Rica"><span class="menu-item__text">Costa Rica</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-ec" data-value="Ecuador"><span class="menu-item__text">Ecuador</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-sv" data-value="El Salvador"><span class="menu-item__text">El Salvador</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-es" data-value="España"><span class="menu-item__text">España</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-us" data-value="Estados Unidos"><span class="menu-item__text">Estados Unidos</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-gt" data-value="Guatemala"><span class="menu-item__text">Guatemala</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-hn" data-value="Honduras"><span class="menu-item__text">Honduras</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-mx" data-value="México"><span class="menu-item__text">México</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-ni" data-value="Nicaragua"><span class="menu-item__text">Nicaragua</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-pa" data-value="Panamá"><span class="menu-item__text">Panamá</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-py" data-value="Paraguay"><span class="menu-item__text">Paraguay</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-pe" data-value="Perú"><span class="menu-item__text">Perú</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-pr" data-value="Puerto Rico"><span class="menu-item__text">Puerto Rico</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-do" data-value="República Dominicana"><span class="menu-item__text">República Dominicana</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-uy" data-value="Uruguay"><span class="menu-item__text">Uruguay</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-ve" data-value="Venezuela"><span class="menu-item__text">Venezuela</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-other" data-value="Otro"><span class="menu-item__text">Otro país</span></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div>

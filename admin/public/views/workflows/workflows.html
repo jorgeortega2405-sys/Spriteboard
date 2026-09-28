@@ -138,36 +138,43 @@
   </div>
 
   <div class="modal-backdrop" data-ref="modal-workflow-history-backdrop" style="display: none;">
-    <div class="modal-dialog modal-dialog--md" data-ref="modal-workflow-history">
-      <div class="modal-header">
-        <h3 class="modal-title" data-ref="workflow-history-title">Historial de Ejecución</h3>
-        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-history-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-        </button>
-      </div>
-      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-        <div class="component-table-wrapper" data-ref="history-table-wrapper">
-          <table class="component-table" data-ref="history-table">
-            <thead>
-              <tr>
-                <th>Fecha / Hora</th>
-                <th>Disparador</th>
-                <th>Duración</th>
-                <th>Estado</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody data-ref="history-tbody">
-              <!-- Renderizado dinámico -->
-            </tbody>
-          </table>
+    <div class="modal-container" data-ref="modal-workflow-history-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-history-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--lg" data-ref="modal-workflow-history">
+        <div class="modal-card__drag-zone" data-ref="modal-workflow-history-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="view-empty-state" data-ref="history-empty-state" style="display: none; padding: 24px; text-align: center;">
-          <p style="color: var(--text-secondary); font-size: 13px;">No hay registros previos de ejecución para este trabajo.</p>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="workflow-history-title">Historial de Ejecución</h2>
         </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
-        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-close-history-footer">Cerrar</button>
+        <div class="modal-card__body" style="max-height: 60vh; overflow-y: auto;">
+          <div class="component-table-wrapper" data-ref="history-table-wrapper">
+            <table class="component-table" data-ref="history-table">
+              <thead>
+                <tr>
+                  <th>Fecha / Hora</th>
+                  <th>Disparador</th>
+                  <th>Duración</th>
+                  <th>Estado</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody data-ref="history-tbody">
+                <!-- Renderizado dinámico -->
+              </tbody>
+            </table>
+          </div>
+          <div class="view-empty-state" data-ref="history-empty-state" style="display: none; padding: 24px; text-align: center;">
+            <p style="color: var(--text-secondary); font-size: 13px;">No hay registros previos de ejecución para este trabajo.</p>
+          </div>
+        </div>
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-close-history-footer">Cerrar</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

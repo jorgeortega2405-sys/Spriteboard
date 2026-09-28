@@ -116,7 +116,8 @@ body[data-theme="dark"] .login-logo-img {
    18. COMPONENTE DROPDOWN TRIGGER Y WRAPPER (.settings-dropdown-wrapper)
    ========================================================================== */
 
-.settings-dropdown-wrapper {
+.settings-dropdown-wrapper,
+.dropdown-wrapper {
   position: relative;
   display: inline-block;
   width: 100%;
@@ -124,8 +125,16 @@ body[data-theme="dark"] .login-logo-img {
 }
 
 .settings-dropdown-wrapper--w-320,
-.settings-dropdown-wrapper--w-320 .dropdown-trigger {
+.dropdown-wrapper--w-320,
+.settings-dropdown-wrapper--w-320 .dropdown-trigger,
+.dropdown-wrapper--w-320 .dropdown-trigger {
   max-width: 320px;
+}
+
+.settings-dropdown-wrapper--full,
+.dropdown-wrapper--full {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .dropdown-trigger {
@@ -152,6 +161,18 @@ body[data-theme="dark"] .login-logo-img {
 
 .dropdown-trigger:hover {
   border-color: var(--border-color-focus);
+}
+
+.dropdown-trigger--sm {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.dropdown-trigger--full {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .dropdown-trigger__left {
@@ -196,7 +217,8 @@ body[data-theme="dark"] .login-logo-img {
 }
 
 @media (max-width: 768px) {
-  .settings-dropdown-wrapper {
+  .settings-dropdown-wrapper,
+  .dropdown-wrapper {
     max-width: 100%;
   }
 
@@ -205,7 +227,9 @@ body[data-theme="dark"] .login-logo-img {
   }
 
   .settings-dropdown-wrapper .dropdown-backdrop,
-  .settings-dropdown-wrapper .avatar-dropdown-backdrop {
+  .dropdown-wrapper .dropdown-backdrop,
+  .settings-dropdown-wrapper .avatar-dropdown-backdrop,
+  .dropdown-wrapper .avatar-dropdown-backdrop {
     display: none;
     position: fixed;
     top: 0;
@@ -226,11 +250,14 @@ body[data-theme="dark"] .login-logo-img {
   }
 
   .settings-dropdown-wrapper .dropdown-backdrop.is-open,
-  .settings-dropdown-wrapper .avatar-dropdown-backdrop.is-open {
+  .dropdown-wrapper .dropdown-backdrop.is-open,
+  .settings-dropdown-wrapper .avatar-dropdown-backdrop.is-open,
+  .dropdown-wrapper .avatar-dropdown-backdrop.is-open {
     display: flex;
   }
 
-  .settings-dropdown-wrapper .menu-panel--dropdown {
+  .settings-dropdown-wrapper .menu-panel--dropdown,
+  .dropdown-wrapper .menu-panel--dropdown {
     position: relative;
     bottom: 0;
     top: auto;
@@ -258,7 +285,8 @@ body[data-theme="dark"] .login-logo-img {
 }
 
 @media (min-width: 769px) {
-  .settings-dropdown-wrapper .menu-panel--dropdown {
+  .settings-dropdown-wrapper .menu-panel--dropdown,
+  .dropdown-wrapper .menu-panel--dropdown {
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
@@ -277,17 +305,21 @@ body[data-theme="dark"] .login-logo-img {
   }
 
   .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-full,
-  .settings-dropdown-wrapper .menu-panel--dropdown:not([class*="menu-panel--w-"]) {
+  .dropdown-wrapper .menu-panel--dropdown.menu-panel--w-full,
+  .settings-dropdown-wrapper .menu-panel--dropdown:not([class*="menu-panel--w-"]),
+  .dropdown-wrapper .menu-panel--dropdown:not([class*="menu-panel--w-"]) {
     width: 100%;
     min-width: 100%;
     max-width: 100%;
   }
 
-  .settings-dropdown-wrapper .menu-panel--dropdown.is-open {
+  .settings-dropdown-wrapper .menu-panel--dropdown.is-open,
+  .dropdown-wrapper .menu-panel--dropdown.is-open {
     display: flex;
   }
 
-  .settings-dropdown-wrapper .menu-panel__drag-zone {
+  .settings-dropdown-wrapper .menu-panel__drag-zone,
+  .dropdown-wrapper .menu-panel__drag-zone {
     display: none;
   }
 }

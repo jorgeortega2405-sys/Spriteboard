@@ -3,7 +3,7 @@ import { getApi, loadTemplate, patchApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { CarouselController, debounce, initCarouselScroll } from '../utils/dom.util.js';
+import { CarouselController, debounce, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
 
 interface ComplianceOverviewData {
   completedRequests: number;
@@ -33,7 +33,9 @@ export class ComplianceViewController implements ViewController {
   private currentPage = 1;
   private currentSearch = '';
   private currentStatus = 'all';
+  private selectedModalStatus = 'in_progress';
   private selectedRequestId: number | null = null;
+  private statusDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private totalPages = 1;
 
   constructor(container: HTMLElement) {
@@ -144,6 +146,15 @@ export class ComplianceViewController implements ViewController {
     const btnCancelModal = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-compliance"]');
     const btnSaveModal = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-save-compliance"]');
 
+    const statusDropdownEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-compliance-status"]');
+    if (statusDropdownEl) {
+      this.statusDropdownCtrl = setupDropdown(statusDropdownEl, {
+        onSelect: (val) => {
+          this.selectedModalStatus = val;
+        },
+      });
+    }
+
     if (btnCloseModal) {
       btnCloseModal.addEventListener('click', () => this.closeModal(), { signal });
     }
@@ -157,6 +168,7 @@ export class ComplianceViewController implements ViewController {
 
   public destroy(): void {
     this.abortController.abort();
+    this.statusDropdownCtrl?.destroy();
     if (this.carouselController) {
       this.carouselController.destroy();
       this.carouselController = null;
@@ -335,15 +347,30 @@ export class ComplianceViewController implements ViewController {
   private openModal(reqId: number, status: string, notes: string): void {
     if (!this.container) return;
     this.selectedRequestId = reqId;
+    this.selectedModalStatus = status === 'pending' ? 'in_progress' : status;
 
     const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-compliance-backdrop"]');
     const modalId = this.container.querySelector<HTMLElement>('[data-ref="compliance-modal-id"]');
-    const selectStatus = this.container.querySelector<HTMLSelectElement>('[data-ref="select-compliance-status"]');
     const inputNotes = this.container.querySelector<HTMLInputElement>('[data-ref="input-compliance-notes"]');
+    const triggerText = this.container.querySelector<HTMLElement>('[data-ref="compliance-status-selected-text"]');
 
     if (modalId) modalId.textContent = `#${reqId}`;
-    if (selectStatus) selectStatus.value = status === 'pending' ? 'in_progress' : status;
     if (inputNotes) inputNotes.value = notes;
+
+    const statusTextMap: Record<string, string> = {
+      completed: 'Completada',
+      in_progress: 'En Proceso',
+      rejected: 'Rechazada',
+    };
+    if (triggerText) {
+      triggerText.textContent = statusTextMap[this.selectedModalStatus] || 'En Proceso';
+    }
+
+    const menuItems = this.container.querySelectorAll<HTMLElement>('[data-ref^="opt-status-"]');
+    menuItems.forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-value') === this.selectedModalStatus);
+    });
+
     if (modal) modal.style.display = 'flex';
   }
 
@@ -357,10 +384,8 @@ export class ComplianceViewController implements ViewController {
   private async submitStatusUpdate(): Promise<void> {
     if (!this.selectedRequestId || !this.container) return;
 
-    const selectStatus = this.container.querySelector<HTMLSelectElement>('[data-ref="select-compliance-status"]');
     const inputNotes = this.container.querySelector<HTMLInputElement>('[data-ref="input-compliance-notes"]');
-
-    const status = selectStatus?.value || 'in_progress';
+    const status = this.selectedModalStatus || 'in_progress';
     const notes = inputNotes?.value.trim() || '';
 
     try {

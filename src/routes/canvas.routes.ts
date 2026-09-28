@@ -1,6 +1,6 @@
 import { createCommentHandler, deleteCommentHandler, listCommentsHandler, updateCommentHandler } from '../controllers/canvas-comment.controller.js';
 import { createSnapshotHandler, deleteSnapshotHandler, forkSnapshotHandler, getSnapshotDataHandler, listSnapshotsHandler, restoreSnapshotHandler, updateSnapshotHandler } from '../controllers/canvas-snapshot.controller.js';
-import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listSharedCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
+import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listSharedCanvases, listTrashCanvases, patchCanvasHandler, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { canvasHeartbeatLimiter, canvasSnapshotLimiter, canvasViewLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
@@ -13,6 +13,8 @@ router.post('/canvases', requireAuth, createCanvasHandler);
 router.post('/canvases/sync', syncCanvasHandler);
 router.patch('/canvases/:uuid/access', requireAuth, updateCanvasAccessHandler);
 router.patch('/canvases/:uuid/slug', requireAuth, updateCanvasSlugHandler);
+router.patch('/canvases/:uuid', requireAuth, patchCanvasHandler);
+router.put('/canvases/:uuid', requireAuth, patchCanvasHandler);
 router.get('/canvases/resolve-slug/:slug', resolveCanvasSlugHandler);
 router.get('/canvases/:uuid/members', getCanvasMembersHandler);
 router.post('/canvases/:uuid/members', requireAuth, addCanvasMemberHandler);

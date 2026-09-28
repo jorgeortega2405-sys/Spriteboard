@@ -750,7 +750,7 @@ export class BrandController {
       const isItalic = activeStyle === 'italic';
 
       return `
-        <div class="brand-font-row" data-ref="row-font-${cfg.role}" data-role="${cfg.role}">
+        <div class="brand-font-row" data-ref="row-font-${cfg.role}" data-role="${cfg.role}" data-family="${escapeHtml(activeFamily)}">
           <div class="brand-font-row__left">
             <span class="brand-font-row__role-label">${escapeHtml(cfg.label)}</span>
             <div class="brand-font-row__preview" data-ref="preview-font-${cfg.role}" contenteditable="true" style="font-family: '${escapeHtml(activeFamily)}', sans-serif; font-size: ${activeSize}px; font-weight: ${escapeHtml(activeWeight)}; font-style: ${escapeHtml(activeStyle)};">
@@ -758,16 +758,35 @@ export class BrandController {
             </div>
           </div>
           <div class="brand-font-row__controls">
-            <select class="brand-font-select" data-ref="select-font-family-${cfg.role}">
-              ${customFonts.length > 0 ? `
-                <optgroup label="Fuentes de tu marca">
-                  ${customFonts.map((cf) => `<option value="${escapeHtml(cf.name)}"${cf.name === activeFamily ? ' selected' : ''}>${escapeHtml(cf.name)}</option>`).join('')}
-                </optgroup>
-              ` : ''}
-              <optgroup label="Fuentes populares">
-                ${AVAILABLE_GOOGLE_FONTS.map((gf) => `<option value="${gf}"${gf === activeFamily ? ' selected' : ''}>${gf}</option>`).join('')}
-              </optgroup>
-            </select>
+            <div class="dropdown-wrapper brand-font-dropdown-wrapper" data-ref="dropdown-wrapper-font-${cfg.role}">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-font-${cfg.role}" aria-label="Fuente para ${escapeHtml(cfg.label)}">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="font-selected-text-${cfg.role}">${escapeHtml(activeFamily)}</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-font-${cfg.role}">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-font-${cfg.role}" style="max-height: 240px; overflow-y: auto;">
+                  <div class="menu-panel__list" data-ref="list-font-${cfg.role}">
+                    ${customFonts.length > 0 ? `
+                      <div class="menu-panel__header" style="padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Fuentes de tu marca</div>
+                      ${customFonts.map((cf) => `
+                        <button type="button" class="menu-item${cf.name === activeFamily ? ' is-active' : ''}" data-ref="btn-font-${cfg.role}-${escapeHtml(cf.name)}" data-value="${escapeHtml(cf.name)}">
+                          <span class="menu-item__text" style="font-family: '${escapeHtml(cf.name)}', sans-serif;">${escapeHtml(cf.name)}</span>
+                        </button>
+                      `).join('')}
+                    ` : ''}
+                    <div class="menu-panel__header" style="padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Fuentes populares</div>
+                    ${AVAILABLE_GOOGLE_FONTS.map((gf) => `
+                      <button type="button" class="menu-item${gf === activeFamily ? ' is-active' : ''}" data-ref="btn-font-${cfg.role}-${gf}" data-value="${gf}">
+                        <span class="menu-item__text" style="font-family: '${gf}', sans-serif;">${gf}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="brand-font-size-wrapper">
               <input class="brand-font-size-input" data-ref="input-font-size-${cfg.role}" type="number" min="8" max="140" value="${activeSize}" />
@@ -788,7 +807,11 @@ export class BrandController {
       const row = container.querySelector<HTMLElement>(`[data-ref="row-font-${cfg.role}"]`);
       if (!row) return;
 
-      const selFamily = row.querySelector<HTMLSelectElement>(`[data-ref="select-font-family-${cfg.role}"]`);
+      const wrapper = row.querySelector<HTMLElement>(`[data-ref="dropdown-wrapper-font-${cfg.role}"]`);
+      const trigger = row.querySelector<HTMLElement>(`[data-ref="btn-trigger-font-${cfg.role}"]`);
+      const menu = row.querySelector<HTMLElement>(`[data-ref="dropdown-menu-font-${cfg.role}"]`);
+      const backdrop = row.querySelector<HTMLElement>(`[data-ref="dropdown-backdrop-font-${cfg.role}"]`);
+      const textEl = row.querySelector<HTMLElement>(`[data-ref="font-selected-text-${cfg.role}"]`);
       const inputSize = row.querySelector<HTMLInputElement>(`[data-ref="input-font-size-${cfg.role}"]`);
       const btnBold = row.querySelector<HTMLButtonElement>(`[data-ref="btn-bold-${cfg.role}"]`);
       const btnItalic = row.querySelector<HTMLButtonElement>(`[data-ref="btn-italic-${cfg.role}"]`);
@@ -796,8 +819,8 @@ export class BrandController {
       const preview = row.querySelector<HTMLElement>(`[data-ref="preview-font-${cfg.role}"]`);
 
       const updateRowPreview = () => {
-        if (!preview || !selFamily || !inputSize) return;
-        const fontName = selFamily.value;
+        if (!preview || !inputSize) return;
+        const fontName = row.getAttribute('data-family') || cfg.defaultFamily;
         const sizeVal = parseInt(inputSize.value, 10) || cfg.defaultFontSize;
         const boldVal = btnBold?.classList.contains('is-active') ? '700' : '400';
         const italicVal = btnItalic?.classList.contains('is-active') ? 'italic' : 'normal';
@@ -808,7 +831,21 @@ export class BrandController {
         preview.style.fontStyle = italicVal;
       };
 
-      selFamily?.addEventListener('change', updateRowPreview);
+      if (wrapper && trigger && menu) {
+        setupDropdown(wrapper, trigger, menu, { backdrop: backdrop || undefined, signal: this.abortController.signal });
+        menu.addEventListener('click', (e) => {
+          const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+          if (!item) return;
+          const val = item.getAttribute('data-value');
+          if (val) {
+            row.setAttribute('data-family', val);
+            menu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+            if (textEl) textEl.textContent = val;
+            updateRowPreview();
+          }
+        }, { signal: this.abortController.signal });
+      }
+
       inputSize?.addEventListener('input', updateRowPreview);
 
       btnBold?.addEventListener('click', () => {
@@ -827,7 +864,11 @@ export class BrandController {
           await deleteBrandFontApi(this.activeKit.uuid, fontUuid);
           this.activeKit.fonts = this.activeKit.fonts.filter((f) => f.uuid !== fontUuid);
         }
-        if (selFamily) selFamily.value = cfg.defaultFamily;
+        row.setAttribute('data-family', cfg.defaultFamily);
+        if (textEl) textEl.textContent = cfg.defaultFamily;
+        if (menu) {
+          menu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m.getAttribute('data-value') === cfg.defaultFamily));
+        }
         if (inputSize) inputSize.value = String(cfg.defaultFontSize);
         if (btnBold) {
           if (cfg.defaultWeight === '700' || cfg.defaultWeight === '600') btnBold.classList.add('is-active');
@@ -1131,24 +1172,24 @@ export class BrandController {
     const dtos: SetBrandFontDto[] = [];
 
     for (const role of roles) {
-      const selFamily = container.querySelector<HTMLSelectElement>(`[data-ref="select-font-family-${role}"]`);
-      const inputSize = container.querySelector<HTMLInputElement>(`[data-ref="input-font-size-${role}"]`);
-      const btnBold = container.querySelector<HTMLButtonElement>(`[data-ref="btn-bold-${role}"]`);
-      const btnItalic = container.querySelector<HTMLButtonElement>(`[data-ref="btn-italic-${role}"]`);
+      const row = container.querySelector<HTMLElement>(`[data-ref="row-font-${role}"]`);
+      if (!row) continue;
+      const font_family = row.getAttribute('data-family') || 'Inter';
+      const inputSize = row.querySelector<HTMLInputElement>(`[data-ref="input-font-size-${role}"]`);
+      const btnBold = row.querySelector<HTMLButtonElement>(`[data-ref="btn-bold-${role}"]`);
+      const btnItalic = row.querySelector<HTMLButtonElement>(`[data-ref="btn-italic-${role}"]`);
 
-      if (selFamily) {
-        const isBold = btnBold?.classList.contains('is-active');
-        const isItalic = btnItalic?.classList.contains('is-active');
-        const fontSize = inputSize ? parseInt(inputSize.value, 10) : undefined;
+      const isBold = btnBold?.classList.contains('is-active');
+      const isItalic = btnItalic?.classList.contains('is-active');
+      const fontSize = inputSize ? parseInt(inputSize.value, 10) : undefined;
 
-        dtos.push({
-          font_family: selFamily.value,
-          font_size: fontSize || undefined,
-          font_style: isItalic ? 'italic' : 'normal',
-          font_weight: isBold ? '700' : '400',
-          role,
-        });
-      }
+      dtos.push({
+        font_family,
+        font_size: fontSize || undefined,
+        font_style: isItalic ? 'italic' : 'normal',
+        font_weight: isBold ? '700' : '400',
+        role,
+      });
     }
 
     if (this.btnSaveFonts) {

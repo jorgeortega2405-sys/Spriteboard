@@ -91,22 +91,29 @@
   </div>
 
   <div class="modal-backdrop" data-ref="modal-role-backdrop" style="display: none;">
-    <div class="modal-dialog modal-dialog--md" data-ref="modal-role">
-      <div class="modal-header">
-        <h3 class="modal-title" data-ref="modal-role-title">Detalle del Rol</h3>
-        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-role-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);" data-ref="modal-role-desc"></p>
-        <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Alcances y Privilegios:</h4>
-        <div data-ref="modal-role-permissions" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
-          <!-- Badges de permisos -->
+    <div class="modal-container" data-ref="modal-role-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-role-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--md" data-ref="modal-role">
+        <div class="modal-card__drag-zone" data-ref="modal-role-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
         </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
-        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-dismiss-role-modal">Cerrar</button>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-role-title">Detalle del Rol</h2>
+          <p class="modal-card__desc" data-ref="modal-role-desc"></p>
+        </div>
+        <div class="modal-card__body">
+          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Alcances y Privilegios:</h4>
+          <div data-ref="modal-role-permissions" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
+            <!-- Badges de permisos -->
+          </div>
+        </div>
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-dismiss-role-modal">Cerrar</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

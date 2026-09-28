@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
-import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, GetUserCanvasesOptions, PaginatedCanvasesResult, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
+import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CanvasType, CreateCanvasDto, GetUserCanvasesOptions, PaginatedCanvasesResult, PatchCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
 import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
 import { ensureDefaultFolder } from './folder.service.js';
@@ -71,16 +71,58 @@ export function generateShortCode(): string {
   return result;
 }
 
+const VALID_BACKEND_CANVAS_TYPES = new Set<CanvasType>(['board', 'doc', 'presentation', 'sheet', 'social', 'video']);
+
+export function resolveCanvasType(dto?: { canvas_type?: string; unit?: string; data?: any } | null): CanvasType {
+  if (!dto) return 'board';
+  const t = typeof dto.canvas_type === 'string' ? dto.canvas_type.toLowerCase().trim() : '';
+  if (VALID_BACKEND_CANVAS_TYPES.has(t as CanvasType)) {
+    return t as CanvasType;
+  }
+  const u = typeof dto.unit === 'string' ? dto.unit.toLowerCase().trim() : '';
+  if (VALID_BACKEND_CANVAS_TYPES.has(u as CanvasType) && u !== 'board') {
+    return u as CanvasType;
+  }
+  if (dto.data) {
+    try {
+      const parsed = typeof dto.data === 'string' ? JSON.parse(dto.data) : dto.data;
+      if (parsed && typeof parsed === 'object') {
+        const dataType = typeof parsed.type === 'string' ? parsed.type.toLowerCase().trim() : '';
+        if (VALID_BACKEND_CANVAS_TYPES.has(dataType as CanvasType)) {
+          return dataType as CanvasType;
+        }
+        if (Array.isArray(parsed.tracks) || typeof parsed.duration === 'number' || parsed.timeline !== undefined) {
+          return 'video';
+        }
+        if (Array.isArray(parsed.sheets) || typeof parsed.activeSheetId === 'string' || parsed.gridLines !== undefined) {
+          return 'sheet';
+        }
+        if (Array.isArray(parsed.pages) && (parsed.pages[0]?.blocks || parsed.docPaperSize || parsed.paperSize || parsed.margins || parsed.docMargins)) {
+          return 'doc';
+        }
+        if (Array.isArray(parsed.slides) || parsed.aspectRatio !== undefined || parsed.slideIndex !== undefined) {
+          return 'presentation';
+        }
+        if (Array.isArray(parsed.elements)) {
+          return u === 'social' ? 'social' : 'board';
+        }
+      }
+    } catch {}
+  }
+  if (u === 'social') return 'social';
+  if (u === 'board') return 'board';
+  return 'board';
+}
+
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isPresentation = dto.canvas_type === 'presentation' || dto.unit === 'presentation';
-  const isDoc = !isPresentation && (dto.canvas_type === 'doc' || dto.unit === 'doc');
-  const isSocial = !isPresentation && !isDoc && (dto.canvas_type === 'social' || dto.unit === 'social');
-  const canvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
+  const canvasType = resolveCanvasType(dto);
   const isInfinite = canvasType === 'board';
-  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
-  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
+  const defaultW = canvasType === 'presentation' || canvasType === 'video' || canvasType === 'sheet' ? 1920 : (canvasType === 'social' ? 940 : 816);
+  const defaultH = canvasType === 'presentation' || canvasType === 'video' || canvasType === 'sheet' ? 1080 : (canvasType === 'social' ? 788 : 1056);
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || defaultW)));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || defaultH)));
   const unit = canvasType;
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
   const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
@@ -330,6 +372,10 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
       conditions.push("(c.canvas_type = 'presentation' OR c.unit = 'presentation')");
     } else if (type === 'social') {
       conditions.push("(c.canvas_type = 'social' OR c.unit = 'social')");
+    } else if (type === 'sheet') {
+      conditions.push("(c.canvas_type = 'sheet' OR c.unit = 'sheet')");
+    } else if (type === 'video') {
+      conditions.push("(c.canvas_type = 'video' OR c.unit = 'video')");
     }
 
     if (folderId !== undefined) {
@@ -663,13 +709,12 @@ export async function updateCanvasAccessLevel(
 export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid.trim();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isPresentation = dto.canvas_type === 'presentation' || dto.unit === 'presentation';
-  const isDoc = !isPresentation && (dto.canvas_type === 'doc' || dto.unit === 'doc');
-  const isSocial = !isPresentation && !isDoc && (dto.canvas_type === 'social' || dto.unit === 'social');
-  const canvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
+  const canvasType = resolveCanvasType(dto);
   const isInfinite = canvasType === 'board';
-  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
-  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
+  const defaultW = canvasType === 'presentation' || canvasType === 'video' || canvasType === 'sheet' ? 1920 : (canvasType === 'social' ? 940 : 816);
+  const defaultH = canvasType === 'presentation' || canvasType === 'video' || canvasType === 'sheet' ? 1080 : (canvasType === 'social' ? 788 : 1056);
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || defaultW)));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || defaultH)));
   const unit = canvasType;
   const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
@@ -1732,4 +1777,110 @@ export async function getCanvasMetrics(
     logger.db.error(`Error al obtener métricas del lienzo ${uuid}`, err);
     throw err;
   }
+}
+
+export async function patchCanvas(uuid: string, userId: number, dto: PatchCanvasDto): Promise<Canvas> {
+  const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
+    'SELECT id, user_id, access_level, public_role, deleted_at, canvas_type, unit, width, height, name FROM canvases WHERE uuid = ? LIMIT 1',
+    [uuid]
+  );
+
+  if (existing.length === 0) {
+    throw new Error('El lienzo solicitado no existe.');
+  }
+
+  const row = existing[0];
+  if (row.deleted_at !== null) {
+    throw new Error('El lienzo ha sido enviado a la papelera.');
+  }
+
+  const isOwner = row.user_id === userId;
+  let isEditor = isOwner;
+
+  if (!isOwner) {
+    if (row.access_level === 'public' && row.public_role !== 'viewer') {
+      isEditor = true;
+    } else {
+      const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        "SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? AND role = 'editor' LIMIT 1",
+        [row.id, userId]
+      );
+      isEditor = memberRows.length > 0;
+      if (!isEditor) {
+        const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.id FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? AND ct.role = 'editor' LIMIT 1`,
+          [row.id, userId]
+        );
+        isEditor = teamRows.length > 0;
+      }
+    }
+  }
+
+  if (!isEditor) {
+    throw new Error('No tienes permisos para modificar este lienzo.');
+  }
+
+  const canvasType = dto.canvas_type ? resolveCanvasType(dto) : (row.canvas_type as CanvasType || resolveCanvasType({ unit: row.unit, data: dto.data }));
+  const name = dto.name !== undefined ? (dto.name.trim().slice(0, 255) || 'Lienzo sin título') : row.name;
+  const unit = dto.unit || canvasType || row.unit;
+  const isInfinite = canvasType === 'board';
+  const width = dto.width !== undefined ? (isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)))) : row.width;
+  const height = dto.height !== undefined ? (isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)))) : row.height;
+
+  let sizeBytes: number | null = null;
+  let compressedBytes: number | null = null;
+  let dbData: string | null = null;
+
+  if (dto.data !== undefined) {
+    const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
+    if (dataStr) {
+      try {
+        const blobResult = await saveCanvasBlob(uuid, dataStr);
+        compressedBytes = blobResult.compressedBytes;
+        sizeBytes = blobResult.sizeBytes;
+      } catch (blobErr) {
+        logger.db.error(`Error al persistir blob para ${uuid} en patch`, blobErr);
+      }
+    }
+    dbData = dataStr && dataStr.length > 65536 ? JSON.stringify({ storage: 'blob', version: 2 }) : dataStr;
+  }
+
+  const updates: string[] = ['name = ?', 'width = ?', 'height = ?', 'unit = ?', 'canvas_type = ?'];
+  const params: any[] = [name, width, height, unit, canvasType];
+
+  if (dto.data !== undefined) {
+    updates.push('data = ?', 'size_bytes = ?', 'compressed_bytes = ?');
+    params.push(dbData, sizeBytes, compressedBytes);
+  }
+
+  if (dto.preview_thumbnail !== undefined) {
+    updates.push('preview_thumbnail = ?');
+    params.push(dto.preview_thumbnail);
+  }
+
+  if (isOwner && dto.access_level !== undefined) {
+    updates.push('access_level = ?');
+    params.push(dto.access_level === 'public' ? 'public' : 'private');
+  }
+
+  if (isOwner && dto.public_role !== undefined) {
+    updates.push('public_role = ?');
+    params.push(dto.public_role === 'viewer' ? 'viewer' : 'editor');
+  }
+
+  params.push(uuid);
+
+  await canvasPool.execute(
+    `UPDATE canvases SET ${updates.join(', ')} WHERE uuid = ?`,
+    params
+  );
+
+  const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+    'SELECT id, uuid, user_id, folder_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+    [uuid]
+  );
+
+  return updatedRows[0] as Canvas;
 }

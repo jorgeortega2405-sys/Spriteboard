@@ -90,7 +90,7 @@ export function openYouTubePlayerModal(videoId: string, title = 'Video de YouTub
       <div class="modal-card" data-ref="youtube-player-card" style="padding: 0; overflow: hidden; background: #0f172a; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); width: 100%;">
         <div style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; background: #020617; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
           <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-            <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 22px; height: 22px; fill: #ef4444; flex-shrink: 0;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            <svg class="component-icon" aria-hidden="true" style="width: 22px; height: 22px; flex-shrink: 0;"><use href="/icons.svg#youtube_colored"></use></svg>
             <span style="font-size: 13.5px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(title)}</span>
           </div>
         </div>

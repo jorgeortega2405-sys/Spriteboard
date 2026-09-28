@@ -1,3 +1,4 @@
+import { renderSheetBorderButtonsHtml, SHEET_BORDER_CLEAR_ICON, SHEET_BORDER_STYLE_ICON } from '../../config/sheet-borders.config.js';
 import { SheetBorderStyle } from './sheet.types.js';
 
 export type SheetBorderType =
@@ -96,35 +97,7 @@ export class SheetBordersPopupComponent {
     el.innerHTML = `
       <div class="sheet-borders-popup__main" data-ref="sheet-borders-main">
         <div class="sheet-borders-popup__grid" data-ref="sheet-borders-grid">
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-all" data-border-type="all" data-tooltip="Todos los bordes" aria-label="Todos los bordes">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="12" y1="3" x2="12" y2="21" stroke-width="2"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="2"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-outer" data-border-type="outer" data-tooltip="Bordes exteriores" aria-label="Bordes exteriores">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="12" y1="3" x2="12" y2="21" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-inner" data-border-type="inner" data-tooltip="Bordes interiores" aria-label="Bordes interiores">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/><line x1="12" y1="3" x2="12" y2="21" stroke-width="2"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="2"/></svg>
-          </button>
-
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-top" data-border-type="top" data-tooltip="Borde superior" aria-label="Borde superior">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="3" y1="3" x2="21" y2="3" stroke-width="2.5"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-middle-h" data-border-type="middle-h" data-tooltip="Borde horizontal interior" aria-label="Borde horizontal interior">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="2.5"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-bottom" data-border-type="bottom" data-tooltip="Borde inferior" aria-label="Borde inferior">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="3" y1="21" x2="21" y2="21" stroke-width="2.5"/></svg>
-          </button>
-
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-left" data-border-type="left" data-tooltip="Borde izquierdo" aria-label="Borde izquierdo">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="3" y1="3" x2="3" y2="21" stroke-width="2.5"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-middle-v" data-border-type="middle-v" data-tooltip="Borde vertical interior" aria-label="Borde vertical interior">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="12" y1="3" x2="12" y2="21" stroke-width="2.5"/></svg>
-          </button>
-          <button type="button" class="sheet-border-btn" data-ref="btn-border-right" data-border-type="right" data-tooltip="Borde derecho" aria-label="Borde derecho">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1" stroke-dasharray="2 2" opacity="0.3"/><line x1="21" y1="3" x2="21" y2="21" stroke-width="2.5"/></svg>
-          </button>
+          ${renderSheetBorderButtonsHtml()}
         </div>
 
         <div class="sheet-borders-popup__side" data-ref="sheet-borders-side">
@@ -132,10 +105,10 @@ export class SheetBordersPopupComponent {
             <span class="sheet-border-color-swatch" data-ref="sheet-border-swatch" style="background-color: ${this.currentColor};"></span>
           </button>
           <button type="button" class="sheet-border-style-btn" data-ref="btn-border-style" data-tooltip="Estilo de línea" aria-label="Estilo de línea">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="4" y1="7" x2="20" y2="7" stroke-width="1"/><line x1="4" y1="12" x2="20" y2="12" stroke-width="2"/><line x1="4" y1="17" x2="20" y2="17" stroke-width="3"/></svg>
+            ${SHEET_BORDER_STYLE_ICON}
           </button>
           <button type="button" class="sheet-border-reset-btn" data-ref="btn-border-clear" data-tooltip="Borrar bordes" aria-label="Borrar bordes">
-            <svg class="sheet-border-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            ${SHEET_BORDER_CLEAR_ICON}
           </button>
         </div>
       </div>

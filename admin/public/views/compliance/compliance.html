@@ -160,33 +160,60 @@
   </div>
 
   <div class="modal-backdrop" data-ref="modal-compliance-backdrop" style="display: none;">
-    <div class="modal-dialog modal-dialog--sm" data-ref="modal-compliance">
-      <div class="modal-header">
-        <h3 class="modal-title">Gestionar Solicitud GDPR</h3>
-        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-compliance-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Actualiza el estado de la solicitud <strong data-ref="compliance-modal-id">#0</strong>.</p>
-        <div class="field-group" style="margin-bottom: 16px;">
-          <label class="field" data-ref="field-compliance-status">
-            <span class="field__label">Nuevo Estado</span>
-            <select class="field__input" data-ref="select-compliance-status">
-              <option value="in_progress">En Proceso</option>
-              <option value="completed">Completada</option>
-              <option value="rejected">Rechazada</option>
-            </select>
+    <div class="modal-container" data-ref="modal-compliance-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-compliance-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="modal-compliance">
+        <div class="modal-card__drag-zone" data-ref="modal-compliance-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Gestionar Solicitud GDPR</h2>
+          <p class="modal-card__desc">Actualiza el estado de la solicitud <strong data-ref="compliance-modal-id">#0</strong>.</p>
+        </div>
+        <div class="modal-card__body">
+          <div class="field-group" style="margin-bottom: 16px;">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Nuevo Estado</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-compliance-status">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-compliance-status" aria-label="Nuevo Estado">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="compliance-status-selected-text">En Proceso</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-compliance-status">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-compliance-status">
+                  <div class="menu-panel__drag-zone" data-ref="compliance-status-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-compliance-status">
+                    <button type="button" class="menu-item is-active" data-ref="opt-status-in-progress" data-value="in_progress">
+                      <span class="menu-item__text">En Proceso</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-status-completed" data-value="completed">
+                      <span class="menu-item__text">Completada</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-status-rejected" data-value="rejected">
+                      <span class="menu-item__text">Rechazada</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="field" data-ref="field-compliance-notes" style="display: block;">
+            <input class="field__input" data-ref="input-compliance-notes" type="text" placeholder=" " />
+            <span class="field__label" data-ref="lbl-compliance-notes">Notas Internas / Motivo</span>
           </label>
         </div>
-        <label class="field" data-ref="field-compliance-notes">
-          <span class="field__label">Notas Internas / Motivo</span>
-          <input class="field__input" data-ref="input-compliance-notes" type="text" placeholder="Ej. Archivo ZIP enviado al correo del usuario" />
-        </label>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-cancel-compliance">Cancelar</button>
-        <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-save-compliance">Guardar Cambios</button>
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-compliance">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-save-compliance">Guardar Cambios</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

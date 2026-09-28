@@ -54,6 +54,9 @@ export function openDocAiModal(options: DocAiModalOptions): void {
       </button>
 
       <div class="modal-card modal-card--md" data-ref="modal-card">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
         <div class="modal-card__header" data-ref="modal-header">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span class="component-icon" style="color: #6366f1; font-size: 24px;">auto_awesome</span>
@@ -119,9 +122,9 @@ export function openDocAiModal(options: DocAiModalOptions): void {
         </div>
 
         <div class="modal-card__footer" data-ref="modal-footer">
-          <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h40" data-ref="btn-doc-ai-cancel">Cancelar</button>
-            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-doc-ai-submit" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">
+          <div class="modal-card__actions modal-card__actions--end" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-doc-ai-cancel">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-doc-ai-submit" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">
               <span class="component-icon" style="font-size: 18px; margin-right: 6px;">auto_awesome</span>
               <span>Generar e Insertar</span>
             </button>

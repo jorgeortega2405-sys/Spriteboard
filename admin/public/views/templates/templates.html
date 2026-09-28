@@ -111,13 +111,34 @@
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <select class="field__input field__select" data-ref="select-filter-type" style="height: 38px; min-width: 160px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 13px;">
-                <option value="all">Todos los lienzos</option>
-                <option value="board">Pizarrón (Board)</option>
-                <option value="presentation">Presentación</option>
-                <option value="doc">Documento (Doc)</option>
-              </select>
+            <div class="dropdown-wrapper" data-ref="dropdown-wrapper-filter-type">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-filter-type" aria-label="Filtrar por tipo de lienzo">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="filter-type-selected-text">Todos los lienzos</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
+                  <div class="menu-panel__drag-zone" data-ref="filter-type-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-filter-type">
+                    <button type="button" class="menu-item is-active" data-ref="opt-filter-type-all" data-value="all">
+                      <span class="menu-item__text">Todos los lienzos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-filter-type-board" data-value="board">
+                      <span class="menu-item__text">Pizarrón (Board)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-filter-type-presentation" data-value="presentation">
+                      <span class="menu-item__text">Presentación</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-filter-type-doc" data-value="doc">
+                      <span class="menu-item__text">Documento (Doc)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

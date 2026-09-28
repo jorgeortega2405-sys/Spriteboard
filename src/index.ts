@@ -3,6 +3,7 @@ import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
+import { compressionMiddleware } from './middlewares/compression.middleware.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import apiRouter from './routes/api.routes.js';
 import uploadRouter from './routes/upload.routes.js';
@@ -60,6 +61,7 @@ app.use((_req: Request, res: Response, next: express.NextFunction) => {
   next();
 });
 
+app.use(compressionMiddleware);
 app.use(['/api/canvases/sync', '/api/canvas/canvases/sync'], express.json({ limit: '50mb' }));
 app.use(
   express.json({
@@ -79,8 +81,15 @@ app.use('/api', apiRouter);
 app.use(uploadRouter);
 app.use(
   express.static(path.join(process.cwd(), 'public'), {
-    maxAge: config.nodeEnv === 'production' ? '1d' : 0,
     index: false,
+    maxAge: config.nodeEnv === 'production' ? '7d' : '1h',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (filePath.match(/\.(svg|png|jpg|jpeg|webp|gif|woff2|woff|ttf|glb)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      }
+    },
   })
 );
 

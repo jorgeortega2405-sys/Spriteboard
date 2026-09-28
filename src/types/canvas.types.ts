@@ -1,5 +1,7 @@
 import { SubscriptionTierId } from './subscription.types.js';
 
+export type CanvasType = 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+
 export interface Canvas {
   id: number;
   uuid: string;
@@ -11,7 +13,7 @@ export interface Canvas {
   width: number;
   height: number;
   unit: string;
-  canvas_type?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
+  canvas_type?: CanvasType;
   data: string | null;
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
@@ -67,7 +69,7 @@ export interface CreateCanvasDto {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
+  canvas_type?: CanvasType;
   access_level?: 'private' | 'public';
   public_role?: 'viewer' | 'editor';
   data?: any;
@@ -83,7 +85,19 @@ export interface SyncCanvasDto {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
+  canvas_type?: CanvasType;
+  data?: any;
+  preview_thumbnail?: string | null;
+  access_level?: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
+}
+
+export interface PatchCanvasDto {
+  name?: string;
+  width?: number;
+  height?: number;
+  unit?: string;
+  canvas_type?: CanvasType;
   data?: any;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
@@ -141,7 +155,7 @@ export interface CanvasMetricsData {
 export interface GetUserCanvasesOptions {
   page?: number;
   limit?: number;
-  type?: 'all' | 'board' | 'doc' | 'presentation' | 'social';
+  type?: 'all' | CanvasType;
   sort?: 'activity' | 'alpha-asc' | 'alpha-desc';
   search?: string;
   folderId?: number | null;

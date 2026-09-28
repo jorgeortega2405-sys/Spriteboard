@@ -696,6 +696,8 @@ html.dark-theme .component-badge--active .component-icon {
 
 .field__input:focus ~ .field__label,
 .field__input:not(:placeholder-shown) ~ .field__label,
+.field__select ~ .field__label,
+.field:has(.field__select) .field__label,
 .form-input:focus ~ .form-label,
 .form-input:not(:placeholder-shown) ~ .form-label {
   top: 15px;
@@ -721,7 +723,9 @@ html.dark-theme .component-badge--active .component-icon {
 }
 
 .field--sm .field__input:focus ~ .field__label,
-.field--sm .field__input:not(:placeholder-shown) ~ .field__label {
+.field--sm .field__input:not(:placeholder-shown) ~ .field__label,
+.field--sm .field__select ~ .field__label,
+.field--sm:has(.field__select) .field__label {
   top: 11px;
   transform: translateY(-50%) scale(0.75);
 }

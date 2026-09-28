@@ -1,13 +1,13 @@
-import { APP_CATEGORIES, getAppById, searchApps } from '../../config/apps.config.js';
-import { AppCategory } from '../../types/apps.types.js';
-import { GoogleDriveFile, connectGoogleDrive, disconnectGoogleDrive, fetchGoogleDriveFileBlob, formatFileSize, getGoogleDriveUser, isGoogleDriveConnected, listGoogleDriveFiles, openGooglePicker, uploadCanvasExportToDrive } from '../../services/google-drive.service.js';
-import { GooglePhotoItem, connectGooglePhotos, disconnectGooglePhotos, fetchPhotoBlob, getGooglePhotosUser, isGooglePhotosConnected, listGooglePhotos, listGooglePhotosAlbums, openGooglePhotosPicker } from '../../services/google-photos.service.js';
-import { MAP_PRESET_LOCATIONS, MapStyleOption, MapTypeOption, buildStaticMapUrl, fetchMapImageBlob, getGoogleMapsExternalUrl } from '../../services/google-maps.service.js';
-import { escapeHtml } from '../../services/api.service.js';
 import { getActiveCanvasController, getActiveCanvasType, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
-import { openYouTubePlayerModal, searchYouTubeVideos } from '../../services/youtube.service.js';
+import { APP_CATEGORIES, getAppById, searchApps } from '../../config/apps.config.js';
+import { escapeHtml } from '../../services/api.service.js';
+import { connectGoogleDrive, disconnectGoogleDrive, fetchGoogleDriveFileBlob, formatFileSize, getGoogleDriveUser, GoogleDriveFile, isGoogleDriveConnected, listGoogleDriveFiles, openGooglePicker, uploadCanvasExportToDrive } from '../../services/google-drive.service.js';
+import { buildStaticMapUrl, fetchMapImageBlob, getGoogleMapsExternalUrl, MAP_PRESET_LOCATIONS, MapStyleOption, MapTypeOption } from '../../services/google-maps.service.js';
+import { connectGooglePhotos, disconnectGooglePhotos, fetchPhotoBlob, getGooglePhotosUser, GooglePhotoItem, isGooglePhotosConnected, listGooglePhotos, listGooglePhotosAlbums, openGooglePhotosPicker } from '../../services/google-photos.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { openYouTubePlayerModal, searchYouTubeVideos } from '../../services/youtube.service.js';
+import { AppCategory } from '../../types/apps.types.js';
 
 let activeAppId: string | null = null;
 let activeAppCategory: AppCategory = 'all';
@@ -27,7 +27,7 @@ function renderYouTubeAppContent(drawer: HTMLElement, drawerBody: HTMLElement): 
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
       <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
         <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-          <svg class="canvas-panel-card__icon" viewBox="0 0 24 24" aria-hidden="true" style="fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#youtube_colored"></use></svg>
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">YouTube</span>
         </div>
         <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -56,7 +56,7 @@ function renderYouTubeAppContent(drawer: HTMLElement, drawerBody: HTMLElement): 
         <div class="youtube-results-container" data-ref="youtube-results-container">
           <div class="youtube-initial-state" data-ref="youtube-initial-state">
             <div class="youtube-initial-icon" data-ref="youtube-initial-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 44px; height: 44px; fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+              <svg class="component-icon" aria-hidden="true" style="width: 44px; height: 44px;"><use href="/icons.svg#youtube_colored"></use></svg>
             </div>
             <span class="youtube-initial-title" data-ref="youtube-initial-title">Busca videos en YouTube</span>
             <span class="youtube-initial-desc" data-ref="youtube-initial-desc">Escribe en el buscador o pulsa una sugerencia para encontrar e insertar videos en tu lienzo.</span>
@@ -90,7 +90,7 @@ function renderYouTubeAppContent(drawer: HTMLElement, drawerBody: HTMLElement): 
       resultsContainer.innerHTML = `
         <div class="youtube-initial-state" data-ref="youtube-initial-state">
           <div class="youtube-initial-icon" data-ref="youtube-initial-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 44px; height: 44px; fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            <svg class="component-icon" aria-hidden="true" style="width: 44px; height: 44px;"><use href="/icons.svg#youtube_colored"></use></svg>
           </div>
           <span class="youtube-initial-title" data-ref="youtube-initial-title">Busca videos en YouTube</span>
           <span class="youtube-initial-desc" data-ref="youtube-initial-desc">Escribe en el buscador o pulsa una sugerencia para encontrar e insertar videos en tu lienzo.</span>
@@ -125,7 +125,7 @@ function renderYouTubeAppContent(drawer: HTMLElement, drawerBody: HTMLElement): 
               <img class="youtube-video-card__img" data-ref="youtube-img-${v.id}" src="${v.thumbnailUrl}" alt="${escapeHtml(v.title)}" loading="lazy" />
               <div class="youtube-video-card__overlay" data-ref="youtube-overlay-${v.id}">
                 <button type="button" class="youtube-video-card__play-btn" data-ref="btn-preview-yt-${v.id}" data-tooltip="Previsualizar video" aria-label="Previsualizar">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px; fill: #ffffff;"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="component-icon" aria-hidden="true" style="width: 20px; height: 20px;"><use href="/icons.svg#play_arrow"></use></svg>
                 </button>
               </div>
             </div>
@@ -281,7 +281,7 @@ function renderGoogleDriveAppContent(drawer: HTMLElement, drawerBody: HTMLElemen
       <div class="canvas-panel-card" data-ref="canvas-panel-card">
         <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
           <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-            <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#0284c7"/><path d="M23 44L14 28L25 10H39L30 26L23 44Z" fill="#22c55e"/><path d="M50 44H23L30 32H57L50 44Z" fill="#eab308"/><path d="M39 10L57 40L50 52L32 22L39 10Z" fill="#3b82f6"/></svg>
+            ${getAppById('google-drive')?.iconSvg || '<svg class="component-icon canvas-panel-card__icon"><use href="/icons.svg#add_to_drive"></use></svg>'}
             <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Drive</span>
           </div>
           <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -296,22 +296,22 @@ function renderGoogleDriveAppContent(drawer: HTMLElement, drawerBody: HTMLElemen
 
           <div class="drive-connect-card" data-ref="drive-connect-card">
             <div class="drive-connect-icon" data-ref="drive-connect-icon">
-              <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0284c7"/><path d="M23 44L14 28L25 10H39L30 26L23 44Z" fill="#22c55e"/><path d="M50 44H23L30 32H57L50 44Z" fill="#eab308"/><path d="M39 10L57 40L50 52L32 22L39 10Z" fill="#3b82f6"/></svg>
+              ${getAppById('google-drive')?.iconSvg || '<svg class="component-icon"><use href="/icons.svg#add_to_drive"></use></svg>'}
             </div>
             <span class="drive-connect-title" data-ref="drive-connect-title">Conecta con Google Drive</span>
             <span class="drive-connect-desc" data-ref="drive-connect-desc">Accede a tus fotos, ilustraciones, carpetas y documentos de Google Drive sin salir de Spriteboard.</span>
 
             <div class="drive-connect-features" data-ref="drive-connect-features">
               <div class="drive-connect-feature-item" data-ref="drive-feat-1">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Explora todas tus carpetas y archivos en la nube</span>
               </div>
               <div class="drive-connect-feature-item" data-ref="drive-feat-2">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Inserta imágenes en alta resolución con un solo clic</span>
               </div>
               <div class="drive-connect-feature-item" data-ref="drive-feat-3">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Exporta y guarda tus diseños en tu Drive</span>
               </div>
             </div>
@@ -377,7 +377,7 @@ function renderGoogleDriveAppContent(drawer: HTMLElement, drawerBody: HTMLElemen
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
       <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
         <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-          <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#0284c7"/><path d="M23 44L14 28L25 10H39L30 26L23 44Z" fill="#22c55e"/><path d="M50 44H23L30 32H57L50 44Z" fill="#eab308"/><path d="M39 10L57 40L50 52L32 22L39 10Z" fill="#3b82f6"/></svg>
+          ${getAppById('google-drive')?.iconSvg || '<svg class="component-icon canvas-panel-card__icon"><use href="/icons.svg#add_to_drive"></use></svg>'}
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Drive</span>
         </div>
         <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -728,7 +728,7 @@ function renderGooglePhotosAppContent(drawer: HTMLElement, drawerBody: HTMLEleme
       <div class="canvas-panel-card" data-ref="canvas-panel-card">
         <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
           <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-            <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+            ${getAppById('google-photos')?.iconSvg || '<svg class="component-icon canvas-panel-card__icon"><use href="/icons.svg#photo_library"></use></svg>'}
             <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Fotos</span>
           </div>
           <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -743,22 +743,22 @@ function renderGooglePhotosAppContent(drawer: HTMLElement, drawerBody: HTMLEleme
 
           <div class="drive-connect-card" data-ref="photos-connect-card">
             <div class="drive-connect-icon" data-ref="photos-connect-icon">
-              <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+              ${getAppById('google-photos')?.iconSvg || '<svg class="component-icon"><use href="/icons.svg#photo_library"></use></svg>'}
             </div>
             <span class="drive-connect-title" data-ref="photos-connect-title">Conecta con Google Fotos</span>
             <span class="drive-connect-desc" data-ref="photos-connect-desc">Accede a tus fotografías, ilustraciones y álbumes personales para agregarlos directamente a tu diseño.</span>
 
             <div class="drive-connect-features" data-ref="photos-connect-features">
               <div class="drive-connect-feature-item" data-ref="photos-feat-1">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Accede a tus fotos y álbumes de Google</span>
               </div>
               <div class="drive-connect-feature-item" data-ref="photos-feat-2">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Inserta imágenes en alta calidad en un solo clic</span>
               </div>
               <div class="drive-connect-feature-item" data-ref="photos-feat-3">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                 <span>Selección rápida con Google Photos Picker</span>
               </div>
             </div>
@@ -824,7 +824,7 @@ function renderGooglePhotosAppContent(drawer: HTMLElement, drawerBody: HTMLEleme
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
       <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
         <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-          <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+          ${getAppById('google-photos')?.iconSvg || '<svg class="component-icon canvas-panel-card__icon"><use href="/icons.svg#photo_library"></use></svg>'}
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Fotos</span>
         </div>
         <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -1094,7 +1094,7 @@ function renderGoogleMapsAppContent(drawer: HTMLElement, drawerBody: HTMLElement
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
       <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
         <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-          <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#10b981"/><path d="M32 14C23.7 14 17 20.7 17 29C17 39.5 32 50 32 50C32 50 47 39.5 47 29C47 20.7 40.3 14 32 14ZM32 35C28.7 35 26 32.3 26 29C26 25.7 28.7 23 32 23C35.3 23 38 25.7 38 29C38 32.3 35.3 35 32 35Z" fill="#ffffff"/></svg>
+          ${getAppById('google-maps')?.iconSvg || '<svg class="component-icon canvas-panel-card__icon"><use href="/icons.svg#map"></use></svg>'}
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Maps</span>
         </div>
         <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">

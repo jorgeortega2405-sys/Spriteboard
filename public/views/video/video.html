@@ -129,14 +129,33 @@
                 </div>
               </div>
 
-              <label class="field field--sm" data-ref="field-video-fps">
-                <span class="field__label">Fotogramas por segundo (FPS)</span>
-                <select class="field__input field__select" data-ref="select-video-fps">
-                  <option value="30" selected>30 FPS (Estándar)</option>
-                  <option value="60">60 FPS (Fluido)</option>
-                  <option value="24">24 FPS (Cinemático)</option>
-                </select>
-              </label>
+              <div class="field-group" data-ref="field-video-fps">
+                <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Fotogramas por segundo (FPS)</span>
+                <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-video-fps">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="btn-trigger-video-fps" aria-label="Fotogramas por segundo">
+                    <div class="dropdown-trigger__left">
+                      <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
+                      <span class="dropdown-trigger__text" data-ref="video-fps-selected-text">30 FPS (Estándar)</span>
+                    </div>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-video-fps">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-video-fps">
+                      <div class="menu-panel__list" data-ref="list-video-fps">
+                        <button type="button" class="menu-item is-active" data-ref="btn-fps-30" data-value="30">
+                          <span class="menu-item__text">30 FPS (Estándar)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-fps-60" data-value="60">
+                          <span class="menu-item__text">60 FPS (Fluido)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-fps-24" data-value="24">
+                          <span class="menu-item__text">24 FPS (Cinemático)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <label class="field field--sm" data-ref="field-video-bg-color">
                 <span class="field__label">Color de Fondo</span>
@@ -331,40 +350,72 @@
 
   <div class="modal-backdrop video-export-modal-backdrop" data-ref="modal-export-backdrop" style="display: none;">
     <div class="modal-container" data-ref="modal-export-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-export-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-export-modal" data-i18n-aria="modal.close" aria-label="Cerrar ventana emergente">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
-      <div class="modal-card video-export-card" data-ref="modal-card-export">
-        <div class="modal-card__header">
-          <h2 class="modal-card__title">Exportar Video MP4</h2>
-          <p class="modal-card__subtitle">Renderizado en alta calidad impulsado por FFmpeg en el servidor</p>
+      <div class="modal-card modal-card--sm video-export-card" data-ref="modal-card-export">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">Exportar Video MP4</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">Renderizado en alta calidad impulsado por FFmpeg en el servidor.</p>
         </div>
 
-        <div class="modal-card__body">
+        <div class="modal-card__body" data-ref="modal-body">
           <div class="video-export-options-view" data-ref="export-options-view">
-            <label class="field" data-ref="field-export-quality">
-              <span class="field__label">Calidad de Renderizado</span>
-              <select class="field__input field__select" data-ref="select-export-quality">
-                <option value="high" selected>Alta Calidad (1080p / Bitrate Óptimo)</option>
-                <option value="medium">Calidad Media (720p / Rápido)</option>
-                <option value="low">Borrador Rápido (480p / Ligero)</option>
-              </select>
-            </label>
+            <div class="field-group" data-ref="group-export-quality" style="margin-bottom: 12px;">
+              <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Calidad de Renderizado</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-quality">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-quality" aria-label="Calidad de Renderizado">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#high_quality"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="export-quality-selected-text">Alta Calidad (1080p / Bitrate Óptimo)</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-export-quality">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-export-quality">
+                    <div class="menu-panel__list" data-ref="list-export-quality">
+                      <button type="button" class="menu-item is-active" data-ref="btn-opt-quality-high" data-value="high">
+                        <span class="menu-item__text">Alta Calidad (1080p / Bitrate Óptimo)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-opt-quality-medium" data-value="medium">
+                        <span class="menu-item__text">Calidad Media (720p / Rápido)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-opt-quality-low" data-value="low">
+                        <span class="menu-item__text">Borrador Rápido (480p / Ligero)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <label class="field" data-ref="field-export-fps">
-              <span class="field__label">Fotogramas por Segundo</span>
-              <select class="field__input field__select" data-ref="select-export-fps">
-                <option value="30" selected>30 FPS</option>
-                <option value="60">60 FPS</option>
-              </select>
-            </label>
-
-            <div class="video-export-actions">
-              <button type="button" class="component-button component-button--h48 component-button--primary component-button--w-full" data-ref="btn-start-render">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                <span>Comenzar Renderizado</span>
-              </button>
+            <div class="field-group" data-ref="group-export-fps" style="margin-bottom: 12px;">
+              <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Fotogramas por Segundo</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-fps">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-fps" aria-label="Fotogramas por Segundo">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="export-fps-selected-text">30 FPS</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-export-fps">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-export-fps">
+                    <div class="menu-panel__list" data-ref="list-export-fps">
+                      <button type="button" class="menu-item is-active" data-ref="btn-opt-fps-30" data-value="30">
+                        <span class="menu-item__text">30 FPS</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-opt-fps-60" data-value="60">
+                        <span class="menu-item__text">60 FPS</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -381,32 +432,44 @@
             <div class="video-download-success-box" data-ref="video-download-success-box" style="display: none;">
               <svg class="component-icon icon-success" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
               <p class="video-success-msg">¡Tu video se ha renderizado exitosamente!</p>
-              <a class="component-button component-button--h48 component-button--primary component-button--w-full" data-ref="btn-download-video-file" href="#" download>
+              <a class="component-button component-button--h34 component-button--black" data-ref="btn-download-video-file" href="#" download>
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                 <span>Descargar Video MP4</span>
               </a>
             </div>
           </div>
+        </div>
 
-          <div class="banner banner--danger" data-ref="video-export-error" style="display: none; margin-top: 14px;"></div>
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-export">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-start-render">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span>Comenzar Renderizado</span>
+            </button>
+          </div>
+          <div class="banner banner--danger" data-ref="video-export-error" style="display: none;"></div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="modal-backdrop video-modal-backdrop" data-ref="modal-filters-backdrop" style="display: none;">
-    <div class="modal-container" data-ref="modal-filters-container" style="max-width: 440px;">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-filters-modal" aria-label="Cerrar modal">
+    <div class="modal-container" data-ref="modal-filters-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-filters-modal" data-i18n-aria="modal.close" aria-label="Cerrar ventana emergente">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
-      <div class="modal-card" data-ref="modal-card-filters">
-        <div class="modal-card__header">
-          <h2 class="modal-card__title">Filtros y Ajustes de Color</h2>
-          <p class="modal-card__subtitle">Aplica efectos visuales y gradación de color al clip seleccionado</p>
+      <div class="modal-card modal-card--sm" data-ref="modal-card-filters">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">Filtros y Ajustes de Color</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">Aplica efectos visuales y gradación de color al clip seleccionado.</p>
         </div>
 
-        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
           <div class="video-filter-presets-section" style="display: flex; flex-direction: column; gap: 6px;">
             <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Efectos Preestablecidos</span>
             <div class="video-filter-presets-grid" data-ref="video-filter-presets" style="display: flex; flex-wrap: wrap; gap: 6px;">
@@ -433,10 +496,12 @@
             <span class="field__label">Saturación: <span data-ref="val-filter-saturate">100%</span></span>
             <input class="field__input" data-ref="input-filter-saturate" type="range" min="0" max="2" step="0.05" value="1" />
           </label>
+        </div>
 
-          <div style="display: flex; gap: 8px; margin-top: 6px;">
-            <button type="button" class="component-button component-button--h40 component-button--w-full" data-ref="btn-reset-filters">Restablecer</button>
-            <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-filters">Aplicar</button>
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-reset-filters">Restablecer</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-filters">Aplicar</button>
           </div>
         </div>
       </div>
@@ -444,116 +509,225 @@
   </div>
 
   <div class="modal-backdrop video-modal-backdrop" data-ref="modal-transitions-backdrop" style="display: none;">
-    <div class="modal-container" data-ref="modal-transitions-container" style="max-width: 400px;">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-transitions-modal" aria-label="Cerrar modal">
+    <div class="modal-container" data-ref="modal-transitions-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-transitions-modal" data-i18n-aria="modal.close" aria-label="Cerrar ventana emergente">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
-      <div class="modal-card" data-ref="modal-card-transitions">
-        <div class="modal-card__header">
-          <h2 class="modal-card__title">Transición de Entrada</h2>
-          <p class="modal-card__subtitle">Efecto visual al entrar el clip en la reproducción</p>
+      <div class="modal-card modal-card--sm" data-ref="modal-card-transitions">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">Transición de Entrada</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">Efecto visual al entrar el clip en la reproducción.</p>
         </div>
 
-        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
-          <label class="field" data-ref="field-transition-type">
-            <span class="field__label">Tipo de Transición</span>
-            <select class="field__input field__select" data-ref="select-transition-type">
-              <option value="none" selected>Ninguna</option>
-              <option value="crossfade">Disolución Cruzada (Crossfade)</option>
-              <option value="fade_black">Fundido a Negro (Fade Black)</option>
-              <option value="slide_left">Deslizar a la Izquierda (Slide)</option>
-              <option value="wipe_left">Barrido a la Izquierda (Wipe)</option>
-            </select>
-          </label>
+        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="field-group" data-ref="field-transition-type">
+            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Tipo de Transición</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-transition-type">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-transition-type" aria-label="Tipo de Transición">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#movie_edit"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="transition-type-selected-text">Ninguna</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-transition-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-transition-type">
+                  <div class="menu-panel__list" data-ref="list-transition-type">
+                    <button type="button" class="menu-item is-active" data-ref="btn-trans-none" data-value="none">
+                      <span class="menu-item__text">Ninguna</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-trans-crossfade" data-value="crossfade">
+                      <span class="menu-item__text">Disolución Cruzada (Crossfade)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-trans-fade-black" data-value="fade_black">
+                      <span class="menu-item__text">Fundido a Negro (Fade Black)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-trans-slide-left" data-value="slide_left">
+                      <span class="menu-item__text">Deslizar a la Izquierda (Slide)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-trans-wipe-left" data-value="wipe_left">
+                      <span class="menu-item__text">Barrido a la Izquierda (Wipe)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <label class="field" data-ref="field-transition-duration">
+          <label class="field field--sm" data-ref="field-transition-duration">
             <span class="field__label">Duración: <span data-ref="val-transition-duration">1.0s</span></span>
             <input class="field__input" data-ref="input-transition-duration" type="range" min="0.3" max="2.5" step="0.1" value="1.0" />
           </label>
+        </div>
 
-          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-transition">Guardar Transición</button>
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-transitions-modal">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-transition">Guardar Transición</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="modal-backdrop video-modal-backdrop" data-ref="modal-audio-fade-backdrop" style="display: none;">
-    <div class="modal-container" data-ref="modal-audio-fade-container" style="max-width: 400px;">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-audio-fade-modal" aria-label="Cerrar modal">
+    <div class="modal-container" data-ref="modal-audio-fade-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-audio-fade-modal" data-i18n-aria="modal.close" aria-label="Cerrar ventana emergente">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
-      <div class="modal-card" data-ref="modal-card-audio-fade">
-        <div class="modal-card__header">
-          <h2 class="modal-card__title">Fundidos de Audio</h2>
-          <p class="modal-card__subtitle">Atenuación suave de entrada (Fade In) y salida (Fade Out)</p>
+      <div class="modal-card modal-card--sm" data-ref="modal-card-audio-fade">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">Fundidos de Audio</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">Atenuación suave de entrada (Fade In) y salida (Fade Out).</p>
         </div>
 
-        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
-          <label class="field" data-ref="field-audio-fade-in">
+        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+          <label class="field field--sm" data-ref="field-audio-fade-in">
             <span class="field__label">Aparición (Fade In): <span data-ref="val-audio-fade-in">0.0s</span></span>
             <input class="field__input" data-ref="input-audio-fade-in" type="range" min="0" max="5" step="0.2" value="0" />
           </label>
 
-          <label class="field" data-ref="field-audio-fade-out">
+          <label class="field field--sm" data-ref="field-audio-fade-out">
             <span class="field__label">Desvanecimiento (Fade Out): <span data-ref="val-audio-fade-out">0.0s</span></span>
             <input class="field__input" data-ref="input-audio-fade-out" type="range" min="0" max="5" step="0.2" value="0" />
           </label>
+        </div>
 
-          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-audio-fade">Guardar Fundidos</button>
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-audio-fade-modal">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-audio-fade">Guardar Fundidos</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="modal-backdrop video-modal-backdrop" data-ref="modal-subtitles-backdrop" style="display: none;">
-    <div class="modal-container" data-ref="modal-subtitles-container" style="max-width: 440px;">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-subtitles-modal" aria-label="Cerrar modal">
+    <div class="modal-container" data-ref="modal-subtitles-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-subtitles-modal" data-i18n-aria="modal.close" aria-label="Cerrar ventana emergente">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
-      <div class="modal-card" data-ref="modal-card-subtitles">
-        <div class="modal-card__header">
-          <h2 class="modal-card__title">Subtítulos Automáticos con IA</h2>
-          <p class="modal-card__subtitle">Transcribe y sincroniza la voz del video automáticamente con Gemini IA</p>
+      <div class="modal-card modal-card--sm" data-ref="modal-card-subtitles">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">Subtítulos Automáticos con IA</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">Transcribe y sincroniza la voz del video automáticamente con Gemini IA.</p>
         </div>
 
-        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
-          <label class="field" data-ref="field-subtitles-source">
-            <span class="field__label">Clip de Origen</span>
-            <select class="field__input field__select" data-ref="select-subtitles-source"></select>
-          </label>
+        <div class="modal-card__body" data-ref="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="field-group" data-ref="field-subtitles-source">
+            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Clip de Origen</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-source">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-source" aria-label="Clip de Origen">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-source-selected-text">Seleccionar clip...</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-subtitles-source">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-subtitles-source">
+                  <div class="menu-panel__list" data-ref="list-subtitles-source"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <label class="field" data-ref="field-subtitles-lang">
-            <span class="field__label">Idioma del Audio</span>
-            <select class="field__input field__select" data-ref="select-subtitles-lang">
-              <option value="auto" selected>Detección Automática</option>
-              <option value="es">Español</option>
-              <option value="en">Inglés</option>
-              <option value="pt">Portugués</option>
-              <option value="fr">Francés</option>
-              <option value="de">Alemán</option>
-              <option value="it">Italiano</option>
-            </select>
-          </label>
+          <div class="field-group" data-ref="field-subtitles-lang">
+            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Idioma del Audio</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-lang">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-lang" aria-label="Idioma del Audio">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#translate"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-lang-selected-text">Detección Automática</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-subtitles-lang">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-subtitles-lang">
+                  <div class="menu-panel__list" data-ref="list-subtitles-lang">
+                    <button type="button" class="menu-item is-active" data-ref="btn-lang-auto" data-value="auto">
+                      <span class="menu-item__text">Detección Automática</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-es" data-value="es">
+                      <span class="menu-item__text">Español</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-en" data-value="en">
+                      <span class="menu-item__text">Inglés</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-pt" data-value="pt">
+                      <span class="menu-item__text">Portugués</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-fr" data-value="fr">
+                      <span class="menu-item__text">Francés</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-de" data-value="de">
+                      <span class="menu-item__text">Alemán</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-lang-it" data-value="it">
+                      <span class="menu-item__text">Italiano</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <label class="field" data-ref="field-subtitles-style">
-            <span class="field__label">Estilo Visual</span>
-            <select class="field__input field__select" data-ref="select-subtitles-style">
-              <option value="karaoke_yellow" selected>Karaoke (Texto Blanco, Palabra Activa en Amarillo)</option>
-              <option value="karaoke_white">Karaoke Inverso (Texto Amarillo, Palabra Activa en Blanco)</option>
-              <option value="standard">Blanco con Sombra (Clásico)</option>
-              <option value="yellow">Amarillo Destacado (TikTok / Reels)</option>
-              <option value="boxed">Caja Oscura Translúcida</option>
-            </select>
-          </label>
+          <div class="field-group" data-ref="field-subtitles-style">
+            <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Estilo Visual</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-style">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-style" aria-label="Estilo Visual">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-style-selected-text">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-subtitles-style">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-subtitles-style">
+                  <div class="menu-panel__list" data-ref="list-subtitles-style">
+                    <button type="button" class="menu-item is-active" data-ref="btn-style-karaoke-yellow" data-value="karaoke_yellow">
+                      <span class="menu-item__text">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-style-karaoke-white" data-value="karaoke_white">
+                      <span class="menu-item__text">Karaoke Inverso (Texto Amarillo, Palabra Activa en Blanco)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-style-standard" data-value="standard">
+                      <span class="menu-item__text">Blanco con Sombra (Clásico)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-style-yellow" data-value="yellow">
+                      <span class="menu-item__text">Amarillo Destacado (TikTok / Reels)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-style-boxed" data-value="boxed">
+                      <span class="menu-item__text">Caja Oscura Translúcida</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-generate-subtitles">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
-            <span data-ref="btn-generate-subtitles-text">Generar Subtítulos</span>
-          </button>
-
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-subtitles-modal">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-generate-subtitles">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
+              <span data-ref="btn-generate-subtitles-text">Generar Subtítulos</span>
+            </button>
+          </div>
           <div class="banner banner--danger" data-ref="banner-subtitles-error" style="display: none;">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
             <span data-ref="subtitles-error-text">No se pudo generar subtítulos.</span>

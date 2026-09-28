@@ -26,6 +26,7 @@ import { closeWebSocket } from '../../services/websocket.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
+import { detectCanvasType } from '../../utils/canvas-type.util.js';
 import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
@@ -575,6 +576,12 @@ export class BoardController {
     }
 
     if (canvas) {
+      const detectedType = detectCanvasType(canvas);
+      if (detectedType !== 'board') {
+        window.location.replace(`/design/${this.canvasUuid}`);
+        return false;
+      }
+
       this.currentCanvasItem = canvas;
       this.canvasServerId = canvas.id || this.canvasServerId;
       this.canvasUserId = canvas.user_id || this.canvasUserId;

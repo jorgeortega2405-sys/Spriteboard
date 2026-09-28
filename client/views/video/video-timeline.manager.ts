@@ -1,5 +1,6 @@
 import { generateVideoSubtitlesApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
 import { WebAudioPlaybackEngine } from './engine/audio-engine.js';
 import { VideoPreviewManager } from './video-preview.manager.js';
 import { VideoClip, VideoProject, VideoTrack } from './video.types.js';
@@ -30,6 +31,10 @@ export class VideoTimelineManager {
   private _selectedClipId: string | null = null;
   private _selectedClipIds: Set<string> = new Set();
   private _selectedTrackId: string | null = null;
+  private _selectedTransitionType: string = 'none';
+  private _selectedSubtitleSourceClipId: string = '';
+  private _selectedSubtitleLang: string = 'auto';
+  private _selectedSubtitleStyle: string = 'karaoke_yellow';
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
   private _playheadElement: HTMLElement | null = null;
@@ -521,6 +526,10 @@ export class VideoTimelineManager {
 
       lane.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'copy';
+        }
         lane.classList.add('is-drag-target');
       });
 
@@ -530,12 +539,35 @@ export class VideoTimelineManager {
 
       lane.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         lane.classList.remove('is-drag-target');
-        const raw = e.dataTransfer?.getData('application/json');
-        if (!raw) return;
 
-        try {
-          const clipData = JSON.parse(raw) as Partial<VideoClip>;
+        const raw = e.dataTransfer?.getData('spriteboard/clip-data') || e.dataTransfer?.getData('application/json');
+        let clipData: Partial<VideoClip> | null = null;
+        if (raw) {
+          try {
+            clipData = JSON.parse(raw);
+          } catch {}
+        }
+
+        if (!clipData) {
+          const plainUrl = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list');
+          if (plainUrl && (plainUrl.startsWith('http://') || plainUrl.startsWith('https://') || plainUrl.startsWith('/'))) {
+            const isAud = plainUrl.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i);
+            const isImg = plainUrl.match(/\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i);
+            clipData = {
+              assetUrl: plainUrl,
+              duration: 5,
+              mediaType: isAud ? 'audio' : (isImg ? 'image' : 'video'),
+              name: isAud ? 'Audio' : (isImg ? 'Foto' : 'Video'),
+              sourceDuration: 5,
+              trimEnd: 5,
+              trimStart: 0,
+            };
+          }
+        }
+
+        if (clipData && (clipData.assetUrl || clipData.id)) {
           const rect = lane.getBoundingClientRect();
           const dropX = e.clientX - rect.left + (lanesList.parentElement?.scrollLeft || 0);
           const rawStartTime = Math.max(0, dropX / this._pixelsPerSecond);
@@ -545,13 +577,14 @@ export class VideoTimelineManager {
             ...clipData,
             startTime,
           });
-        } catch {}
+        }
       });
     });
 
     const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
     lanesContainer?.addEventListener('dragover', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = 'copy';
       }
@@ -560,11 +593,34 @@ export class VideoTimelineManager {
     lanesContainer?.addEventListener('drop', (e) => {
       if ((e.target as HTMLElement).closest('.video-track-lane')) return;
       e.preventDefault();
-      const raw = e.dataTransfer?.getData('application/json');
-      if (!raw) return;
+      e.stopPropagation();
 
-      try {
-        const clipData = JSON.parse(raw) as Partial<VideoClip>;
+      const raw = e.dataTransfer?.getData('spriteboard/clip-data') || e.dataTransfer?.getData('application/json');
+      let clipData: Partial<VideoClip> | null = null;
+      if (raw) {
+        try {
+          clipData = JSON.parse(raw);
+        } catch {}
+      }
+
+      if (!clipData) {
+        const plainUrl = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list');
+        if (plainUrl && (plainUrl.startsWith('http://') || plainUrl.startsWith('https://') || plainUrl.startsWith('/'))) {
+          const isAud = plainUrl.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i);
+          const isImg = plainUrl.match(/\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i);
+          clipData = {
+            assetUrl: plainUrl,
+            duration: 5,
+            mediaType: isAud ? 'audio' : (isImg ? 'image' : 'video'),
+            name: isAud ? 'Audio' : (isImg ? 'Foto' : 'Video'),
+            sourceDuration: 5,
+            trimEnd: 5,
+            trimStart: 0,
+          };
+        }
+      }
+
+      if (clipData && (clipData.assetUrl || clipData.id)) {
         const rect = lanesContainer.getBoundingClientRect();
         const dropX = e.clientX - rect.left + (lanesList.parentElement?.scrollLeft || 0);
         const rawStartTime = Math.max(0, dropX / this._pixelsPerSecond);
@@ -582,7 +638,7 @@ export class VideoTimelineManager {
             startTime,
           });
         }
-      } catch {}
+      }
     });
   }
 
@@ -1554,7 +1610,19 @@ export class VideoTimelineManager {
     const valDuration = this._container.querySelector<HTMLElement>('[data-ref="val-transition-duration"]');
 
     const trans = clip.transition || { duration: 1.0, type: 'none' as const };
-    if (selectType) selectType.value = trans.type;
+    this._selectedTransitionType = trans.type;
+    const textEl = this._container.querySelector<HTMLElement>('[data-ref="transition-type-selected-text"]');
+    const typeNames: Record<string, string> = {
+      none: 'Ninguna (Corte Directo)',
+      fade: 'Fundido a Negro (Fade Out/In)',
+      dissolve: 'Disolución Cruzada (Cross Dissolve)',
+      slide_left: 'Deslizar a la Izquierda (Slide)',
+      wipe_left: 'Barrido a la Izquierda (Wipe)',
+    };
+    if (textEl) textEl.textContent = typeNames[this._selectedTransitionType] || 'Ninguna (Corte Directo)';
+    this._container.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-transition-type"] .menu-item').forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-value') === this._selectedTransitionType);
+    });
     if (inDuration) inDuration.value = String(trans.duration || 1.0);
     if (valDuration) valDuration.textContent = `${(trans.duration || 1.0).toFixed(1)}s`;
 
@@ -1615,27 +1683,32 @@ export class VideoTimelineManager {
     }
 
     const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-subtitles-backdrop"]');
-    const selectSource = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-source"]');
+    const sourceList = this._container.querySelector<HTMLElement>('[data-ref="list-subtitles-source"]');
+    const sourceText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-source-selected-text"]');
     const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
 
     if (errorBanner) errorBanner.style.display = 'none';
 
-    if (selectSource) {
-      selectSource.innerHTML = '';
-      const selectedClip = this.getSelectedClip();
+    const selectedClip = this.getSelectedClip();
+    let initialClip = eligibleClips[0];
+    if (selectedClip) {
+      const match = eligibleClips.find((i) => i.clip.id === selectedClip.id);
+      if (match) initialClip = match;
+    }
+    this._selectedSubtitleSourceClipId = initialClip.clip.id;
+    const startFmt = `${Math.floor(initialClip.clip.startTime / 60)}:${Math.floor(initialClip.clip.startTime % 60).toString().padStart(2, '0')}`;
+    const endFmt = `${Math.floor((initialClip.clip.startTime + initialClip.clip.duration) / 60)}:${Math.floor((initialClip.clip.startTime + initialClip.clip.duration) % 60).toString().padStart(2, '0')}`;
+    if (sourceText) sourceText.textContent = `${initialClip.clip.name} (${initialClip.trackName}) [${startFmt} - ${endFmt}]`;
 
-      for (const item of eligibleClips) {
-        const opt = document.createElement('option');
-        opt.value = item.clip.id;
+    if (sourceList) {
+      sourceList.innerHTML = eligibleClips.map((item) => {
         const startFormatted = `${Math.floor(item.clip.startTime / 60)}:${Math.floor(item.clip.startTime % 60).toString().padStart(2, '0')}`;
         const endFormatted = `${Math.floor((item.clip.startTime + item.clip.duration) / 60)}:${Math.floor((item.clip.startTime + item.clip.duration) % 60).toString().padStart(2, '0')}`;
-        opt.textContent = `${item.clip.name} (${item.trackName}) [${startFormatted} - ${endFormatted}]`;
-
-        if (selectedClip && selectedClip.id === item.clip.id) {
-          opt.selected = true;
-        }
-        selectSource.appendChild(opt);
-      }
+        const isSel = item.clip.id === this._selectedSubtitleSourceClipId;
+        return `<button type="button" class="menu-item${isSel ? ' is-active' : ''}" data-ref="btn-sub-src-${item.clip.id}" data-value="${item.clip.id}">
+          <span class="menu-item__text">${item.clip.name} (${item.trackName}) [${startFormatted} - ${endFormatted}]</span>
+        </button>`;
+      }).join('');
     }
 
     if (backdrop) {
@@ -1719,9 +1792,31 @@ export class VideoTimelineManager {
     const transBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-transitions-backdrop"]');
     const btnCloseTrans = this._container.querySelector<HTMLElement>('[data-ref="btn-close-transitions-modal"]');
     const btnApplyTrans = this._container.querySelector<HTMLElement>('[data-ref="btn-apply-transition"]');
-    const selectTrans = this._container.querySelector<HTMLSelectElement>('[data-ref="select-transition-type"]');
     const inTransDur = this._container.querySelector<HTMLInputElement>('[data-ref="input-transition-duration"]');
     const valTransDur = this._container.querySelector<HTMLElement>('[data-ref="val-transition-duration"]');
+
+    const transWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-transition-type"]');
+    const transTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-transition-type"]');
+    const transMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-transition-type"]');
+    const transBackdropEl = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-transition-type"]');
+    const transText = this._container.querySelector<HTMLElement>('[data-ref="transition-type-selected-text"]');
+
+    if (transWrapper && transTrigger && transMenu) {
+      setupDropdown(transWrapper, transTrigger, transMenu, { backdrop: transBackdropEl || undefined, signal });
+      transMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (val) {
+          this._selectedTransitionType = val;
+          transMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (transText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) transText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
 
     inTransDur?.addEventListener('input', () => {
       if (valTransDur) valTransDur.textContent = `${parseFloat(inTransDur.value).toFixed(1)}s`;
@@ -1741,10 +1836,10 @@ export class VideoTimelineManager {
 
     btnApplyTrans?.addEventListener('click', () => {
       const clip = this.getSelectedClip();
-      if (clip && selectTrans && inTransDur) {
+      if (clip && inTransDur) {
         clip.transition = {
           duration: parseFloat(inTransDur.value) || 1.0,
-          type: selectTrans.value as any,
+          type: this._selectedTransitionType as any,
         };
         this.render();
         this._onProjectChanged();
@@ -1780,7 +1875,7 @@ export class VideoTimelineManager {
       if (e.target === fadeBackdrop) closeFade();
     }, { signal });
 
-      btnApplyFade?.addEventListener('click', () => {
+    btnApplyFade?.addEventListener('click', () => {
       const clip = this.getSelectedClip();
       if (clip && inFadeIn && inFadeOut) {
         clip.audioFadeIn = parseFloat(inFadeIn.value) || 0;
@@ -1795,11 +1890,77 @@ export class VideoTimelineManager {
     const btnCloseSub = this._container.querySelector<HTMLElement>('[data-ref="btn-close-subtitles-modal"]');
     const btnGenSub = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles"]');
     const btnGenSubText = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles-text"]');
-    const selectSource = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-source"]');
-    const selectLang = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-lang"]');
-    const selectStyle = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-style"]');
     const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
     const errorText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-error-text"]');
+
+    const subSrcWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-source"]');
+    const subSrcTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-source"]');
+    const subSrcMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-source"]');
+    const subSrcBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-source"]');
+    const subSrcText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-source-selected-text"]');
+
+    if (subSrcWrapper && subSrcTrigger && subSrcMenu) {
+      setupDropdown(subSrcWrapper, subSrcTrigger, subSrcMenu, { backdrop: subSrcBackdrop || undefined, signal });
+      subSrcMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (val) {
+          this._selectedSubtitleSourceClipId = val;
+          subSrcMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (subSrcText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) subSrcText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
+
+    const subLangWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-lang"]');
+    const subLangTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-lang"]');
+    const subLangMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-lang"]');
+    const subLangBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-lang"]');
+    const subLangText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-lang-selected-text"]');
+
+    if (subLangWrapper && subLangTrigger && subLangMenu) {
+      setupDropdown(subLangWrapper, subLangTrigger, subLangMenu, { backdrop: subLangBackdrop || undefined, signal });
+      subLangMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (val) {
+          this._selectedSubtitleLang = val;
+          subLangMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (subLangText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) subLangText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
+
+    const subStyleWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-style"]');
+    const subStyleTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-style"]');
+    const subStyleMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-style"]');
+    const subStyleBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-style"]');
+    const subStyleText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-style-selected-text"]');
+
+    if (subStyleWrapper && subStyleTrigger && subStyleMenu) {
+      setupDropdown(subStyleWrapper, subStyleTrigger, subStyleMenu, { backdrop: subStyleBackdrop || undefined, signal });
+      subStyleMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (val) {
+          this._selectedSubtitleStyle = val;
+          subStyleMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (subStyleText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) subStyleText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
 
     const closeSub = () => {
       if (subBackdrop) {
@@ -1815,7 +1976,7 @@ export class VideoTimelineManager {
 
     btnGenSub?.addEventListener('click', async () => {
       const project = this._getProject();
-      const clipId = selectSource?.value;
+      const clipId = this._selectedSubtitleSourceClipId;
       let targetClip: VideoClip | null = null;
 
       for (const track of project.tracks) {
@@ -1839,8 +2000,8 @@ export class VideoTimelineManager {
       if (errorBanner) errorBanner.style.display = 'none';
 
       try {
-        const language = selectLang?.value || 'auto';
-        const style = selectStyle?.value || 'standard';
+        const language = this._selectedSubtitleLang || 'auto';
+        const style = this._selectedSubtitleStyle || 'karaoke_yellow';
 
         const result = await generateVideoSubtitlesApi(targetClip.assetUrl, {
           language,

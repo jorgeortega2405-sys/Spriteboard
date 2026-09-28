@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -59,13 +59,12 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
     }
 
     const { access_level, canvas_type, data, height, name, preview_thumbnail, public_role, unit, width } = req.body;
-    const isPresentation = canvas_type === 'presentation' || unit === 'presentation';
-    const isDoc = !isPresentation && (canvas_type === 'doc' || unit === 'doc');
-    const isSocial = !isPresentation && !isDoc && (canvas_type === 'social' || unit === 'social');
-    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
+    const finalCanvasType = resolveCanvasType({ canvas_type, data, unit });
     const isInfinite = finalCanvasType === 'board' || unit === 'infinite';
-    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
-    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
+    const defaultW = finalCanvasType === 'presentation' || finalCanvasType === 'video' || finalCanvasType === 'sheet' ? 1920 : (finalCanvasType === 'social' ? 940 : 816);
+    const defaultH = finalCanvasType === 'presentation' || finalCanvasType === 'video' || finalCanvasType === 'sheet' ? 1080 : (finalCanvasType === 'social' ? 788 : 1056);
+    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || defaultW)));
+    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || defaultH)));
 
     if (!isInfinite && (isNaN(numWidth) || numWidth <= 0 || isNaN(numHeight) || numHeight <= 0)) {
       sendBadRequest(res, 'Las dimensiones del lienzo deben ser valores numéricos positivos.');
@@ -106,13 +105,12 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const isPresentation = canvas_type === 'presentation' || unit === 'presentation';
-    const isDoc = !isPresentation && (canvas_type === 'doc' || unit === 'doc');
-    const isSocial = !isPresentation && !isDoc && (canvas_type === 'social' || unit === 'social');
-    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
+    const finalCanvasType = resolveCanvasType({ canvas_type, data, unit });
     const isInfinite = finalCanvasType === 'board' || unit === 'infinite';
-    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
-    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
+    const defaultW = finalCanvasType === 'presentation' || finalCanvasType === 'video' || finalCanvasType === 'sheet' ? 1920 : (finalCanvasType === 'social' ? 940 : 816);
+    const defaultH = finalCanvasType === 'presentation' || finalCanvasType === 'video' || finalCanvasType === 'sheet' ? 1080 : (finalCanvasType === 'social' ? 788 : 1056);
+    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || defaultW)));
+    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || defaultH)));
 
     const canvas = await syncCanvas(user ? user.id : null, {
       access_level: access_level === 'public' ? 'public' : access_level === 'private' ? 'private' : undefined,
@@ -631,5 +629,51 @@ export async function getCanvasMetricsHandler(req: Request, res: Response): Prom
       return;
     }
     sendInternalError(res, 'Error al obtener estadísticas del lienzo en canvas controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
+  }
+}
+
+export async function patchCanvasHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string' || uuid.trim().length === 0) {
+      sendBadRequest(res, 'Identificador único de lienzo requerido.');
+      return;
+    }
+
+    const { access_level, canvas_type, data, height, name, preview_thumbnail, public_role, unit, width } = req.body;
+
+    const canvas = await patchCanvas(uuid.trim(), user.id, {
+      access_level,
+      canvas_type,
+      data,
+      height: height !== undefined ? Number(height) : undefined,
+      name,
+      preview_thumbnail,
+      public_role,
+      unit,
+      width: width !== undefined ? Number(width) : undefined,
+    });
+
+    sendSuccess(res, { canvas, success: true });
+  } catch (err: any) {
+    if (err?.message?.includes('no existe') || err?.message?.includes('eliminado')) {
+      sendNotFound(res, 'El lienzo solicitado no existe.');
+      return;
+    }
+    if (err?.message?.includes('papelera')) {
+      sendForbidden(res, 'El lienzo ha sido enviado a la papelera.');
+      return;
+    }
+    if (err?.message?.includes('permisos')) {
+      sendForbidden(res, 'No tienes permisos de edición para modificar este lienzo.');
+      return;
+    }
+    sendInternalError(res, 'Error al actualizar lienzo en patch canvas controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }

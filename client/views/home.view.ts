@@ -10,6 +10,8 @@ import { openMoveCanvasModal } from '../components/move-canvas-modal.component.j
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { FOLDER_BACK_TAB_SVG, getFolderFrontIconSvg } from '../config/folder-graphics.config.js';
+import { renderHomeCategoryBadgesHtml } from '../config/home-category-badges.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
@@ -159,6 +161,11 @@ class HomeController {
     }
 
     this.homeTitle = this.container.querySelector<HTMLElement>('[data-ref="home-title"]');
+
+    const badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="home-categories-badges"]');
+    if (badgesContainer) {
+      badgesContainer.innerHTML = renderHomeCategoryBadgesHtml();
+    }
 
     this.bindEvents();
     this.setupNavDropTargets();
@@ -1941,20 +1948,7 @@ class HomeController {
     card.setAttribute('data-folder-uuid', folder.uuid);
 
     const isDefaultFolder = Boolean(folder.is_default || folder.name === 'Mis proyectos' || folder.name === 'Subidos');
-
-    let iconSvg = `
-      <svg class="folder-card__cloud-icon" viewBox="0 0 32 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 21C5.2 21 3 18.8 3 16C3 13.4 4.9 11.3 7.5 11C8.5 7 12 4 16 4C20.2 4 23.6 7.2 24 11.3C26.3 12 28 14 28 16.5C28 19 26 21 23.5 21H8Z" />
-        <path d="M16 17V10M12.5 13.5L16 10L19.5 13.5" />
-      </svg>
-    `;
-    if (folder.name === 'Mis proyectos') {
-      iconSvg = `
-        <svg class="folder-card__cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-        </svg>
-      `;
-    }
+    const iconSvg = getFolderFrontIconSvg(folder.name);
 
     const actionsHtml = isDefaultFolder
       ? ''
@@ -1987,9 +1981,7 @@ class HomeController {
     card.innerHTML = `
       <div class="canvas-card__thumbnail" data-ref="folder-thumbnail">
         <div class="folder-card__back" data-ref="folder-back-${folder.uuid}">
-          <svg class="folder-card__back-svg" viewBox="0 0 300 50" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 10C0 4.5 4.5 0 10 0H105C110 0 115 2 118 6L124 14C127 18 132 20 137 20H290C295.5 20 300 24.5 300 30V50H0Z" fill="currentColor" />
-          </svg>
+          ${FOLDER_BACK_TAB_SVG}
         </div>
 
         <div class="folder-card__front" data-ref="folder-front-${folder.uuid}">
@@ -2008,7 +2000,7 @@ class HomeController {
           ${escapeHtml(folder.name)}
         </span>
         <div class="canvas-card__meta">
-          <svg class="canvas-card__meta-icon" viewBox="0 0 24 24" fill="#F59E0B" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <svg class="component-icon canvas-card__meta-icon" style="color: #F59E0B;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
           <span>${isDefaultFolder ? 'Carpeta del sistema' : 'Carpeta'}</span>
           ${folder.items_count !== undefined ? `<span class="canvas-card__meta-dot">·</span><span>${folder.items_count} ${folder.items_count === 1 ? 'elemento' : 'elementos'}</span>` : ''}
         </div>

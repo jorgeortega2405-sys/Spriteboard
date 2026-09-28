@@ -1,10 +1,10 @@
 import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, getApi, postApi, setCurrentUser } from '../services/api.service.js';
-import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
-import { debounce } from '../utils/dom.util.js';
+import { t, translateElement } from '../services/i18n.service.js';
+import { debounce, setupDropdown } from '../utils/dom.util.js';
 
 let activeOnboardingModal: { close: () => void } | null = null;
 
@@ -21,6 +21,18 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
   let isClosing = false;
   let isSubmitting = false;
   let isHandleValid = false;
+  let selectedCountry = 'MX';
+
+  const countryLabels: Record<string, string> = {
+    AR: 'Argentina (AR)',
+    CL: 'Chile (CL)',
+    CO: 'Colombia (CO)',
+    ES: 'España (ES)',
+    MX: 'México (MX)',
+    OTHER: 'Otro país',
+    PE: 'Perú (PE)',
+    US: 'Estados Unidos (US)',
+  };
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -30,21 +42,21 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-designer-onboard-container">
-      <div class="modal-card modal-card--w-540" data-ref="modal-card-designer-onboard" style="padding: 24px 28px; max-height: 90vh; overflow-y: auto;">
-        <div class="modal-card__header" data-ref="modal-header" style="margin-bottom: 20px; text-align: left;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; color: #6366f1; flex-shrink: 0;">
-              <svg class="component-icon" style="font-size: 22px; width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-            </div>
-            <h2 class="modal-card__title" data-ref="modal-title" style="font-size: 19px; font-weight: 700; margin: 0;">¡Bienvenido al panel de Diseñadores!</h2>
-          </div>
-          <p class="modal-card__desc" data-ref="modal-desc" style="font-size: 13.5px; color: var(--text-secondary); margin: 0; line-height: 1.45;">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-onboard-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--md" data-ref="modal-card-designer-onboard">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">¡Bienvenido al panel de Diseñadores!</h2>
+          <p class="modal-card__desc" data-ref="modal-desc">
             Configura tu identificador de creador (@handle) y tus datos preferidos para recibir cobros y pagos por tus plantillas.
           </p>
         </div>
 
-        <form data-ref="form-designer-onboard" style="display: flex; flex-direction: column; gap: 16px;">
-          
+        <form class="modal-card__body" data-ref="form-designer-onboard" style="display: flex; flex-direction: column; gap: 16px;">
           <div data-ref="section-handle">
             <label class="field-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">
               Identificador de Diseñador (@handle)
@@ -72,23 +84,34 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
               <div>
                 <label class="field-label" style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">País de Cobro</label>
-                <div style="border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); padding: 0 8px; height: 40px; display: flex; align-items: center;">
-                  <select data-ref="select-payout-country" style="width: 100%; border: none; background: transparent; outline: none; font-size: 13px; color: var(--text-primary);">
-                    <option value="MX">México (MX)</option>
-                    <option value="US">Estados Unidos (US)</option>
-                    <option value="ES">España (ES)</option>
-                    <option value="CO">Colombia (CO)</option>
-                    <option value="AR">Argentina (AR)</option>
-                    <option value="CL">Chile (CL)</option>
-                    <option value="PE">Perú (PE)</option>
-                    <option value="OTHER">Otro país</option>
-                  </select>
+                <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-payout-country">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--full dropdown-trigger--sm" data-ref="btn-trigger-payout-country" aria-label="País de Cobro">
+                    <div class="dropdown-trigger__left">
+                      <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+                      <span class="dropdown-trigger__text" data-ref="payout-country-selected-text">México (MX)</span>
+                    </div>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-payout-country">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-payout-country" style="max-height: 200px; overflow-y: auto;">
+                      <div class="menu-panel__list">
+                        <button type="button" class="menu-item is-active" data-ref="btn-country-mx" data-value="MX"><span class="menu-item__text">México (MX)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-us" data-value="US"><span class="menu-item__text">Estados Unidos (US)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-es" data-value="ES"><span class="menu-item__text">España (ES)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-co" data-value="CO"><span class="menu-item__text">Colombia (CO)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-ar" data-value="AR"><span class="menu-item__text">Argentina (AR)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-cl" data-value="CL"><span class="menu-item__text">Chile (CL)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-pe" data-value="PE"><span class="menu-item__text">Perú (PE)</span></button>
+                        <button type="button" class="menu-item" data-ref="btn-country-other" data-value="OTHER"><span class="menu-item__text">Otro país</span></button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label class="field-label" style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Moneda de Pago</label>
-                <div style="border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface-secondary, rgba(0,0,0,0.03)); padding: 0 10px; height: 40px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface-secondary, rgba(0,0,0,0.03)); padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: space-between;">
                   <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">USD ($)</span>
                   <span class="component-badge component-badge--success" style="font-size: 10.5px; font-weight: 600; padding: 2px 6px;">100% en Dólares</span>
                 </div>
@@ -106,11 +129,14 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
             </div>
           </div>
 
-          <div style="margin-top: 6px;">
-            <button type="submit" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-submit-designer-onboard">
-              <span data-ref="btn-submit-text">Comenzar como Diseñador</span>
-            </button>
-            <div class="banner banner--danger" data-ref="onboard-error-banner" style="display: none; margin-top: 10px; font-size: 12.5px; padding: 10px 14px; border-radius: 8px;"></div>
+          <div class="modal-card__footer" data-ref="modal-footer" style="padding: 0; margin-top: 8px;">
+            <div class="modal-card__actions" data-ref="modal-actions">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-designer-onboard">Cancelar</button>
+              <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-designer-onboard">
+                <span data-ref="btn-submit-text">Comenzar como Diseñador</span>
+              </button>
+            </div>
+            <div class="banner banner--danger" data-ref="onboard-error-banner" style="display: none; margin-top: 10px;"></div>
           </div>
         </form>
       </div>
@@ -125,7 +151,28 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
   const handleStatusIcon = backdrop.querySelector<HTMLElement>('[data-ref="handle-status-icon"]');
   const previewUrlText = backdrop.querySelector<HTMLElement>('[data-ref="preview-url-text"]');
 
-  const selectCountry = backdrop.querySelector<HTMLSelectElement>('[data-ref="select-payout-country"]');
+  const btnClose = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-close-onboard-modal"]');
+  const btnCancel = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-designer-onboard"]');
+
+  const countryWrapper = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-payout-country"]');
+  const countryTrigger = backdrop.querySelector<HTMLElement>('[data-ref="btn-trigger-payout-country"]');
+  const countryMenu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-payout-country"]');
+  const countryBackdrop = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-payout-country"]');
+  const countryText = backdrop.querySelector<HTMLElement>('[data-ref="payout-country-selected-text"]');
+
+  if (countryWrapper && countryTrigger && countryMenu) {
+    setupDropdown(countryWrapper, countryTrigger, countryMenu, { backdrop: countryBackdrop || undefined });
+    countryMenu.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+      if (!item) return;
+      const val = item.getAttribute('data-value');
+      if (val) {
+        selectedCountry = val;
+        countryMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+        if (countryText) countryText.textContent = countryLabels[val] || val;
+      }
+    });
+  }
 
   const form = backdrop.querySelector<HTMLFormElement>('[data-ref="form-designer-onboard"]');
   const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-designer-onboard"]');
@@ -148,6 +195,9 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
       }, 200);
     },
   };
+
+  btnClose?.addEventListener('click', () => modalInstance.close());
+  btnCancel?.addEventListener('click', () => modalInstance.close());
 
   activeOnboardingModal = modalInstance;
 
@@ -234,7 +284,7 @@ export function openDesignerOnboardingModal(options: DesignerOnboardingModalOpti
       return;
     }
 
-    const payoutCountry = selectCountry?.value || 'MX';
+    const payoutCountry = selectedCountry || 'MX';
 
     isSubmitting = true;
     if (btnSubmit) btnSubmit.disabled = true;

@@ -18,6 +18,8 @@ class InternalTicketsController implements ViewController {
   private currentSearch: string = '';
   private dropdownInstance: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private isStaffOrTech: boolean = false;
+  private newPriorityDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
+  private selectedNewPriority: InternalTicketPriority = 'medium';
   private tickets: InternalTicketItem[] = [];
   private wsUnsubscribers: Array<() => void> = [];
 
@@ -64,6 +66,10 @@ class InternalTicketsController implements ViewController {
       this.dropdownInstance.destroy();
       this.dropdownInstance = null;
     }
+    if (this.newPriorityDropdownCtrl) {
+      this.newPriorityDropdownCtrl.destroy();
+      this.newPriorityDropdownCtrl = null;
+    }
   }
 
   private bindEvents(): void {
@@ -88,6 +94,15 @@ class InternalTicketsController implements ViewController {
     const btnCloseResolveModal = this.container.querySelector<HTMLElement>('[data-ref="btn-close-resolve-modal"]');
     const btnCancelResolve = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-resolve"]');
     const resolveModalBackdrop = this.container.querySelector<HTMLElement>('[data-ref="resolve-ticket-modal-backdrop"]');
+
+    const newPriorityDropdownEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-new-priority"]');
+    if (newPriorityDropdownEl) {
+      this.newPriorityDropdownCtrl = setupDropdown(newPriorityDropdownEl, {
+        onSelect: (val) => {
+          this.selectedNewPriority = val as InternalTicketPriority;
+        },
+      });
+    }
 
     btnCloseResolveModal?.addEventListener('click', () => this.closeResolveModal(), { signal });
     btnCancelResolve?.addEventListener('click', () => this.closeResolveModal(), { signal });
@@ -649,14 +664,13 @@ class InternalTicketsController implements ViewController {
 
   private async handleCreateTicket(): Promise<void> {
     const inputTitle = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-title"]');
-    const selectPriority = this.container.querySelector<HTMLSelectElement>('[data-ref="select-new-priority"]');
     const inputLocation = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-location"]');
     const inputDescription = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-new-description"]');
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-new"]');
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="new-ticket-error"]');
 
     const title = inputTitle?.value.trim() || '';
-    const priority = (selectPriority?.value || 'medium') as InternalTicketPriority;
+    const priority = this.selectedNewPriority || 'medium';
     const location = inputLocation?.value.trim() || '';
     const description = inputDescription?.value.trim() || '';
 

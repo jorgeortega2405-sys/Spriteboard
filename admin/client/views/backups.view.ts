@@ -855,6 +855,27 @@ class BackupsController implements ViewController {
       time_of_day: '02:00',
     };
 
+    const intervalLabels: Record<string, string> = {
+      hourly: 'Cada hora',
+      every_6_hours: 'Cada 6 horas',
+      every_12_hours: 'Cada 12 horas',
+      daily: 'Diario (una vez al día)',
+      weekly: 'Semanal (un día fijo)',
+      monthly: 'Mensual (un día al mes)',
+      custom_hours: 'Personalizado (horas)',
+    };
+    const dowLabels: Record<number, string> = {
+      1: 'Lunes',
+      2: 'Martes',
+      3: 'Miércoles',
+      4: 'Jueves',
+      5: 'Viernes',
+      6: 'Sábado',
+      7: 'Domingo',
+    };
+    let selectedInterval: BackupScheduleInterval = schedule.interval_type || 'daily';
+    let selectedDow = schedule.day_of_week || 1;
+
     const databases = this.targetsCache?.databases || [
       { name: 'db_identity', table_count: 0, tables: [] },
       { name: 'db_canvas', table_count: 0, tables: [] },
@@ -939,18 +960,47 @@ class BackupsController implements ViewController {
           </label>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <label class="field" data-ref="modal-sched-field-interval">
-              <select class="field__input" data-ref="modal-sched-select-interval" style="cursor: pointer;">
-                <option value="hourly" ${schedule.interval_type === 'hourly' ? 'selected' : ''}>Cada hora</option>
-                <option value="every_6_hours" ${schedule.interval_type === 'every_6_hours' ? 'selected' : ''}>Cada 6 horas</option>
-                <option value="every_12_hours" ${schedule.interval_type === 'every_12_hours' ? 'selected' : ''}>Cada 12 horas</option>
-                <option value="daily" ${schedule.interval_type === 'daily' ? 'selected' : ''}>Diario (una vez al día)</option>
-                <option value="weekly" ${schedule.interval_type === 'weekly' ? 'selected' : ''}>Semanal (un día fijo)</option>
-                <option value="monthly" ${schedule.interval_type === 'monthly' ? 'selected' : ''}>Mensual (un día al mes)</option>
-                <option value="custom_hours" ${schedule.interval_type === 'custom_hours' ? 'selected' : ''}>Personalizado (horas)</option>
-              </select>
-              <span class="field__label">Frecuencia / Intervalo</span>
-            </label>
+            <div class="field-group" data-ref="modal-sched-field-interval">
+              <span class="field__label" style="margin-bottom: 4px; display: block;">Frecuencia / Intervalo</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-sched-interval">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-sched-interval" aria-label="Frecuencia">
+                  <div class="dropdown-trigger__left">
+                    <span class="dropdown-trigger__text" data-ref="sched-interval-selected-text">${intervalLabels[schedule.interval_type] || 'Diario (una vez al día)'}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sched-interval">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-sched-interval">
+                    <div class="menu-panel__drag-zone" data-ref="sched-interval-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-sched-interval">
+                      <button type="button" class="menu-item${schedule.interval_type === 'hourly' ? ' is-active' : ''}" data-value="hourly">
+                        <span class="menu-item__text">Cada hora</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'every_6_hours' ? ' is-active' : ''}" data-value="every_6_hours">
+                        <span class="menu-item__text">Cada 6 horas</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'every_12_hours' ? ' is-active' : ''}" data-value="every_12_hours">
+                        <span class="menu-item__text">Cada 12 horas</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'daily' || !schedule.interval_type ? ' is-active' : ''}" data-value="daily">
+                        <span class="menu-item__text">Diario (una vez al día)</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'weekly' ? ' is-active' : ''}" data-value="weekly">
+                        <span class="menu-item__text">Semanal (un día fijo)</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'monthly' ? ' is-active' : ''}" data-value="monthly">
+                        <span class="menu-item__text">Mensual (un día al mes)</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.interval_type === 'custom_hours' ? ' is-active' : ''}" data-value="custom_hours">
+                        <span class="menu-item__text">Personalizado (horas)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <label class="field" data-ref="modal-sched-field-retention">
               <input class="field__input" data-ref="modal-sched-input-retention" type="number" min="0" max="100" value="${schedule.retention_count ?? 7}" placeholder=" " autocomplete="off" />
@@ -964,18 +1014,47 @@ class BackupsController implements ViewController {
               <span class="field__label">Hora de ejecución (HH:MM)</span>
             </label>
 
-            <label class="field" data-ref="modal-sched-field-dow" style="display: ${schedule.interval_type === 'weekly' ? 'block' : 'none'};">
-              <select class="field__input" data-ref="modal-sched-select-dow">
-                <option value="1" ${schedule.day_of_week === 1 ? 'selected' : ''}>Lunes</option>
-                <option value="2" ${schedule.day_of_week === 2 ? 'selected' : ''}>Martes</option>
-                <option value="3" ${schedule.day_of_week === 3 ? 'selected' : ''}>Miércoles</option>
-                <option value="4" ${schedule.day_of_week === 4 ? 'selected' : ''}>Jueves</option>
-                <option value="5" ${schedule.day_of_week === 5 ? 'selected' : ''}>Viernes</option>
-                <option value="6" ${schedule.day_of_week === 6 ? 'selected' : ''}>Sábado</option>
-                <option value="7" ${schedule.day_of_week === 7 ? 'selected' : ''}>Domingo</option>
-              </select>
-              <span class="field__label">Día de la semana</span>
-            </label>
+            <div class="field-group" data-ref="modal-sched-field-dow" style="display: ${schedule.interval_type === 'weekly' ? 'block' : 'none'};">
+              <span class="field__label" style="margin-bottom: 4px; display: block;">Día de la semana</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-sched-dow">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-sched-dow" aria-label="Día de la semana">
+                  <div class="dropdown-trigger__left">
+                    <span class="dropdown-trigger__text" data-ref="sched-dow-selected-text">${dowLabels[schedule.day_of_week] || 'Lunes'}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sched-dow">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-sched-dow">
+                    <div class="menu-panel__drag-zone" data-ref="sched-dow-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-sched-dow">
+                      <button type="button" class="menu-item${schedule.day_of_week === 1 || !schedule.day_of_week ? ' is-active' : ''}" data-value="1">
+                        <span class="menu-item__text">Lunes</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 2 ? ' is-active' : ''}" data-value="2">
+                        <span class="menu-item__text">Martes</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 3 ? ' is-active' : ''}" data-value="3">
+                        <span class="menu-item__text">Miércoles</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 4 ? ' is-active' : ''}" data-value="4">
+                        <span class="menu-item__text">Jueves</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 5 ? ' is-active' : ''}" data-value="5">
+                        <span class="menu-item__text">Viernes</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 6 ? ' is-active' : ''}" data-value="6">
+                        <span class="menu-item__text">Sábado</span>
+                      </button>
+                      <button type="button" class="menu-item${schedule.day_of_week === 7 ? ' is-active' : ''}" data-value="7">
+                        <span class="menu-item__text">Domingo</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <label class="field" data-ref="modal-sched-field-dom" style="display: ${schedule.interval_type === 'monthly' ? 'block' : 'none'};">
               <input class="field__input" data-ref="modal-sched-input-dom" type="number" min="1" max="28" value="${schedule.day_of_month || 1}" placeholder=" " />
@@ -1042,10 +1121,8 @@ class BackupsController implements ViewController {
       onConfirm: async () => {
         const enabledChk = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-enabled"]');
         const nameInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-name"]');
-        const intervalSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-interval"]');
         const retentionInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-retention"]');
         const timeInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-time"]');
-        const dowSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-dow"]');
         const domInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-dom"]');
         const customHoursInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-custom-hours"]');
         const s3Chk = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-chk-s3"]');
@@ -1053,10 +1130,10 @@ class BackupsController implements ViewController {
 
         const isEnabled = Boolean(enabledChk?.checked);
         const name = (nameInput?.value || '').trim() || 'Copia Automática Programada';
-        const intervalType = (intervalSelect?.value || 'daily') as BackupScheduleInterval;
+        const intervalType = selectedInterval;
         const retentionCount = Math.max(0, parseInt(retentionInput?.value || '7', 10));
         const timeOfDay = timeInput?.value || '02:00';
-        const dayOfWeek = parseInt(dowSelect?.value || '1', 10);
+        const dayOfWeek = selectedDow;
         const dayOfMonth = parseInt(domInput?.value || '1', 10);
         const intervalHours = parseInt(customHoursInput?.value || '24', 10);
         const includeS3 = Boolean(s3Chk?.checked);
@@ -1122,19 +1199,40 @@ class BackupsController implements ViewController {
       title: 'Configurar Copias Automáticas',
     });
 
-    const intervalSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-interval"]');
     const fieldTime = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-time"]');
     const fieldDow = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-dow"]');
     const fieldDom = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-dom"]');
     const fieldCustomHours = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-custom-hours"]');
 
-    intervalSelect?.addEventListener('change', () => {
-      const val = intervalSelect.value;
-      if (fieldTime) fieldTime.style.display = (val === 'hourly' || val === 'custom_hours') ? 'none' : 'block';
-      if (fieldDow) fieldDow.style.display = val === 'weekly' ? 'block' : 'none';
-      if (fieldDom) fieldDom.style.display = val === 'monthly' ? 'block' : 'none';
-      if (fieldCustomHours) fieldCustomHours.style.display = val === 'custom_hours' ? 'block' : 'none';
-    });
+    const intervalDropdownEl = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-sched-interval"]');
+    if (intervalDropdownEl) {
+      setupDropdown({
+        container: intervalDropdownEl,
+        onSelect: (item) => {
+          const val = item.getAttribute('data-value') as BackupScheduleInterval;
+          if (val) {
+            selectedInterval = val;
+            if (fieldTime) fieldTime.style.display = (val === 'hourly' || val === 'custom_hours') ? 'none' : 'block';
+            if (fieldDow) fieldDow.style.display = val === 'weekly' ? 'block' : 'none';
+            if (fieldDom) fieldDom.style.display = val === 'monthly' ? 'block' : 'none';
+            if (fieldCustomHours) fieldCustomHours.style.display = val === 'custom_hours' ? 'block' : 'none';
+          }
+        },
+      });
+    }
+
+    const dowDropdownEl = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-sched-dow"]');
+    if (dowDropdownEl) {
+      setupDropdown({
+        container: dowDropdownEl,
+        onSelect: (item) => {
+          const val = parseInt(item.getAttribute('data-value') || '1', 10);
+          if (val) {
+            selectedDow = val;
+          }
+        },
+      });
+    }
 
     databases.forEach((db) => {
       const parentChk = modal.body.querySelector<HTMLInputElement>(`[data-ref="chk-sched-db-${db.name}"]`);

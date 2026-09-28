@@ -1,4 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
+import { MODAL_2FA_SHIELD_SVG } from '../config/modal-illustrations.config.js';
 import { postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -38,7 +39,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-container">
       <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--${size}" data-ref="modal-card">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
@@ -355,7 +356,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-2fa-container">
       <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--split" data-ref="modal-card-2fa">
         <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone" aria-hidden="true">
@@ -381,7 +382,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
               </label>
 
               <button type="button" class="modal-split__link-toggle" data-ref="btn-toggle-secret">
-                <span class="material-symbols-rounded">key</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
                 <span data-ref="toggle-secret-text" data-i18n="settings.security.two_factor_view_secret">
                   ${t('settings.security.two_factor_view_secret')}
                 </span>
@@ -390,7 +391,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
               <div class="modal-split__secret-box" data-ref="box-secret-key" style="display: none;">
                 <span class="modal-split__secret-value" data-ref="text-secret-value"></span>
                 <button type="button" class="modal-split__secret-copy" data-ref="btn-copy-secret" data-tooltip="${t('modal.copy')}">
-                  <span class="material-symbols-rounded">content_copy</span>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
                 </button>
               </div>
 
@@ -417,7 +418,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
 
               <div class="modal-split__backup-actions" data-ref="stage-2-actions">
                 <button type="button" class="component-button component-button--h38" data-ref="btn-copy-backup-codes">
-                  <span class="material-symbols-rounded">content_copy</span>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
                   <span data-ref="btn-copy-text">${t('settings.security.two_factor_copy_all')}</span>
                 </button>
                 <button type="button" class="component-button component-button--h38 component-button--black" data-ref="btn-finish-2fa">
@@ -434,32 +435,18 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
               <div class="modal-split__qr-canvas" data-ref="qr-container"></div>
             </div>
             <div class="modal-split__right-hint" data-ref="qr-hint">
-              <span class="material-symbols-rounded">qr_code_scanner</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
               <span data-i18n="settings.security.two_factor_qr_hint">${t('settings.security.two_factor_qr_hint')}</span>
             </div>
           </div>
 
           <div class="modal-split__visual-stage" data-ref="visual-stage-2" style="display: none;">
             <div class="modal-split__svg-wrapper" data-ref="svg-wrapper">
-              <svg class="modal-split__shield-svg" data-ref="shield-svg" width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="110" cy="110" r="80" fill="#ffffff" fill-opacity="0.06"/>
-                <circle cx="110" cy="110" r="75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 5" stroke-opacity="0.2"/>
-                <path d="M110 40L158 62V114C158 145 137 172 110 182C83 172 62 145 62 114V62L110 40Z" fill="rgba(255,255,255,0.05)" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/>
-                <rect x="93" y="105" width="34" height="28" rx="6" fill="rgba(255,255,255,0.12)" stroke="#ffffff" stroke-width="2"/>
-                <path d="M101 105V96C101 91.0294 105.029 87 110 87C114.971 87 119 91.0294 119 96V105" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="110" cy="117" r="2.5" fill="#ffffff"/>
-                <line x1="110" y1="119.5" x2="110" y2="124" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                <rect x="78" y="78" width="14" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.4"/>
-                <rect x="128" y="78" width="14" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.4"/>
-                <rect x="74" y="136" width="18" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.3"/>
-                <rect x="128" y="136" width="18" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.3"/>
-                <circle cx="150" cy="72" r="15" fill="#22c55e" stroke="#000000" stroke-width="2.5"/>
-                <path d="M145 72L148.5 75.5L155.5 68.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              ${MODAL_2FA_SHIELD_SVG}
             </div>
             <div class="modal-split__right-status" data-ref="status-badge">
               <span class="modal-split__badge-check">
-                <span class="material-symbols-rounded">verified_user</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
               </span>
               <span class="modal-split__badge-text" data-i18n="settings.security.two_factor_active_badge">
                 ${t('settings.security.two_factor_active_badge')}

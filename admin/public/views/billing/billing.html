@@ -160,23 +160,30 @@
   </div>
 
   <div class="modal-backdrop" data-ref="modal-refund-backdrop" style="display: none;">
-    <div class="modal-dialog modal-dialog--sm" data-ref="modal-refund">
-      <div class="modal-header">
-        <h3 class="modal-title">Emitir Reembolso</h3>
-        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-refund-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">¿Estás seguro de que deseas reembolsar la transacción <strong data-ref="refund-modal-id">#0</strong>? Esta acción es irreversible.</p>
-        <label class="field" data-ref="field-refund-reason">
-          <span class="field__label">Motivo del Reembolso</span>
-          <input class="field__input" data-ref="input-refund-reason" type="text" placeholder="Ej. Solicitud de usuario / Cargo no reconocido" />
-        </label>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-cancel-refund">Cancelar</button>
-        <button type="button" class="component-button component-button--h40 component-button--danger" data-ref="btn-confirm-refund">Emitir Reembolso</button>
+    <div class="modal-container" data-ref="modal-refund-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-refund-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="modal-refund">
+        <div class="modal-card__drag-zone" data-ref="modal-refund-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Emitir Reembolso</h2>
+          <p class="modal-card__desc">¿Estás seguro de que deseas reembolsar la transacción <strong data-ref="refund-modal-id">#0</strong>? Esta acción es irreversible.</p>
+        </div>
+        <div class="modal-card__body">
+          <label class="field" data-ref="field-refund-reason" style="display: block;">
+            <input class="field__input" data-ref="input-refund-reason" type="text" placeholder=" " />
+            <span class="field__label" data-ref="lbl-refund-reason">Motivo del Reembolso</span>
+          </label>
+        </div>
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-refund">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-confirm-refund">Emitir Reembolso</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -113,13 +113,13 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
 
             <div class="design-share-section${(canvas.is_local && !canvas.id) || !isLoggedIn ? ' is-hidden' : ''}" data-ref="section-share-access">
               <span class="design-share-section__label">Nivel de acceso</span>
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-access-level">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-access-level">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
                   <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="access-level-selected-icon">lock</span>
+                    <svg class="component-icon dropdown-trigger__icon" data-ref="access-level-selected-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
                     <span class="dropdown-trigger__text" data-ref="access-level-selected-text">Solo tú tienes acceso</span>
                   </div>
-                  <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access-level">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-access-level">
@@ -128,11 +128,11 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
                     </div>
                     <div class="menu-panel__list" data-ref="list-access-level">
                       <button type="button" class="menu-item is-active" data-ref="btn-access-private" data-value="private">
-                        <span class="material-symbols-rounded menu-item__icon">lock</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
                         <span class="menu-item__text">Solo tú tienes acceso</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-access-public" data-value="public">
-                        <span class="material-symbols-rounded menu-item__icon">language</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
                         <span class="menu-item__text">Cualquier persona con el enlace</span>
                       </button>
                     </div>
@@ -143,13 +143,13 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
 
             <div class="design-share-section is-hidden" data-ref="section-public-role">
               <span class="design-share-section__label">Permiso del enlace</span>
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-public-role">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-public-role" aria-label="Permiso del enlace">
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-public-role">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-public-role" aria-label="Permiso del enlace">
                   <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="public-role-selected-icon">edit</span>
+                    <svg class="component-icon dropdown-trigger__icon" data-ref="public-role-selected-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
                     <span class="dropdown-trigger__text" data-ref="public-role-selected-text">Ver y editar</span>
                   </div>
-                  <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-public-role">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-public-role">
@@ -158,11 +158,11 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
                     </div>
                     <div class="menu-panel__list" data-ref="list-public-role">
                       <button type="button" class="menu-item is-active" data-ref="btn-public-role-editor" data-value="editor">
-                        <span class="material-symbols-rounded menu-item__icon">edit</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
                         <span class="menu-item__text">Ver y editar</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-public-role-viewer" data-value="viewer">
-                        <span class="material-symbols-rounded menu-item__icon">visibility</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
                         <span class="menu-item__text">Solo ver</span>
                       </button>
                     </div>
@@ -173,12 +173,12 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
 
             <div class="design-share-link-row">
               <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-copy-share-link">
-                <span class="material-symbols-rounded">link</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
                 <span>Copiar el enlace</span>
               </button>
               ${canPublishTemplates(currentUser) ? `
               <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-publish-template">
-                <span class="material-symbols-rounded">auto_awesome</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
                 <span>Publicar como plantilla</span>
               </button>
               ` : ''}

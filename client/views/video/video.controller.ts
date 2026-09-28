@@ -202,13 +202,24 @@ export class VideoController {
       });
     }
 
-    const selectFps = this._container.querySelector<HTMLSelectElement>('[data-ref="select-video-fps"]');
-    if (selectFps) {
-      selectFps.value = String(this._project.fps || 30);
-      selectFps.addEventListener('change', () => {
-        this._project.fps = parseInt(selectFps.value, 10) || 30;
-        this.scheduleAutoSave();
-      }, { signal });
+    const fpsWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-video-fps"]');
+    const fpsText = this._container.querySelector<HTMLElement>('[data-ref="video-fps-selected-text"]');
+    if (fpsWrapper) {
+      const curFps = this._project.fps || 30;
+      if (fpsText) {
+        fpsText.textContent = curFps === 60 ? '60 FPS (Fluido)' : curFps === 24 ? '24 FPS (Cinemático)' : '30 FPS (Estándar)';
+      }
+      setupDropdown(fpsWrapper, {
+        isSelect: true,
+        onSelect: (val) => {
+          const fps = parseInt(String(val), 10) || 30;
+          this._project.fps = fps;
+          if (fpsText) {
+            fpsText.textContent = fps === 60 ? '60 FPS (Fluido)' : fps === 24 ? '24 FPS (Cinemático)' : '30 FPS (Estándar)';
+          }
+          this.scheduleAutoSave();
+        },
+      });
     }
 
     const inputBgColor = this._container.querySelector<HTMLInputElement>('[data-ref="input-video-bg-color"]');
@@ -868,9 +879,11 @@ export class VideoController {
     if (currentUser) {
       try {
         const res = await patchApi(API_ROUTES.canvases.byId(this._canvasUuid), {
+          canvas_type: 'video',
           data: dataStr,
           height: this._project.height,
           name: this._project.name,
+          unit: 'video',
           width: this._project.width,
         });
         if (res.ok) {
@@ -944,11 +957,12 @@ export class VideoController {
 
     viewport.addEventListener('drop', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dragDepth = 0;
       overlay?.classList.add('is-hidden');
       viewport.classList.remove('is-drag-over');
 
-      const rawJson = e.dataTransfer?.getData('application/json');
+      const rawJson = e.dataTransfer?.getData('spriteboard/clip-data') || e.dataTransfer?.getData('application/json');
       if (rawJson) {
         try {
           const clipData = JSON.parse(rawJson);
@@ -978,18 +992,23 @@ export class VideoController {
         } catch {}
       }
 
-      const plainUrl = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list');
-      if (plainUrl && (plainUrl.startsWith('http://') || plainUrl.startsWith('https://') || plainUrl.startsWith('/'))) {
-        this.insertVideo({
-          title: 'Video',
-          url: plainUrl,
-        });
-        showToast('Video añadido al proyecto', 'success');
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        void this.handleDirectFileUpload(Array.from(e.dataTransfer.files));
         return;
       }
 
-      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-        void this.handleDirectFileUpload(Array.from(e.dataTransfer.files));
+      const plainUrl = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list');
+      if (plainUrl && (plainUrl.startsWith('http://') || plainUrl.startsWith('https://') || plainUrl.startsWith('/'))) {
+        const isAud = plainUrl.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i);
+        const isImg = plainUrl.match(/\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i);
+        if (isAud) {
+          this.insertAudio({ title: 'Audio', url: plainUrl });
+        } else if (isImg) {
+          this.insertImage({ title: 'Foto', url: plainUrl });
+        } else {
+          this.insertVideo({ title: 'Video', url: plainUrl });
+        }
+        showToast('Elemento añadido al proyecto', 'success');
       }
     }, { signal });
   }

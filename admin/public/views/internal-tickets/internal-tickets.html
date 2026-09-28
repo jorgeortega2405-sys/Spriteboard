@@ -107,13 +107,16 @@
 
               <div class="support-ticket-header__actions" data-ref="internal-header-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
 
-                <div class="settings-dropdown-wrapper" data-ref="internal-actions-wrapper" style="position: relative;">
+                <div class="dropdown-wrapper" data-ref="internal-actions-wrapper" style="position: relative;">
                   <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-internal-options" data-tooltip="Acciones del ticket" aria-label="Acciones del ticket">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                   </button>
 
                   <div class="dropdown-backdrop" data-ref="internal-actions-backdrop">
                     <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="internal-actions-menu">
+                      <div class="menu-panel__drag-zone" data-ref="internal-actions-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
                       <div class="menu-panel__list" data-ref="internal-actions-list">
                         <button type="button" class="menu-item" data-ref="btn-action-take">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#person_add"></use></svg>
@@ -178,82 +181,117 @@
     </div>
   </div>
 
-  <div class="component-modal-backdrop" data-ref="new-ticket-modal-backdrop" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="component-modal component-modal--w460" data-ref="new-ticket-modal" style="background-color: var(--bg-surface); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-xl); max-width: 90vw; width: 480px; display: flex; flex-direction: column; gap: 16px;">
-      <div class="component-modal__header" style="display: flex; align-items: center; justify-content: space-between;">
-        <h3 class="component-modal__title" style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">Reportar Incidencia Interna</h3>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-new-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="component-modal__body" style="display: flex; flex-direction: column; gap: 12px;">
-        <div class="field" data-ref="field-ticket-title">
-          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Título / Resumen de la Incidencia</label>
-          <input class="field__input" data-ref="input-new-title" type="text" maxlength="150" placeholder="Ej. Impresora Piso 2 no responde" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);" />
+  <div class="modal-backdrop" data-ref="new-ticket-modal-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="new-ticket-modal-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-new-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="new-ticket-modal">
+        <div class="modal-card__drag-zone" data-ref="modal-new-ticket-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Reportar Incidencia Interna</h2>
+          <p class="modal-card__desc">Genera un ticket para que el personal de TI o mantenimiento atienda el caso.</p>
         </div>
 
-        <div class="field" data-ref="field-ticket-priority">
-          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Prioridad</label>
-          <select class="field__input" data-ref="select-new-priority" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
-            <option value="low">Baja (Sin urgencia)</option>
-            <option value="medium" selected>Media (Normal)</option>
-            <option value="high">Alta (Afecta trabajo)</option>
-            <option value="urgent">Urgente (Bloqueo crítico)</option>
-          </select>
+        <div class="modal-card__body">
+          <label class="field" data-ref="field-ticket-title" style="margin-bottom: 12px; display: block;">
+            <input class="field__input" data-ref="input-new-title" type="text" maxlength="150" placeholder=" " />
+            <span class="field__label" data-ref="lbl-new-title">Título / Resumen de la Incidencia</span>
+          </label>
+
+          <div class="field-group" style="margin-bottom: 12px;">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Prioridad</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-new-priority">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-new-priority" aria-label="Prioridad">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="new-priority-selected-text">Media (Normal)</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-new-priority">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-new-priority">
+                  <div class="menu-panel__drag-zone" data-ref="new-priority-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-new-priority">
+                    <button type="button" class="menu-item" data-ref="opt-new-priority-low" data-value="low">
+                      <span class="menu-item__text">Baja (Sin urgencia)</span>
+                    </button>
+                    <button type="button" class="menu-item is-active" data-ref="opt-new-priority-medium" data-value="medium">
+                      <span class="menu-item__text">Media (Normal)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-new-priority-high" data-value="high">
+                      <span class="menu-item__text">Alta (Afecta trabajo)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-new-priority-urgent" data-value="urgent">
+                      <span class="menu-item__text">Urgente (Bloqueo crítico)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="field" data-ref="field-ticket-location" style="margin-bottom: 12px; display: block;">
+            <input class="field__input" data-ref="input-new-location" type="text" maxlength="100" placeholder=" " />
+            <span class="field__label" data-ref="lbl-new-location">Ubicación Física (Piso / Sala / Estación)</span>
+          </label>
+
+          <label class="field" data-ref="field-ticket-description" style="display: block;">
+            <textarea class="field__input" data-ref="input-new-description" placeholder=" " rows="4" maxlength="2000" style="min-height: 90px; padding-top: 18px; resize: vertical;"></textarea>
+            <span class="field__label" data-ref="lbl-new-description">Descripción Detallada</span>
+          </label>
         </div>
 
-        <div class="field" data-ref="field-ticket-location">
-          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Ubicación Física (Piso / Sala / Estación)</label>
-          <input class="field__input" data-ref="input-new-location" type="text" maxlength="100" placeholder="Ej. Piso 2 - Sala de Juntas A / Estación 14" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);" />
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-new">
+              <span>Cancelar</span>
+            </button>
+            <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-new">
+              <span>Crear Ticket</span>
+            </button>
+          </div>
+          <div class="banner banner--danger" data-ref="new-ticket-error" style="display: none; margin-top: 12px;"></div>
         </div>
-
-        <div class="field field--textarea" data-ref="field-ticket-description">
-          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Descripción Detallada</label>
-          <textarea class="field__input field__input--textarea" data-ref="input-new-description" placeholder="Describe qué ocurre, mensajes de error o detalles para el técnico..." rows="4" maxlength="2000" style="resize: none; width: 100%;"></textarea>
-        </div>
-
-        <div class="banner banner--danger" data-ref="new-ticket-error" style="display: none; margin-top: 4px; font-size: 12px; padding: 8px 12px; border-radius: var(--radius-md);"></div>
-      </div>
-
-      <div class="component-modal__footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-cancel-new">
-          <span>Cancelar</span>
-        </button>
-        <button type="button" class="component-button component-button--primary component-button--h36" data-ref="btn-submit-new">
-          <span>Crear Ticket</span>
-        </button>
       </div>
     </div>
   </div>
 
-  <div class="component-modal-backdrop" data-ref="resolve-ticket-modal-backdrop" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="component-modal component-modal--w460" data-ref="resolve-ticket-modal" style="background-color: var(--bg-surface); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-xl); max-width: 90vw; width: 440px; display: flex; flex-direction: column; gap: 16px;">
-      <div class="component-modal__header" style="display: flex; align-items: center; justify-content: space-between;">
-        <h3 class="component-modal__title" style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">Resolver Incidencia Interna</h3>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-resolve-modal" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="component-modal__body" style="display: flex; flex-direction: column; gap: 12px;">
-        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Indica la solución aplicada o acciones realizadas para cerrar esta incidencia.</p>
-
-        <div class="field field--textarea" data-ref="field-resolve-note">
-          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Nota de Solución / Diagnóstico</label>
-          <textarea class="field__input field__input--textarea" data-ref="input-resolve-note" placeholder="Ej. Se reemplazó cartucho de tóner y se verificó prueba de impresión correcta..." rows="3" maxlength="1000" style="resize: none; width: 100%;"></textarea>
+  <div class="modal-backdrop" data-ref="resolve-ticket-modal-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="resolve-ticket-modal-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-resolve-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="resolve-ticket-modal">
+        <div class="modal-card__drag-zone" data-ref="modal-resolve-ticket-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Resolver Incidencia Interna</h2>
+          <p class="modal-card__desc">Indica la solución aplicada o acciones realizadas para cerrar esta incidencia.</p>
         </div>
 
-        <div class="banner banner--danger" data-ref="resolve-ticket-error" style="display: none; margin-top: 4px; font-size: 12px; padding: 8px 12px; border-radius: var(--radius-md);"></div>
-      </div>
+        <div class="modal-card__body">
+          <label class="field" data-ref="field-resolve-note" style="display: block;">
+            <textarea class="field__input" data-ref="input-resolve-note" placeholder=" " rows="3" maxlength="1000" style="min-height: 80px; padding-top: 18px; resize: vertical;"></textarea>
+            <span class="field__label" data-ref="lbl-resolve-note">Nota de Solución / Diagnóstico</span>
+          </label>
+        </div>
 
-      <div class="component-modal__footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-cancel-resolve">
-          <span>Cancelar</span>
-        </button>
-        <button type="button" class="component-button component-button--primary component-button--h36" data-ref="btn-submit-resolve">
-          <span>Marcar como Resuelto</span>
-        </button>
+        <div class="modal-card__footer">
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-resolve">
+              <span>Cancelar</span>
+            </button>
+            <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-resolve">
+              <span>Marcar como Resuelto</span>
+            </button>
+          </div>
+          <div class="banner banner--danger" data-ref="resolve-ticket-error" style="display: none; margin-top: 12px;"></div>
+        </div>
       </div>
     </div>
   </div>

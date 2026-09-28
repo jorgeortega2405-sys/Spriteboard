@@ -1,3 +1,4 @@
+import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg, getVideoSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
 import { escapeHtml, uploadFilesApi } from '../services/api.service.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
@@ -5,7 +6,6 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg, getVideoSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -152,15 +152,27 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                     <input class="field__input" data-ref="input-custom-h" type="number" min="10" max="10000" step="any" value="1080" placeholder="1080" />
                   </label>
 
-                  <label class="field" data-ref="field-custom-unit">
-                    <span class="field__label">Unidad</span>
-                    <select class="field__input field__select" data-ref="select-custom-unit" style="height: 48px; cursor: pointer;">
-                      <option value="px" selected>px</option>
-                      <option value="in">in</option>
-                      <option value="mm">mm</option>
-                      <option value="cm">cm</option>
-                    </select>
-                  </label>
+                  <div class="field-group" data-ref="field-custom-unit" style="min-width: 100px;">
+                    <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Unidad</span>
+                    <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-custom-unit">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full dropdown-trigger--sm" data-ref="btn-trigger-custom-unit" aria-label="Unidad de medida">
+                        <div class="dropdown-trigger__left">
+                          <span class="dropdown-trigger__text" data-ref="custom-unit-selected-text">px</span>
+                        </div>
+                        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-custom-unit">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-custom-unit">
+                          <div class="menu-panel__list">
+                            <button type="button" class="menu-item is-active" data-ref="btn-unit-px" data-value="px"><span class="menu-item__text">px</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-unit-in" data-value="in"><span class="menu-item__text">in</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-unit-mm" data-value="mm"><span class="menu-item__text">mm</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-unit-cm" data-value="cm"><span class="menu-item__text">cm</span></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="custom-size-actions" style="display: flex; gap: 12px; align-items: center;">

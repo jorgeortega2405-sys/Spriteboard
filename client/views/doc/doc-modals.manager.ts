@@ -1,7 +1,7 @@
 import { openModal } from '../../components/modal.component.js';
 import { showToast } from '../../services/toast.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
-
 import { DocPaginationManager } from './doc-pagination.manager.js';
 import { DOC_MARGIN_PRESETS, DocColumnsCount, DocPageBorder, DocPageColor, DocPaperSize, DocProject } from './doc.types.js';
 
@@ -98,9 +98,23 @@ export class DocModalsManager {
   }
 
   public openPageDesignModal(): void {
-    const curTheme = this.ctx.project.settings.pageColor || 'white';
-    const curBorder = this.ctx.project.settings.pageBorder || 'none';
-    const curCols = this.ctx.project.settings.columnsCount || 1;
+    let curTheme: DocPageColor = (this.ctx.project.settings.pageColor || 'white') as DocPageColor;
+    let curBorder: DocPageBorder = (this.ctx.project.settings.pageBorder || 'none') as DocPageBorder;
+    let curCols: DocColumnsCount = (this.ctx.project.settings.columnsCount || 1) as DocColumnsCount;
+
+    const themeLabels: Record<DocPageColor, string> = {
+      white: 'Blanco puro',
+      cream: 'Marfil / Crema suave',
+      sepia: 'Sepia cálido',
+      editorial: 'Gris editorial (#f8fafc)',
+    };
+
+    const borderLabels: Record<DocPageBorder, string> = {
+      none: 'Sin borde',
+      thin: 'Borde fino (1.5px)',
+      double: 'Borde doble clásico',
+      dashed: 'Borde punteado',
+    };
 
     openModal({
       bodyHtml: `
@@ -113,12 +127,25 @@ export class DocModalsManager {
               </div>
             </div>
             <div class="settings-item__actions">
-              <select class="settings-dropdown-wrapper" data-ref="modal-select-theme" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
-                <option value="white" ${curTheme === 'white' ? 'selected' : ''}>Blanco puro</option>
-                <option value="cream" ${curTheme === 'cream' ? 'selected' : ''}>Marfil / Crema suave</option>
-                <option value="sepia" ${curTheme === 'sepia' ? 'selected' : ''}>Sepia cálido</option>
-                <option value="editorial" ${curTheme === 'editorial' ? 'selected' : ''}>Gris editorial (#f8fafc)</option>
-              </select>
+              <div class="dropdown-wrapper dropdown-wrapper--w-200" data-ref="dropdown-wrapper-modal-theme">
+                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-modal-theme" aria-label="Tono de papel">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="modal-theme-selected-text">${themeLabels[curTheme] || 'Blanco puro'}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-theme">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-modal-theme">
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item${curTheme === 'white' ? ' is-active' : ''}" data-ref="btn-opt-theme-white" data-value="white"><span class="menu-item__text">Blanco puro</span></button>
+                      <button type="button" class="menu-item${curTheme === 'cream' ? ' is-active' : ''}" data-ref="btn-opt-theme-cream" data-value="cream"><span class="menu-item__text">Marfil / Crema suave</span></button>
+                      <button type="button" class="menu-item${curTheme === 'sepia' ? ' is-active' : ''}" data-ref="btn-opt-theme-sepia" data-value="sepia"><span class="menu-item__text">Sepia cálido</span></button>
+                      <button type="button" class="menu-item${curTheme === 'editorial' ? ' is-active' : ''}" data-ref="btn-opt-theme-editorial" data-value="editorial"><span class="menu-item__text">Gris editorial (#f8fafc)</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -132,12 +159,25 @@ export class DocModalsManager {
               </div>
             </div>
             <div class="settings-item__actions">
-              <select class="settings-dropdown-wrapper" data-ref="modal-select-border" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
-                <option value="none" ${curBorder === 'none' ? 'selected' : ''}>Sin borde</option>
-                <option value="thin" ${curBorder === 'thin' ? 'selected' : ''}>Borde fino (1.5px)</option>
-                <option value="double" ${curBorder === 'double' ? 'selected' : ''}>Borde doble clásico</option>
-                <option value="dashed" ${curBorder === 'dashed' ? 'selected' : ''}>Borde punteado</option>
-              </select>
+              <div class="dropdown-wrapper dropdown-wrapper--w-200" data-ref="dropdown-wrapper-modal-border">
+                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-modal-border" aria-label="Borde de página">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#border_style"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="modal-border-selected-text">${borderLabels[curBorder] || 'Sin borde'}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-border">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-modal-border">
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item${curBorder === 'none' ? ' is-active' : ''}" data-ref="btn-opt-border-none" data-value="none"><span class="menu-item__text">Sin borde</span></button>
+                      <button type="button" class="menu-item${curBorder === 'thin' ? ' is-active' : ''}" data-ref="btn-opt-border-thin" data-value="thin"><span class="menu-item__text">Borde fino (1.5px)</span></button>
+                      <button type="button" class="menu-item${curBorder === 'double' ? ' is-active' : ''}" data-ref="btn-opt-border-double" data-value="double"><span class="menu-item__text">Borde doble clásico</span></button>
+                      <button type="button" class="menu-item${curBorder === 'dashed' ? ' is-active' : ''}" data-ref="btn-opt-border-dashed" data-value="dashed"><span class="menu-item__text">Borde punteado</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -160,17 +200,9 @@ export class DocModalsManager {
       `,
       confirmText: 'Aplicar diseño',
       onConfirm: () => {
-        const modalEl = document.querySelector('.modal-card');
-        if (!modalEl) return;
-        const selTheme = modalEl.querySelector<HTMLSelectElement>('[data-ref="modal-select-theme"]');
-        const selBorder = modalEl.querySelector<HTMLSelectElement>('[data-ref="modal-select-border"]');
-        let cols: DocColumnsCount = 1;
-        if (modalEl.querySelector('[data-ref="modal-btn-col-2"]')?.classList.contains('component-button--black')) cols = 2;
-        if (modalEl.querySelector('[data-ref="modal-btn-col-3"]')?.classList.contains('component-button--black')) cols = 3;
-
-        if (selTheme) this.ctx.project.settings.pageColor = selTheme.value as DocPageColor;
-        if (selBorder) this.ctx.project.settings.pageBorder = selBorder.value as DocPageBorder;
-        this.ctx.project.settings.columnsCount = cols;
+        this.ctx.project.settings.pageColor = curTheme;
+        this.ctx.project.settings.pageBorder = curBorder;
+        this.ctx.project.settings.columnsCount = curCols;
 
         this.ctx.renderDocument();
         this.ctx.recordChange();
@@ -182,11 +214,53 @@ export class DocModalsManager {
     setTimeout(() => {
       const modalEl = document.querySelector('.modal-card');
       if (!modalEl) return;
+
+      const themeWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-theme"]');
+      const themeTrigger = modalEl.querySelector<HTMLElement>('[data-ref="btn-trigger-modal-theme"]');
+      const themeMenu = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-modal-theme"]');
+      const themeBackdrop = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-modal-theme"]');
+      const themeText = modalEl.querySelector<HTMLElement>('[data-ref="modal-theme-selected-text"]');
+
+      if (themeWrapper && themeTrigger && themeMenu) {
+        setupDropdown(themeWrapper, themeTrigger, themeMenu, { backdrop: themeBackdrop || undefined });
+        themeMenu.addEventListener('click', (e) => {
+          const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+          if (!item) return;
+          const val = item.getAttribute('data-value') as DocPageColor;
+          if (val) {
+            curTheme = val;
+            themeMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+            if (themeText) themeText.textContent = themeLabels[val] || val;
+          }
+        });
+      }
+
+      const borderWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-border"]');
+      const borderTrigger = modalEl.querySelector<HTMLElement>('[data-ref="btn-trigger-modal-border"]');
+      const borderMenu = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-modal-border"]');
+      const borderBackdrop = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-modal-border"]');
+      const borderText = modalEl.querySelector<HTMLElement>('[data-ref="modal-border-selected-text"]');
+
+      if (borderWrapper && borderTrigger && borderMenu) {
+        setupDropdown(borderWrapper, borderTrigger, borderMenu, { backdrop: borderBackdrop || undefined });
+        borderMenu.addEventListener('click', (e) => {
+          const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+          if (!item) return;
+          const val = item.getAttribute('data-value') as DocPageBorder;
+          if (val) {
+            curBorder = val;
+            borderMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+            if (borderText) borderText.textContent = borderLabels[val] || val;
+          }
+        });
+      }
+
       const b1 = modalEl.querySelector<HTMLElement>('[data-ref="modal-btn-col-1"]');
       const b2 = modalEl.querySelector<HTMLElement>('[data-ref="modal-btn-col-2"]');
       const b3 = modalEl.querySelector<HTMLElement>('[data-ref="modal-btn-col-3"]');
 
-      const setCols = (active: number) => {
+      const setCols = (active: DocColumnsCount) => {
+        curCols = active;
         b1?.setAttribute('class', `component-button component-button--h32 ${active === 1 ? 'component-button--black' : 'component-button--secondary'}`);
         b2?.setAttribute('class', `component-button component-button--h32 ${active === 2 ? 'component-button--black' : 'component-button--secondary'}`);
         b3?.setAttribute('class', `component-button component-button--h32 ${active === 3 ? 'component-button--black' : 'component-button--secondary'}`);
@@ -331,6 +405,27 @@ export class DocModalsManager {
   }
 
   public openPageSetupModal(): void {
+    let curPaper: DocPaperSize = this.ctx.project.settings.paperSize || 'a4';
+    let curMarginsKey = 'normal';
+    if (this.ctx.project.settings.margins.top === 48) curMarginsKey = 'narrow';
+    else if (this.ctx.project.settings.margins.left === 192) curMarginsKey = 'wide';
+
+    const paperLabels: Record<string, string> = {
+      digital: 'Digital (Tamaño automático)',
+      a4: 'A4 (21 × 29.7 cm)',
+      a3: 'A3 (29.7 × 42 cm)',
+      letter: 'Carta (8.5 × 11 in)',
+      legal: 'Oficio (8.5 × 14 in)',
+      a5: 'A5 (14.8 × 21 cm)',
+      tabloid: 'Tabloide (11 × 17 in)',
+    };
+
+    const marginLabels: Record<string, string> = {
+      normal: 'Normal (2.54 cm / 1 pulgada)',
+      narrow: 'Estrecho (1.27 cm / 0.5 pulgada)',
+      wide: 'Ancho (5.08 cm / 2 pulgadas)',
+    };
+
     openModal({
       bodyHtml: `
         <div class="settings-group">
@@ -342,15 +437,28 @@ export class DocModalsManager {
               </div>
             </div>
             <div class="settings-item__actions">
-              <select class="settings-dropdown-wrapper" data-ref="modal-select-paper" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
-                <option value="digital" ${this.ctx.project.settings.paperSize === 'digital' ? 'selected' : ''}>Digital (Tamaño automático)</option>
-                <option value="a4" ${this.ctx.project.settings.paperSize === 'a4' ? 'selected' : ''}>A4 (21 × 29.7 cm)</option>
-                <option value="a3" ${this.ctx.project.settings.paperSize === 'a3' ? 'selected' : ''}>A3 (29.7 × 42 cm)</option>
-                <option value="letter" ${this.ctx.project.settings.paperSize === 'letter' ? 'selected' : ''}>Carta (8.5 × 11 in)</option>
-                <option value="legal" ${this.ctx.project.settings.paperSize === 'legal' ? 'selected' : ''}>Oficio (8.5 × 14 in)</option>
-                <option value="a5" ${this.ctx.project.settings.paperSize === 'a5' ? 'selected' : ''}>A5 (14.8 × 21 cm)</option>
-                <option value="tabloid" ${this.ctx.project.settings.paperSize === 'tabloid' ? 'selected' : ''}>Tabloide (11 × 17 in)</option>
-              </select>
+              <div class="dropdown-wrapper dropdown-wrapper--w-220" data-ref="dropdown-wrapper-modal-paper">
+                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-modal-paper" aria-label="Tamaño de papel">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="modal-paper-selected-text">${paperLabels[curPaper] || curPaper}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-paper">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-modal-paper" style="max-height: 220px; overflow-y: auto;">
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item${curPaper === 'digital' ? ' is-active' : ''}" data-ref="btn-opt-paper-digital" data-value="digital"><span class="menu-item__text">Digital (Tamaño automático)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'a4' ? ' is-active' : ''}" data-ref="btn-opt-paper-a4" data-value="a4"><span class="menu-item__text">A4 (21 × 29.7 cm)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'a3' ? ' is-active' : ''}" data-ref="btn-opt-paper-a3" data-value="a3"><span class="menu-item__text">A3 (29.7 × 42 cm)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'letter' ? ' is-active' : ''}" data-ref="btn-opt-paper-letter" data-value="letter"><span class="menu-item__text">Carta (8.5 × 11 in)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'legal' ? ' is-active' : ''}" data-ref="btn-opt-paper-legal" data-value="legal"><span class="menu-item__text">Oficio (8.5 × 14 in)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'a5' ? ' is-active' : ''}" data-ref="btn-opt-paper-a5" data-value="a5"><span class="menu-item__text">A5 (14.8 × 21 cm)</span></button>
+                      <button type="button" class="menu-item${curPaper === 'tabloid' ? ' is-active' : ''}" data-ref="btn-opt-paper-tabloid" data-value="tabloid"><span class="menu-item__text">Tabloide (11 × 17 in)</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -379,11 +487,24 @@ export class DocModalsManager {
               </div>
             </div>
             <div class="settings-item__actions">
-              <select class="settings-dropdown-wrapper" data-ref="modal-select-margins" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
-                <option value="normal" ${this.ctx.project.settings.margins.top === 96 && this.ctx.project.settings.margins.left === 96 ? 'selected' : ''}>Normal (2.54 cm / 1 pulgada)</option>
-                <option value="narrow" ${this.ctx.project.settings.margins.top === 48 ? 'selected' : ''}>Estrecho (1.27 cm / 0.5 pulgada)</option>
-                <option value="wide" ${this.ctx.project.settings.margins.left === 192 ? 'selected' : ''}>Ancho (5.08 cm / 2 pulgadas)</option>
-              </select>
+              <div class="dropdown-wrapper dropdown-wrapper--w-220" data-ref="dropdown-wrapper-modal-margins">
+                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-modal-margins" aria-label="Márgenes">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="modal-margins-selected-text">${marginLabels[curMarginsKey] || curMarginsKey}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-margins">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-modal-margins">
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item${curMarginsKey === 'normal' ? ' is-active' : ''}" data-ref="btn-opt-margins-normal" data-value="normal"><span class="menu-item__text">Normal (2.54 cm / 1 pulgada)</span></button>
+                      <button type="button" class="menu-item${curMarginsKey === 'narrow' ? ' is-active' : ''}" data-ref="btn-opt-margins-narrow" data-value="narrow"><span class="menu-item__text">Estrecho (1.27 cm / 0.5 pulgada)</span></button>
+                      <button type="button" class="menu-item${curMarginsKey === 'wide' ? ' is-active' : ''}" data-ref="btn-opt-margins-wide" data-value="wide"><span class="menu-item__text">Ancho (5.08 cm / 2 pulgadas)</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -406,21 +527,13 @@ export class DocModalsManager {
       onConfirm: () => {
         const modalEl = document.querySelector('.modal-card');
         if (!modalEl) return;
-        const selPaper = modalEl.querySelector<HTMLSelectElement>('[data-ref="modal-select-paper"]');
-        const selMargins = modalEl.querySelector<HTMLSelectElement>('[data-ref="modal-select-margins"]');
         const chkDiff = modalEl.querySelector<HTMLInputElement>('[data-ref="modal-first-page-diff"]');
         const isLandscape = modalEl.querySelector('[data-ref="modal-btn-landscape"]')?.classList.contains('component-button--black');
 
-        if (selPaper) {
-          this.ctx.project.settings.paperSize = selPaper.value as DocPaperSize;
-        }
+        this.ctx.project.settings.paperSize = curPaper;
         this.ctx.project.settings.orientation = isLandscape ? 'landscape' : 'portrait';
         this.ctx.project.settings.firstPageDifferent = Boolean(chkDiff?.checked);
-
-        if (selMargins) {
-          const mKey = selMargins.value;
-          this.ctx.project.settings.margins = DOC_MARGIN_PRESETS[mKey]?.margins || DOC_MARGIN_PRESETS.normal.margins;
-        }
+        this.ctx.project.settings.margins = DOC_MARGIN_PRESETS[curMarginsKey]?.margins || DOC_MARGIN_PRESETS.normal.margins;
 
         this.ctx.renderDocument();
         this.ctx.recordChange();
@@ -432,8 +545,50 @@ export class DocModalsManager {
     setTimeout(() => {
       const modalEl = document.querySelector('.modal-card');
       if (!modalEl) return;
+
+      const paperWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-paper"]');
+      const paperTrigger = modalEl.querySelector<HTMLElement>('[data-ref="btn-trigger-modal-paper"]');
+      const paperMenu = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-modal-paper"]');
+      const paperBackdrop = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-modal-paper"]');
+      const paperText = modalEl.querySelector<HTMLElement>('[data-ref="modal-paper-selected-text"]');
+
+      if (paperWrapper && paperTrigger && paperMenu) {
+        setupDropdown(paperWrapper, paperTrigger, paperMenu, { backdrop: paperBackdrop || undefined });
+        paperMenu.addEventListener('click', (e) => {
+          const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+          if (!item) return;
+          const val = item.getAttribute('data-value') as DocPaperSize;
+          if (val) {
+            curPaper = val;
+            paperMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+            if (paperText) paperText.textContent = paperLabels[val] || val;
+          }
+        });
+      }
+
+      const marginsWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-margins"]');
+      const marginsTrigger = modalEl.querySelector<HTMLElement>('[data-ref="btn-trigger-modal-margins"]');
+      const marginsMenu = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-modal-margins"]');
+      const marginsBackdrop = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-modal-margins"]');
+      const marginsText = modalEl.querySelector<HTMLElement>('[data-ref="modal-margins-selected-text"]');
+
+      if (marginsWrapper && marginsTrigger && marginsMenu) {
+        setupDropdown(marginsWrapper, marginsTrigger, marginsMenu, { backdrop: marginsBackdrop || undefined });
+        marginsMenu.addEventListener('click', (e) => {
+          const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+          if (!item) return;
+          const val = item.getAttribute('data-value');
+          if (val) {
+            curMarginsKey = val;
+            marginsMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+            if (marginsText) marginsText.textContent = marginLabels[val] || val;
+          }
+        });
+      }
+
       const btnP = modalEl.querySelector<HTMLElement>('[data-ref="modal-btn-portrait"]');
       const btnL = modalEl.querySelector<HTMLElement>('[data-ref="modal-btn-landscape"]');
+
       if (btnP && btnL) {
         btnP.addEventListener('click', () => {
           btnP.className = 'component-button component-button--h32 component-button--black';

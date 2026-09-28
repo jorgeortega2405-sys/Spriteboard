@@ -76,6 +76,7 @@ class SupportController implements ViewController {
   private activeTicketId: number | null = null;
   private container: HTMLElement;
   private currentFilter: string = 'queued';
+  private escalateRoleDropdown: ReturnType<typeof setupDropdown> | null = null;
   private initialTicketParam?: string;
   private carouselController: CarouselController | null = null;
   private isAiRefining = false;
@@ -85,6 +86,7 @@ class SupportController implements ViewController {
   private lastRenderedTicketId: number | null = null;
   private renderedMessageIds: Set<number> = new Set();
   private searchQuery = '';
+  private selectedEscalateRole = 'SUPPORT_L2';
   private tickets: SupportTicketItem[] = [];
   private wsUnsubscribers: Array<() => void> = [];
 
@@ -412,6 +414,15 @@ class SupportController implements ViewController {
     const btnCloseEscalate = this.container.querySelector<HTMLElement>('[data-ref="btn-close-escalate-modal"]');
     const btnCancelEscalate = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-escalate"]');
     const btnSubmitEscalate = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-escalate"]');
+    const escalateRoleEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-escalate-role"]');
+
+    if (escalateRoleEl) {
+      this.escalateRoleDropdown = setupDropdown(escalateRoleEl, {
+        onSelect: (val) => {
+          this.selectedEscalateRole = val;
+        },
+      });
+    }
 
     const closeEscalate = () => {
       if (escalateBackdrop) escalateBackdrop.style.display = 'none';
@@ -770,10 +781,8 @@ class SupportController implements ViewController {
   private async handleSubmitEscalate(): Promise<void> {
     if (!this.activeTicketId) return;
 
-    const selectRole = this.container.querySelector<HTMLSelectElement>('[data-ref="select-escalate-role"]');
     const noteInput = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-escalate-note"]');
-
-    const targetRole = selectRole?.value || 'SUPPORT_L2';
+    const targetRole = this.selectedEscalateRole || 'SUPPORT_L2';
     const note = noteInput?.value.trim() || '';
 
     try {
@@ -923,6 +932,10 @@ class SupportController implements ViewController {
     if (this.actionsDropdown) {
       this.actionsDropdown.destroy();
       this.actionsDropdown = null;
+    }
+    if (this.escalateRoleDropdown) {
+      this.escalateRoleDropdown.destroy();
+      this.escalateRoleDropdown = null;
     }
   }
 }

@@ -1,6 +1,7 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { getApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../services/canvas-storage.service.js';
+import { detectCanvasType } from '../utils/canvas-type.util.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
@@ -12,13 +13,16 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
         const body = await res.json();
         const serverCanvas = body?.canvas || body;
         if (serverCanvas && serverCanvas.data) {
+          const resolvedType = detectCanvasType(serverCanvas);
           canvasRecord = {
             ...serverCanvas,
+            canvas_type: serverCanvas.canvas_type || resolvedType,
             role: body?.role || serverCanvas.role,
             room_token: body?.room_token || serverCanvas.room_token,
           };
           void saveLocalCanvas({
             ...serverCanvas,
+            canvas_type: canvasRecord.canvas_type,
             data: serverCanvas.data,
             is_local: false,
           });
@@ -36,25 +40,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     });
   }
 
-  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'video' ? 'video' : (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'social' ? 'social' : (canvasRecord.unit === 'doc' ? 'doc' : (canvasRecord.unit === 'sheet' ? 'sheet' : 'board')))));
-  if (canvasRecord.data) {
-    try {
-      const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
-      if (parsed?.type === 'video') {
-        canvasType = 'video';
-      } else if (parsed?.type === 'presentation') {
-        canvasType = 'presentation';
-      } else if (parsed?.type === 'social') {
-        canvasType = 'social';
-      } else if (parsed?.type === 'doc') {
-        canvasType = 'doc';
-      } else if (parsed?.type === 'sheet') {
-        canvasType = 'sheet';
-      } else if (parsed?.type === 'board') {
-        canvasType = 'board';
-      }
-    } catch {}
-  }
+  const canvasType = detectCanvasType(canvasRecord);
 
   if (canvasType === 'video') {
     const { createVideoView } = await import('./video.view.js');

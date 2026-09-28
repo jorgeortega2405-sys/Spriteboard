@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { getEmptyIllustration } from '../config/empty-illustrations.config.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -19,6 +20,11 @@ export async function createErrorView({
   title?: string;
 } = {}): Promise<HTMLElement> {
   const container = await loadTemplate('/views/error/error.html');
+
+  const graphicEl = container.querySelector<HTMLElement>('[data-ref="error-graphic"]');
+  if (graphicEl) {
+    graphicEl.innerHTML = getEmptyIllustration('error');
+  }
 
   translateElement(container);
   renderIcons(container);

@@ -1361,7 +1361,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
 
       return `
         <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" draggable="true" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}" style="position: relative; cursor: grab;">
-          <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(previewSrc)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+          <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(previewSrc)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" draggable="false" style="pointer-events: none;" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
           ${durationBadge}
           <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar ${isVideo ? 'video' : 'imagen'}" aria-label="Eliminar ${isVideo ? 'video' : 'imagen'}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
@@ -1396,6 +1396,8 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
 
         if (e.dataTransfer) {
           e.dataTransfer.setData('application/json', JSON.stringify(clipData));
+          e.dataTransfer.setData('spriteboard/clip-data', JSON.stringify(clipData));
+          e.dataTransfer.setData('spriteboard/internal-upload', uuid || '');
           e.dataTransfer.setData('text/plain', found.url);
           e.dataTransfer.setData('text/uri-list', found.url);
           e.dataTransfer.effectAllowed = 'copy';

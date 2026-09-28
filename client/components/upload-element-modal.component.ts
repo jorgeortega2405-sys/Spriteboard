@@ -1,10 +1,11 @@
-import { openModal } from './modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { canPublishElements } from '../types/auth.types.js';
 import { currentUser, escapeHtml } from '../services/api.service.js';
+import { openModal } from './modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
+import { setupDropdown } from '../utils/dom.util.js';
 import { showToast } from '../services/toast.service.js';
 import { t } from '../services/i18n.service.js';
+import { canPublishElements } from '../types/auth.types.js';
 
 export interface UploadElementModalOptions {
   onSuccess?: () => void;
@@ -23,6 +24,29 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
 
   let selectedFile: File | null = null;
   let isPremium = false;
+  let selectedType = 'graphic';
+  let selectedCategory = 'general';
+
+  const typeLabels: Record<string, string> = {
+    graphic: 'Gráfico / Vector',
+    icon: 'Icono',
+    sticker: 'Sticker / Pegatina',
+    illustration: 'Ilustración',
+    photo: 'Foto',
+  };
+
+  const categoryLabels: Record<string, string> = {
+    general: 'General',
+    technology: 'Tecnología y Software',
+    business: 'Negocios y Finanzas',
+    architecture: 'Arquitectura y Hogar',
+    nature: 'Naturaleza y Medio Ambiente',
+    education: 'Educación y Ciencia',
+    arrows: 'Flechas y Conectores',
+    shapes: 'Formas y Figuras',
+    people: 'Personas y Avatares',
+    food: 'Comida y Bebida',
+  };
 
   const bodyHtml = `
     <div class="upload-element-form" data-ref="upload-element-form">
@@ -56,34 +80,56 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sl-spacing-md); margin-bottom: var(--sl-spacing-md);">
         <div class="field-group" data-ref="group-element-type">
-          <label class="field" data-ref="label-element-type">
-            <select class="field__input field__select" data-ref="select-element-type">
-              <option value="graphic">Gráfico / Vector</option>
-              <option value="icon">Icono</option>
-              <option value="sticker">Sticker / Pegatina</option>
-              <option value="illustration">Ilustración</option>
-              <option value="photo">Foto</option>
-            </select>
-            <span class="field__label">Tipo de elemento</span>
-          </label>
+          <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Tipo de elemento</span>
+          <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-element-type">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-element-type" aria-label="Tipo de elemento">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="element-type-selected-text">Gráfico / Vector</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-element-type">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-element-type">
+                <div class="menu-panel__list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-opt-type-graphic" data-value="graphic"><span class="menu-item__text">Gráfico / Vector</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-type-icon" data-value="icon"><span class="menu-item__text">Icono</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-type-sticker" data-value="sticker"><span class="menu-item__text">Sticker / Pegatina</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-type-illustration" data-value="illustration"><span class="menu-item__text">Ilustración</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-type-photo" data-value="photo"><span class="menu-item__text">Foto</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="field-group" data-ref="group-element-category">
-          <label class="field" data-ref="label-element-category">
-            <select class="field__input field__select" data-ref="select-element-category">
-              <option value="general">General</option>
-              <option value="technology">Tecnología y Software</option>
-              <option value="business">Negocios y Finanzas</option>
-              <option value="architecture">Arquitectura y Hogar</option>
-              <option value="nature">Naturaleza y Medio Ambiente</option>
-              <option value="education">Educación y Ciencia</option>
-              <option value="arrows">Flechas y Conectores</option>
-              <option value="shapes">Formas y Figuras</option>
-              <option value="people">Personas y Avatares</option>
-              <option value="food">Comida y Bebida</option>
-            </select>
-            <span class="field__label">Categoría principal</span>
-          </label>
+          <span class="field-group__label" style="display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">Categoría principal</span>
+          <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-element-category">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-element-category" aria-label="Categoría principal">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="element-category-selected-text">General</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-element-category">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-element-category" style="max-height: 200px; overflow-y: auto;">
+                <div class="menu-panel__list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-opt-cat-general" data-value="general"><span class="menu-item__text">General</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-technology" data-value="technology"><span class="menu-item__text">Tecnología y Software</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-business" data-value="business"><span class="menu-item__text">Negocios y Finanzas</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-architecture" data-value="architecture"><span class="menu-item__text">Arquitectura y Hogar</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-nature" data-value="nature"><span class="menu-item__text">Naturaleza y Medio Ambiente</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-education" data-value="education"><span class="menu-item__text">Educación y Ciencia</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-arrows" data-value="arrows"><span class="menu-item__text">Flechas y Conectores</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-shapes" data-value="shapes"><span class="menu-item__text">Formas y Figuras</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-people" data-value="people"><span class="menu-item__text">Personas y Avatares</span></button>
+                  <button type="button" class="menu-item" data-ref="btn-opt-cat-food" data-value="food"><span class="menu-item__text">Comida y Bebida</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -138,8 +184,6 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
     onConfirm: async (inst) => {
       const container = inst.card || inst.backdrop;
       const titleInput = container.querySelector<HTMLInputElement>('[data-ref="input-element-title"]');
-      const typeSelect = container.querySelector<HTMLSelectElement>('[data-ref="select-element-type"]');
-      const categorySelect = container.querySelector<HTMLSelectElement>('[data-ref="select-element-category"]');
       const tagsInput = container.querySelector<HTMLInputElement>('[data-ref="input-element-tags"]');
 
       const title = titleInput?.value.trim() || '';
@@ -167,8 +211,8 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('title', title);
-        formData.append('element_type', typeSelect?.value || 'graphic');
-        formData.append('category', categorySelect?.value || 'general');
+        formData.append('element_type', selectedType);
+        formData.append('category', selectedCategory);
         formData.append('is_premium', String(isPremium));
         formData.append('tags', JSON.stringify(tags));
 
@@ -208,8 +252,47 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
   const filesizeEl = card.querySelector<HTMLElement>('[data-ref="element-filesize"]');
   const btnRemoveFile = card.querySelector<HTMLButtonElement>('[data-ref="btn-remove-selected-file"]');
   const titleInput = card.querySelector<HTMLInputElement>('[data-ref="input-element-title"]');
-  const typeSelect = card.querySelector<HTMLSelectElement>('[data-ref="select-element-type"]');
   const tagsInput = card.querySelector<HTMLInputElement>('[data-ref="input-element-tags"]');
+
+  const typeWrapper = card.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-element-type"]');
+  const typeTrigger = card.querySelector<HTMLElement>('[data-ref="btn-trigger-element-type"]');
+  const typeMenu = card.querySelector<HTMLElement>('[data-ref="dropdown-menu-element-type"]');
+  const typeBackdrop = card.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-element-type"]');
+  const typeText = card.querySelector<HTMLElement>('[data-ref="element-type-selected-text"]');
+
+  if (typeWrapper && typeTrigger && typeMenu) {
+    setupDropdown(typeWrapper, typeTrigger, typeMenu, { backdrop: typeBackdrop || undefined });
+    typeMenu.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+      if (!item) return;
+      const val = item.getAttribute('data-value');
+      if (val) {
+        selectedType = val;
+        typeMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+        if (typeText) typeText.textContent = typeLabels[val] || val;
+      }
+    });
+  }
+
+  const catWrapper = card.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-element-category"]');
+  const catTrigger = card.querySelector<HTMLElement>('[data-ref="btn-trigger-element-category"]');
+  const catMenu = card.querySelector<HTMLElement>('[data-ref="dropdown-menu-element-category"]');
+  const catBackdrop = card.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-element-category"]');
+  const catText = card.querySelector<HTMLElement>('[data-ref="element-category-selected-text"]');
+
+  if (catWrapper && catTrigger && catMenu) {
+    setupDropdown(catWrapper, catTrigger, catMenu, { backdrop: catBackdrop || undefined });
+    catMenu.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+      if (!item) return;
+      const val = item.getAttribute('data-value');
+      if (val) {
+        selectedCategory = val;
+        catMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+        if (catText) catText.textContent = categoryLabels[val] || val;
+      }
+    });
+  }
 
   const btnTierFree = card.querySelector<HTMLButtonElement>('[data-ref="btn-tier-free"]');
   const btnTierPremium = card.querySelector<HTMLButtonElement>('[data-ref="btn-tier-premium"]');
@@ -242,8 +325,12 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
       }
 
       if (file.name.endsWith('.svg') || file.type === 'image/svg+xml') {
-        if (typeSelect && typeSelect.value === 'photo') {
-          typeSelect.value = 'graphic';
+        if (selectedType === 'photo') {
+          selectedType = 'graphic';
+          if (typeText) typeText.textContent = typeLabels.graphic;
+          if (typeMenu) {
+            typeMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m.getAttribute('data-value') === 'graphic'));
+          }
         }
         const reader = new FileReader();
         reader.onload = (e) => {

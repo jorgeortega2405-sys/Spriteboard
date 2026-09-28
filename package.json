@@ -20,7 +20,11 @@
     "typecheck:admin": "npm --prefix admin run typecheck",
     "start": "node dist/index.js",
     "geoip:download": "tsx scripts/download-geoip.ts",
-    "icons:bundle": "py admin_tool/manage_project.py"
+    "icons:bundle": "py admin_tool/manage_project.py --icons",
+    "audit:styles": "py admin_tool/manage_project.py --audit-styles",
+    "audit:i18n": "py admin_tool/manage_project.py --audit-i18n",
+    "audit:console": "py admin_tool/manage_project.py --audit-console",
+    "audit": "py admin_tool/manage_project.py --audit-all"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1131.0",

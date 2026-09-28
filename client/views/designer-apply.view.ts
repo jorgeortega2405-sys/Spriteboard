@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DesignerApplicationItem, DesignerStatusResponse } from '../types/designer.types.js';
-import { withButtonLoading } from '../utils/dom.util.js';
+import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -27,6 +27,7 @@ export class DesignerApplyController {
   private container: HTMLElement;
   private currentStep = 1;
   private portfolioLinks: string[] = [];
+  private selectedCountry = '';
   private selectedFiles: File[] = [];
   private selectedRole = 'designer';
 
@@ -247,6 +248,29 @@ export class DesignerApplyController {
         this.selectedRole = option.getAttribute('data-role') || 'designer';
       }, { signal });
     });
+
+    const countryWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-country"]');
+    const countryTrigger = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-country"]');
+    const countryMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-country"]');
+    const countryBackdrop = this.container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-country"]');
+    const countryText = this.container.querySelector<HTMLElement>('[data-ref="country-selected-text"]');
+
+    if (countryWrapper && countryTrigger && countryMenu) {
+      setupDropdown(countryWrapper, countryTrigger, countryMenu, { backdrop: countryBackdrop || undefined, signal });
+      countryMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (val) {
+          this.selectedCountry = val;
+          countryMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (countryText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) countryText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
 
     const btnNext1 = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-next-step-1"]');
     btnNext1?.addEventListener('click', () => {
@@ -493,12 +517,11 @@ export class DesignerApplyController {
     this.clearError();
 
     const inputName = this.container.querySelector<HTMLInputElement>('[data-ref="input-full-name"]');
-    const selectCountry = this.container.querySelector<HTMLSelectElement>('[data-ref="select-country"]');
     const textareaBio = this.container.querySelector<HTMLTextAreaElement>('[data-ref="textarea-bio"]');
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-application"]');
 
     const fullName = inputName?.value.trim() || '';
-    const country = selectCountry?.value.trim() || '';
+    const country = this.selectedCountry.trim();
     const bio = textareaBio?.value.trim() || '';
 
     if (!fullName || fullName.length < 2) {
@@ -509,7 +532,6 @@ export class DesignerApplyController {
 
     if (!country) {
       this.showError('Por favor selecciona tu país de residencia.');
-      selectCountry?.focus();
       return;
     }
 

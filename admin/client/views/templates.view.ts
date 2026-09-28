@@ -6,7 +6,7 @@ import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { AdminDesignerApplicationFile, AdminDesignerApplicationItem, DesignerApplicationMetricsData } from '../types/designer.types.js';
 import { AdminTemplateItem, TemplateMetricsData, TemplateStatus } from '../types/template.types.js';
-import { debounce, escapeHtml } from '../utils/dom.util.js';
+import { debounce, escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 function formatFileSize(bytes: number): string {
   if (!bytes || bytes === 0) return '0 B';
@@ -36,6 +36,7 @@ export class TemplatesViewController implements ViewController {
   private designerApps: AdminDesignerApplicationItem[] = [];
   private totalAppCount = 0;
   private totalAppPages = 1;
+  private typeDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -52,6 +53,7 @@ export class TemplatesViewController implements ViewController {
   }
 
   public destroy(): void {
+    this.typeDropdownCtrl?.destroy();
     this.abortController.abort();
   }
 
@@ -140,12 +142,16 @@ export class TemplatesViewController implements ViewController {
       }, { signal });
     });
 
-    const typeSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-filter-type"]');
-    typeSelect?.addEventListener('change', () => {
-      this.currentType = typeSelect.value;
-      this.currentPage = 1;
-      void this.loadTemplates();
-    }, { signal });
+    const typeDropdownEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-filter-type"]');
+    if (typeDropdownEl) {
+      this.typeDropdownCtrl = setupDropdown(typeDropdownEl, {
+        onSelect: (val) => {
+          this.currentType = val;
+          this.currentPage = 1;
+          void this.loadTemplates();
+        },
+      });
+    }
 
     const btnPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-prev-page"]');
     const btnNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-next-page"]');

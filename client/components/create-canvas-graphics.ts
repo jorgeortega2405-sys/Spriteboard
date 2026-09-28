@@ -537,7 +537,7 @@ export function getSocialSvg(format: string): string {
 export function getSheetSvg(): string {
   return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="15" y="10" width="150" height="90" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
-    <rect x="16" y="11" width="148" height="16" rx="5 5 0 0" fill="#f8fafc"/>
+    <rect x="16" y="11" width="148" height="16" rx="5" fill="#f8fafc"/>
     <rect x="22" y="15" width="18" height="8" rx="2" fill="#e2e8f0"/>
     <text x="46" y="22" font-family="sans-serif" font-size="7" font-weight="bold" font-style="italic" fill="#7c3aed">f(x)</text>
     <rect x="60" y="15" width="98" height="8" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="0.75"/>

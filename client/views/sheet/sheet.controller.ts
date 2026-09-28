@@ -979,6 +979,7 @@ export class SheetController implements ViewController {
           canvas_type: 'sheet',
           data: serialized,
           preview_thumbnail: thumbnail,
+          unit: 'sheet',
         });
         if (res.ok) {
           statusBtn?.classList.remove('is-saving', 'is-error');

@@ -1,6 +1,7 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getApi, postApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
 import { ExportJobStatus, ExportOptions, VideoProject } from './video.types.js';
 
 export class VideoExportService {
@@ -8,6 +9,8 @@ export class VideoExportService {
   private _backdrop: HTMLElement | null = null;
   private _pollInterval: any = null;
   private _abortController: AbortController | null = null;
+  private _quality: 'high' | 'medium' | 'low' = 'high';
+  private _fps: number = 30;
 
   constructor(container: HTMLElement) {
     this._container = container;
@@ -18,10 +21,58 @@ export class VideoExportService {
     const signal = this._abortController.signal;
     this._backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-export-backdrop"]');
     const btnClose = this._container.querySelector<HTMLElement>('[data-ref="btn-close-export-modal"]');
+    const btnCancel = this._container.querySelector<HTMLElement>('[data-ref="btn-cancel-export"]');
     const btnStart = this._container.querySelector<HTMLElement>('[data-ref="btn-start-render"]');
 
     btnClose?.addEventListener('click', () => this.close(), { signal });
+    btnCancel?.addEventListener('click', () => this.close(), { signal });
     btnStart?.addEventListener('click', () => void this.startExport(), { signal });
+
+    const qualityWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export-quality"]');
+    const qualityTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-export-quality"]');
+    const qualityMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-export-quality"]');
+    const qualityBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-export-quality"]');
+    const qualityText = this._container.querySelector<HTMLElement>('[data-ref="export-quality-selected-text"]');
+
+    if (qualityWrapper && qualityTrigger && qualityMenu) {
+      setupDropdown(qualityWrapper, qualityTrigger, qualityMenu, { backdrop: qualityBackdrop || undefined, signal });
+      qualityMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value') as 'high' | 'medium' | 'low';
+        if (val) {
+          this._quality = val;
+          qualityMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (qualityText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) qualityText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
+
+    const fpsWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export-fps"]');
+    const fpsTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-export-fps"]');
+    const fpsMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-export-fps"]');
+    const fpsBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-export-fps"]');
+    const fpsText = this._container.querySelector<HTMLElement>('[data-ref="export-fps-selected-text"]');
+
+    if (fpsWrapper && fpsTrigger && fpsMenu) {
+      setupDropdown(fpsWrapper, fpsTrigger, fpsMenu, { backdrop: fpsBackdrop || undefined, signal });
+      fpsMenu.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
+        if (!item) return;
+        const val = parseInt(item.getAttribute('data-value') || '30', 10);
+        if (val) {
+          this._fps = val;
+          fpsMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
+          if (fpsText) {
+            const spanText = item.querySelector('.menu-item__text')?.textContent;
+            if (spanText) fpsText.textContent = spanText;
+          }
+        }
+      }, { signal });
+    }
   }
 
   public open(): void {
@@ -62,13 +113,11 @@ export class VideoExportService {
     const optionsView = this._container.querySelector<HTMLElement>('[data-ref="export-options-view"]');
     const progressView = this._container.querySelector<HTMLElement>('[data-ref="export-progress-view"]');
     const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="video-export-error"]');
-    const selectQuality = this._container.querySelector<HTMLSelectElement>('[data-ref="select-export-quality"]');
-    const selectFps = this._container.querySelector<HTMLSelectElement>('[data-ref="select-export-fps"]');
 
     if (errorBanner) errorBanner.style.display = 'none';
 
-    const quality = (selectQuality?.value || 'high') as 'high' | 'low' | 'medium';
-    const fps = parseInt(selectFps?.value || '30', 10) || 30;
+    const quality = this._quality || 'high';
+    const fps = this._fps || 30;
 
     const project: VideoProject = customProject || (this._container as any).__currentVideoProject;
     if (!project) {

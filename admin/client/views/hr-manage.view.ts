@@ -6,7 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { CompensationHistoryItem, Employee, EmployeeDocument, TimeOffBalance } from '../types/hr.types.js';
-import { escapeHtml } from '../utils/dom.util.js';
+import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -184,6 +184,10 @@ class HrManageController implements ViewController {
   private openPromoteModal(): void {
     if (!this.employee) return;
     const today = new Date().toISOString().split('T')[0];
+    let selectedChangeType = 'promotion';
+    let selectedDepartment = this.employee.department || 'Ingeniería';
+    let selectedCurrency = this.employee.currency || 'USD';
+    let selectedRole = '';
 
     const modal = openModal({
       bodyHtml: `
@@ -192,32 +196,82 @@ class HrManageController implements ViewController {
             Registra una promoción, aumento salarial o transferencia departamental para <strong>${escapeHtml(this.employee.first_name)} ${escapeHtml(this.employee.last_name)}</strong>.
           </p>
 
-          <label class="field" data-ref="field-modal-change-type">
-            <select class="field__input" data-ref="select-modal-change-type">
-              <option value="promotion">Promoción / Ascenso de Cargo</option>
-              <option value="salary_adjustment">Ajuste o Incremento Salarial</option>
-              <option value="department_transfer">Transferencia de Departamento</option>
-              <option value="role_change">Cambio de Rol y Responsabilidades</option>
-            </select>
-            <span class="field__label">Tipo de Modificación *</span>
-          </label>
+          <div class="field-group" data-ref="field-modal-change-type">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Tipo de Modificación *</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-change-type">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-change-type" aria-label="Tipo de Modificación">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="modal-change-type-selected-text">Promoción / Ascenso de Cargo</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-change-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-change-type">
+                  <div class="menu-panel__drag-zone" data-ref="modal-change-type-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-modal-change-type">
+                    <button type="button" class="menu-item is-active" data-value="promotion">
+                      <span class="menu-item__text">Promoción / Ascenso de Cargo</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="salary_adjustment">
+                      <span class="menu-item__text">Ajuste o Incremento Salarial</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="department_transfer">
+                      <span class="menu-item__text">Transferencia de Departamento</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="role_change">
+                      <span class="menu-item__text">Cambio de Rol y Responsabilidades</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div style="display: flex; gap: 12px;">
             <label class="field" data-ref="field-modal-job-title" style="flex: 1;">
               <input class="field__input" data-ref="input-modal-job-title" type="text" value="${escapeHtml(this.employee.job_title)}" required />
               <span class="field__label">Nuevo Puesto / Cargo *</span>
             </label>
-            <label class="field" data-ref="field-modal-department" style="flex: 1;">
-              <select class="field__input" data-ref="select-modal-department">
-                <option value="Ingeniería" ${this.employee.department === 'Ingeniería' ? 'selected' : ''}>Ingeniería</option>
-                <option value="Soporte y Operaciones" ${this.employee.department === 'Soporte y Operaciones' ? 'selected' : ''}>Soporte y Operaciones</option>
-                <option value="Finanzas y Legal" ${this.employee.department === 'Finanzas y Legal' ? 'selected' : ''}>Finanzas y Legal</option>
-                <option value="Recursos Humanos" ${this.employee.department === 'Recursos Humanos' ? 'selected' : ''}>Recursos Humanos</option>
-                <option value="Marketing y Producto" ${this.employee.department === 'Marketing y Producto' ? 'selected' : ''}>Marketing y Producto</option>
-                <option value="Dirección General" ${this.employee.department === 'Dirección General' ? 'selected' : ''}>Dirección General</option>
-              </select>
-              <span class="field__label">Nuevo Departamento *</span>
-            </label>
+            <div class="field-group" data-ref="field-modal-department" style="flex: 1;">
+              <span class="field__label" style="margin-bottom: 4px; display: block;">Nuevo Departamento *</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-department">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-department" aria-label="Nuevo Departamento">
+                  <div class="dropdown-trigger__left">
+                    <span class="dropdown-trigger__text" data-ref="modal-department-selected-text">${escapeHtml(this.employee.department || 'Ingeniería')}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-department">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-department">
+                    <div class="menu-panel__drag-zone" data-ref="modal-department-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-modal-department">
+                      <button type="button" class="menu-item${this.employee.department === 'Ingeniería' || !this.employee.department ? ' is-active' : ''}" data-value="Ingeniería">
+                        <span class="menu-item__text">Ingeniería</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.department === 'Soporte y Operaciones' ? ' is-active' : ''}" data-value="Soporte y Operaciones">
+                        <span class="menu-item__text">Soporte y Operaciones</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.department === 'Finanzas y Legal' ? ' is-active' : ''}" data-value="Finanzas y Legal">
+                        <span class="menu-item__text">Finanzas y Legal</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.department === 'Recursos Humanos' ? ' is-active' : ''}" data-value="Recursos Humanos">
+                        <span class="menu-item__text">Recursos Humanos</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.department === 'Marketing y Producto' ? ' is-active' : ''}" data-value="Marketing y Producto">
+                        <span class="menu-item__text">Marketing y Producto</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.department === 'Dirección General' ? ' is-active' : ''}" data-value="Dirección General">
+                        <span class="menu-item__text">Dirección General</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div style="display: flex; gap: 12px;">
@@ -225,38 +279,108 @@ class HrManageController implements ViewController {
               <input class="field__input" data-ref="input-modal-salary" type="number" step="0.01" min="0" value="${this.employee.salary || ''}" placeholder=" " />
               <span class="field__label">Nuevo Salario / Compensación</span>
             </label>
-            <label class="field" data-ref="field-modal-currency" style="flex: 1;">
-              <select class="field__input" data-ref="select-modal-currency">
-                <option value="USD" ${this.employee.currency === 'USD' ? 'selected' : ''}>USD ($)</option>
-                <option value="EUR" ${this.employee.currency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
-                <option value="MXN" ${this.employee.currency === 'MXN' ? 'selected' : ''}>MXN ($)</option>
-                <option value="COP" ${this.employee.currency === 'COP' ? 'selected' : ''}>COP ($)</option>
-                <option value="CLP" ${this.employee.currency === 'CLP' ? 'selected' : ''}>CLP ($)</option>
-              </select>
-              <span class="field__label">Moneda</span>
-            </label>
+            <div class="field-group" data-ref="field-modal-currency" style="flex: 1;">
+              <span class="field__label" style="margin-bottom: 4px; display: block;">Moneda</span>
+              <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-currency">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-currency" aria-label="Moneda">
+                  <div class="dropdown-trigger__left">
+                    <span class="dropdown-trigger__text" data-ref="modal-currency-selected-text">${escapeHtml(this.employee.currency || 'USD')}</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-currency">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-currency">
+                    <div class="menu-panel__drag-zone" data-ref="modal-currency-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-modal-currency">
+                      <button type="button" class="menu-item${this.employee.currency === 'USD' || !this.employee.currency ? ' is-active' : ''}" data-value="USD">
+                        <span class="menu-item__text">USD ($)</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.currency === 'EUR' ? ' is-active' : ''}" data-value="EUR">
+                        <span class="menu-item__text">EUR (€)</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.currency === 'MXN' ? ' is-active' : ''}" data-value="MXN">
+                        <span class="menu-item__text">MXN ($)</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.currency === 'COP' ? ' is-active' : ''}" data-value="COP">
+                        <span class="menu-item__text">COP ($)</span>
+                      </button>
+                      <button type="button" class="menu-item${this.employee.currency === 'CLP' ? ' is-active' : ''}" data-value="CLP">
+                        <span class="menu-item__text">CLP ($)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <label class="field" data-ref="field-modal-role">
-            <select class="field__input" data-ref="select-modal-role">
-              <option value="">Mantener rol actual (${escapeHtml(this.employee.role || 'USER')})</option>
-              <option value="ENGINEER">Engineer (Ingeniería)</option>
-              <option value="SENIOR_ENGINEER">Senior Engineer (Ingeniería Senior)</option>
-              <option value="DEVOPS">DevOps (Infraestructura)</option>
-              <option value="SUPPORT_L1">Support L1 (Soporte Nivel 1)</option>
-              <option value="SUPPORT_L2">Support L2 (Soporte Técnico Especializado)</option>
-              <option value="SUPPORT_MANAGER">Support Manager (Gerencia de Soporte)</option>
-              <option value="HR_MANAGER">HR Manager (Recursos Humanos)</option>
-              <option value="HR_RECRUITER">HR Recruiter (Reclutamiento y Selección)</option>
-              <option value="FINANCE_ADMIN">Finance Admin (Finanzas y Contabilidad)</option>
-              <option value="OPERATIONS_AGENT">Operations Agent (Operaciones)</option>
-              <option value="DATA_ANALYST">Data Analyst (Analítica)</option>
-              <option value="AUDITOR">Auditor (Auditoría y Compliance)</option>
-              <option value="DESIGNER">Designer (Diseñador)</option>
-              <option value="USER">Usuario Estándar</option>
-            </select>
-            <span class="field__label">Rol en Plataforma</span>
-          </label>
+          <div class="field-group" data-ref="field-modal-role">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Rol en Plataforma</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-role">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-role" aria-label="Rol en Plataforma">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="modal-role-selected-text">Mantener rol actual (${escapeHtml(this.employee.role || 'USER')})</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-role">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-role">
+                  <div class="menu-panel__drag-zone" data-ref="modal-role-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-modal-role">
+                    <button type="button" class="menu-item is-active" data-value="">
+                      <span class="menu-item__text">Mantener rol actual (${escapeHtml(this.employee.role || 'USER')})</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="ENGINEER">
+                      <span class="menu-item__text">Engineer (Ingeniería)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="SENIOR_ENGINEER">
+                      <span class="menu-item__text">Senior Engineer (Ingeniería Senior)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="DEVOPS">
+                      <span class="menu-item__text">DevOps (Infraestructura)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="SUPPORT_L1">
+                      <span class="menu-item__text">Support L1 (Soporte Nivel 1)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="SUPPORT_L2">
+                      <span class="menu-item__text">Support L2 (Soporte Técnico Especializado)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="SUPPORT_MANAGER">
+                      <span class="menu-item__text">Support Manager (Gerencia de Soporte)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="HR_MANAGER">
+                      <span class="menu-item__text">HR Manager (Recursos Humanos)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="HR_RECRUITER">
+                      <span class="menu-item__text">HR Recruiter (Reclutamiento y Selección)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="FINANCE_ADMIN">
+                      <span class="menu-item__text">Finance Admin (Finanzas y Contabilidad)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="OPERATIONS_AGENT">
+                      <span class="menu-item__text">Operations Agent (Operaciones)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="DATA_ANALYST">
+                      <span class="menu-item__text">Data Analyst (Analítica)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="AUDITOR">
+                      <span class="menu-item__text">Auditor (Auditoría y Compliance)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="DESIGNER">
+                      <span class="menu-item__text">Designer (Diseñador)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="USER">
+                      <span class="menu-item__text">Usuario Estándar</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <label class="field" data-ref="field-modal-effective-date">
             <input class="field__input" data-ref="input-modal-effective-date" type="date" value="${today}" required />
@@ -272,12 +396,8 @@ class HrManageController implements ViewController {
       confirmClass: 'component-button--black',
       confirmText: 'Guardar Ajuste',
       onConfirm: async () => {
-        const changeType = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-change-type"]')?.value || 'promotion';
         const newJobTitle = (modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-job-title"]')?.value || '').trim();
-        const newDepartment = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-department"]')?.value || 'Ingeniería';
         const salaryVal = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-salary"]')?.value;
-        const currency = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-currency"]')?.value || 'USD';
-        const roleVal = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-role"]')?.value;
         const effectiveDate = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-effective-date"]')?.value;
         const reason = (modal.body.querySelector<HTMLTextAreaElement>('[data-ref="input-modal-reason"]')?.value || '').trim();
 
@@ -293,12 +413,12 @@ class HrManageController implements ViewController {
 
         modal.setConfirmLoading?.(true, 'Registrando...');
         const res = await promoteEmployeeApi(this.employeeId, {
-          change_type: changeType,
-          currency,
+          change_type: selectedChangeType,
+          currency: selectedCurrency,
           effective_date: effectiveDate,
-          new_department: newDepartment,
+          new_department: selectedDepartment,
           new_job_title: newJobTitle,
-          new_platform_role: roleVal || undefined,
+          new_platform_role: selectedRole || undefined,
           new_salary: salaryVal ? parseFloat(salaryVal) : undefined,
           reason,
         });
@@ -316,11 +436,54 @@ class HrManageController implements ViewController {
       size: 'sm',
       title: 'Ajustar Puesto o Salario',
     });
+
+    const changeTypeDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-change-type"]');
+    if (changeTypeDropdown) {
+      setupDropdown({
+        container: changeTypeDropdown,
+        onSelect: (item) => {
+          selectedChangeType = item.getAttribute('data-value') || 'promotion';
+        },
+      });
+    }
+
+    const deptDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-department"]');
+    if (deptDropdown) {
+      setupDropdown({
+        container: deptDropdown,
+        onSelect: (item) => {
+          selectedDepartment = item.getAttribute('data-value') || 'Ingeniería';
+        },
+      });
+    }
+
+    const currencyDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-currency"]');
+    if (currencyDropdown) {
+      setupDropdown({
+        container: currencyDropdown,
+        onSelect: (item) => {
+          selectedCurrency = item.getAttribute('data-value') || 'USD';
+        },
+      });
+    }
+
+    const roleDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-role"]');
+    if (roleDropdown) {
+      setupDropdown({
+        container: roleDropdown,
+        onSelect: (item) => {
+          selectedRole = item.getAttribute('data-value') || '';
+        },
+      });
+    }
+
+    renderIcons(modal.body);
   }
 
   private openRequestTimeOffModal(): void {
     if (!this.employee) return;
     const today = new Date().toISOString().split('T')[0];
+    let selectedPtoType = 'vacation';
 
     const modal = openModal({
       bodyHtml: `
@@ -329,17 +492,44 @@ class HrManageController implements ViewController {
             Registra una solicitud de vacaciones o permiso para <strong>${escapeHtml(this.employee.first_name)} ${escapeHtml(this.employee.last_name)}</strong>.
           </p>
 
-          <label class="field" data-ref="field-modal-pto-type">
-            <select class="field__input" data-ref="select-modal-pto-type">
-              <option value="vacation">Vacaciones Anuales</option>
-              <option value="sick_leave">Licencia Médica</option>
-              <option value="personal">Día Personal</option>
-              <option value="maternity_paternity">Maternidad / Paternidad</option>
-              <option value="unpaid">Permiso No Remunerado</option>
-              <option value="other">Otro Permiso Especial</option>
-            </select>
-            <span class="field__label">Tipo de Ausencia *</span>
-          </label>
+          <div class="field-group" data-ref="field-modal-pto-type">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Tipo de Ausencia *</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-pto-type">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-pto-type" aria-label="Tipo de Ausencia">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="modal-pto-type-selected-text">Vacaciones Anuales</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-pto-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-pto-type">
+                  <div class="menu-panel__drag-zone" data-ref="modal-pto-type-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-modal-pto-type">
+                    <button type="button" class="menu-item is-active" data-value="vacation">
+                      <span class="menu-item__text">Vacaciones Anuales</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="sick_leave">
+                      <span class="menu-item__text">Licencia Médica</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="personal">
+                      <span class="menu-item__text">Día Personal</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="maternity_paternity">
+                      <span class="menu-item__text">Maternidad / Paternidad</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="unpaid">
+                      <span class="menu-item__text">Permiso No Remunerado</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="other">
+                      <span class="menu-item__text">Otro Permiso Especial</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div style="display: flex; gap: 12px;">
             <label class="field" data-ref="field-modal-start-date" style="flex: 1;">
@@ -361,7 +551,6 @@ class HrManageController implements ViewController {
       confirmClass: 'component-button--black',
       confirmText: 'Registrar Solicitud',
       onConfirm: async () => {
-        const requestType = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-pto-type"]')?.value || 'vacation';
         const startDate = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-start-date"]')?.value;
         const endDate = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-end-date"]')?.value;
         const reason = (modal.body.querySelector<HTMLTextAreaElement>('[data-ref="input-modal-pto-reason"]')?.value || '').trim();
@@ -381,7 +570,7 @@ class HrManageController implements ViewController {
           employee_id: this.employee!.id,
           end_date: endDate,
           reason,
-          request_type: requestType,
+          request_type: selectedPtoType,
           start_date: startDate,
         });
         modal.setConfirmLoading?.(false);
@@ -398,11 +587,24 @@ class HrManageController implements ViewController {
       size: 'sm',
       title: 'Solicitar Ausencia / Permiso',
     });
+
+    const ptoDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-pto-type"]');
+    if (ptoDropdown) {
+      setupDropdown({
+        container: ptoDropdown,
+        onSelect: (item) => {
+          selectedPtoType = item.getAttribute('data-value') || 'vacation';
+        },
+      });
+    }
+
+    renderIcons(modal.body);
   }
 
   private openUploadDocumentModal(): void {
     if (!this.employee) return;
     let selectedFile: File | null = null;
+    let selectedDocType = 'contract';
 
     const modal = openModal({
       bodyHtml: `
@@ -411,16 +613,41 @@ class HrManageController implements ViewController {
             Adjunta un contrato, anexo o documento oficial al expediente de <strong>${escapeHtml(this.employee.first_name)} ${escapeHtml(this.employee.last_name)}</strong>.
           </p>
 
-          <label class="field" data-ref="field-modal-doc-type">
-            <select class="field__input" data-ref="select-modal-doc-type">
-              <option value="contract">Contrato Laboral</option>
-              <option value="nda">Acuerdo de Confidencialidad (NDA)</option>
-              <option value="id_card">Documento de Identidad / Pasaporte</option>
-              <option value="resume">Currículum Vitae (CV)</option>
-              <option value="other">Otro Documento Oficial</option>
-            </select>
-            <span class="field__label">Tipo de Documento *</span>
-          </label>
+          <div class="field-group" data-ref="field-modal-doc-type">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Tipo de Documento *</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-doc-type">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-doc-type" aria-label="Tipo de Documento">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="modal-doc-type-selected-text">Contrato Laboral</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-doc-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-doc-type">
+                  <div class="menu-panel__drag-zone" data-ref="modal-doc-type-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-modal-doc-type">
+                    <button type="button" class="menu-item is-active" data-value="contract">
+                      <span class="menu-item__text">Contrato Laboral</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="nda">
+                      <span class="menu-item__text">Acuerdo de Confidencialidad (NDA)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="id_card">
+                      <span class="menu-item__text">Documento de Identidad / Pasaporte</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="resume">
+                      <span class="menu-item__text">Currículum Vitae (CV)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-value="other">
+                      <span class="menu-item__text">Otro Documento Oficial</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="upload-dropzone" data-ref="doc-dropzone" style="border: 2px dashed var(--border-color); border-radius: var(--radius-lg); padding: 24px 16px; text-align: center; cursor: pointer; background: var(--bg-card-subtle);">
             <input type="file" data-ref="input-doc-file" accept="application/pdf,image/png,image/jpeg" style="display: none;" />
@@ -439,10 +666,9 @@ class HrManageController implements ViewController {
           return;
         }
 
-        const docType = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-doc-type"]')?.value || 'contract';
         const formData = new FormData();
         formData.append('document_file', selectedFile);
-        formData.append('document_type', docType);
+        formData.append('document_type', selectedDocType);
 
         modal.setConfirmLoading?.(true, 'Subiendo...');
         const res = await uploadEmployeeDocumentApi(this.employeeId, formData);
@@ -461,6 +687,16 @@ class HrManageController implements ViewController {
       title: 'Adjuntar Documento',
     });
 
+    const docDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-doc-type"]');
+    if (docDropdown) {
+      setupDropdown({
+        container: docDropdown,
+        onSelect: (item) => {
+          selectedDocType = item.getAttribute('data-value') || 'contract';
+        },
+      });
+    }
+
     const dropzone = modal.body.querySelector<HTMLElement>('[data-ref="doc-dropzone"]');
     const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-doc-file"]');
     const badge = modal.body.querySelector<HTMLElement>('[data-ref="selected-doc-badge"]');
@@ -475,10 +711,19 @@ class HrManageController implements ViewController {
         }
       }
     });
+
+    renderIcons(modal.body);
   }
 
   private openUpdateStatusModal(): void {
     if (!this.employee) return;
+    let selectedStatus = this.employee.status || 'active';
+    const statusLabels: Record<string, string> = {
+      active: 'Activo',
+      onboarding: 'En Onboarding',
+      suspended: 'Suspendido',
+      terminated: 'Desvinculado',
+    };
 
     const modal = openModal({
       bodyHtml: `
@@ -487,15 +732,38 @@ class HrManageController implements ViewController {
             Modifica la situación laboral de <strong>${escapeHtml(this.employee.first_name)} ${escapeHtml(this.employee.last_name)}</strong>.
           </p>
 
-          <label class="field" data-ref="field-modal-status">
-            <select class="field__input" data-ref="select-modal-status">
-              <option value="active" ${this.employee.status === 'active' ? 'selected' : ''}>Activo</option>
-              <option value="onboarding" ${this.employee.status === 'onboarding' ? 'selected' : ''}>En Onboarding</option>
-              <option value="suspended" ${this.employee.status === 'suspended' ? 'selected' : ''}>Suspendido</option>
-              <option value="terminated" ${this.employee.status === 'terminated' ? 'selected' : ''}>Desvinculado</option>
-            </select>
-            <span class="field__label">Estado Laboral *</span>
-          </label>
+          <div class="field-group" data-ref="field-modal-status">
+            <span class="field__label" style="margin-bottom: 4px; display: block;">Estado Laboral *</span>
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-modal-status">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-modal-status" aria-label="Estado Laboral">
+                <div class="dropdown-trigger__left">
+                  <span class="dropdown-trigger__text" data-ref="modal-status-selected-text">${statusLabels[this.employee.status] || 'Activo'}</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-modal-status">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-modal-status">
+                  <div class="menu-panel__drag-zone" data-ref="modal-status-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-modal-status">
+                    <button type="button" class="menu-item${this.employee.status === 'active' || !this.employee.status ? ' is-active' : ''}" data-value="active">
+                      <span class="menu-item__text">Activo</span>
+                    </button>
+                    <button type="button" class="menu-item${this.employee.status === 'onboarding' ? ' is-active' : ''}" data-value="onboarding">
+                      <span class="menu-item__text">En Onboarding</span>
+                    </button>
+                    <button type="button" class="menu-item${this.employee.status === 'suspended' ? ' is-active' : ''}" data-value="suspended">
+                      <span class="menu-item__text">Suspendido</span>
+                    </button>
+                    <button type="button" class="menu-item${this.employee.status === 'terminated' ? ' is-active' : ''}" data-value="terminated">
+                      <span class="menu-item__text">Desvinculado</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="banner banner--warning" style="margin-top: 2px;">
             <span>Si cambias el estado a "Suspendido" o "Desvinculado", se revocarán automáticamente todas las sesiones activas del colaborador.</span>
@@ -505,11 +773,8 @@ class HrManageController implements ViewController {
       confirmClass: 'component-button--black',
       confirmText: 'Guardar Estado',
       onConfirm: async () => {
-        const select = modal.body.querySelector<HTMLSelectElement>('[data-ref="select-modal-status"]');
-        const newStatus = select?.value || 'active';
-
         modal.setConfirmLoading?.(true, 'Guardando...');
-        const res = await updateEmployeeStatusApi(this.employeeId, newStatus);
+        const res = await updateEmployeeStatusApi(this.employeeId, selectedStatus);
         modal.setConfirmLoading?.(false);
 
         if (!res.ok) {
@@ -524,6 +789,18 @@ class HrManageController implements ViewController {
       size: 'sm',
       title: 'Actualizar Estado Laboral',
     });
+
+    const statusDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-status"]');
+    if (statusDropdown) {
+      setupDropdown({
+        container: statusDropdown,
+        onSelect: (item) => {
+          selectedStatus = item.getAttribute('data-value') || 'active';
+        },
+      });
+    }
+
+    renderIcons(modal.body);
   }
 
   private openOffboardModal(): void {

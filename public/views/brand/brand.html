@@ -341,10 +341,13 @@
 
 <div class="modal-backdrop" data-ref="modal-kit-backdrop">
   <div class="modal-container" data-ref="modal-kit-container">
-    <button type="button" class="modal-close-btn" data-ref="btn-close-kit-modal" aria-label="Cerrar modal">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-kit-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
     </button>
     <div class="modal-card modal-card--w-520" data-ref="modal-kit-card">
+      <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+        <div class="modal-card__drag-handle"></div>
+      </div>
       <div class="modal-card__header">
         <h2 class="modal-card__title" data-ref="modal-kit-title" data-i18n="brand.modal_create_title">Nuevo kit de marca</h2>
       </div>
@@ -363,8 +366,8 @@
         </label>
 
         <div class="modal-card__actions">
-          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-kit" data-i18n="modal.cancel">Cancelar</button>
-          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-kit" data-i18n="brand.btn_save_kit">Guardar kit</button>
+          <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-kit" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-kit" data-i18n="brand.btn_save_kit">Guardar kit</button>
         </div>
         <div class="banner banner--danger is-hidden" data-ref="banner-kit-error"></div>
       </form>
@@ -374,10 +377,13 @@
 
 <div class="modal-backdrop" data-ref="modal-color-backdrop">
   <div class="modal-container" data-ref="modal-color-container">
-    <button type="button" class="modal-close-btn" data-ref="btn-close-color-modal" aria-label="Cerrar modal">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-color-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
     </button>
     <div class="modal-card modal-card--w-425" data-ref="modal-color-card">
+      <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+        <div class="modal-card__drag-handle"></div>
+      </div>
       <div class="modal-card__header">
         <h2 class="modal-card__title" data-ref="modal-color-title" data-i18n="brand.modal_add_color_title">Agregar color a la marca</h2>
       </div>
@@ -396,8 +402,8 @@
         </label>
 
         <div class="modal-card__actions">
-          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-color" data-i18n="modal.cancel">Cancelar</button>
-          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-color" data-i18n="brand.btn_save_color">Añadir color</button>
+          <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-color" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-color" data-i18n="brand.btn_save_color">Añadir color</button>
         </div>
         <div class="banner banner--danger is-hidden" data-ref="banner-color-error"></div>
       </form>
@@ -407,10 +413,13 @@
 
 <div class="modal-backdrop" data-ref="modal-template-backdrop">
   <div class="modal-container" data-ref="modal-template-container">
-    <button type="button" class="modal-close-btn" data-ref="btn-close-template-modal" aria-label="Cerrar modal">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-template-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
     </button>
     <div class="modal-card modal-card--w-520" data-ref="modal-template-card">
+      <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+        <div class="modal-card__drag-handle"></div>
+      </div>
       <div class="modal-card__header">
         <h2 class="modal-card__title" data-ref="modal-template-title" data-i18n="brand.modal_add_template_title">Vincular plantilla de marca</h2>
       </div>
@@ -430,8 +439,8 @@
         </div>
 
         <div class="modal-card__actions">
-          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-template" data-i18n="modal.cancel">Cancelar</button>
-          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-template" data-i18n="brand.btn_save_template">Guardar plantilla</button>
+          <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-template" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-template" data-i18n="brand.btn_save_template">Guardar plantilla</button>
         </div>
         <div class="banner banner--danger is-hidden" data-ref="banner-template-error"></div>
       </form>

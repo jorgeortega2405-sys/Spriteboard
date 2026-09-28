@@ -270,9 +270,23 @@ export async function processDroppedFiles(files: FileList | File[], folderName?:
   await processDroppedEntries(entries);
 }
 
+function isExternalFileDrag(e: DragEvent): boolean {
+  if (!e.dataTransfer?.types) return false;
+  const types = Array.from(e.dataTransfer.types);
+  if (
+    types.includes('application/json') ||
+    types.includes('spriteboard/clip-data') ||
+    types.includes('spriteboard/internal-upload') ||
+    types.includes('spriteboard/media-type')
+  ) {
+    return false;
+  }
+  return types.includes('Files');
+}
+
 export function initGlobalDropzone(): void {
   window.addEventListener('dragenter', (e: DragEvent) => {
-    if (!e.dataTransfer?.types || !Array.from(e.dataTransfer.types).includes('Files')) return;
+    if (!isExternalFileDrag(e)) return;
     e.preventDefault();
     dragDepth++;
     if (dragDepth === 1) {
@@ -281,7 +295,7 @@ export function initGlobalDropzone(): void {
   });
 
   window.addEventListener('dragover', (e: DragEvent) => {
-    if (!e.dataTransfer?.types || !Array.from(e.dataTransfer.types).includes('Files')) return;
+    if (!isExternalFileDrag(e)) return;
     e.preventDefault();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
@@ -289,7 +303,7 @@ export function initGlobalDropzone(): void {
   });
 
   window.addEventListener('dragleave', (e: DragEvent) => {
-    if (!e.dataTransfer?.types || !Array.from(e.dataTransfer.types).includes('Files')) return;
+    if (!isExternalFileDrag(e)) return;
     e.preventDefault();
     dragDepth--;
     if (dragDepth <= 0) {
@@ -302,7 +316,7 @@ export function initGlobalDropzone(): void {
   });
 
   window.addEventListener('drop', (e: DragEvent) => {
-    if (!e.dataTransfer?.types || !Array.from(e.dataTransfer.types).includes('Files')) return;
+    if (!isExternalFileDrag(e)) return;
     e.preventDefault();
     hideDropOverlay();
 

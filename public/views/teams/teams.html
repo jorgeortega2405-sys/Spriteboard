@@ -115,6 +115,9 @@
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-team-card">
+        <div class="modal-card__drag-zone" data-ref="modal-team-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
         <div class="modal-card__header">
           <h2 class="modal-card__title" data-ref="modal-team-title" data-i18n="teams.modal_create_title">Nuevo equipo de trabajo</h2>
         </div>
@@ -128,9 +131,9 @@
             <span class="field__label" data-ref="label-team-desc" data-i18n="teams.desc_label">Descripción (opcional)</span>
           </label>
 
-          <div class="modal-card__actions">
-            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
-            <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-team" data-i18n="teams.btn_save">Guardar equipo</button>
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-team" data-i18n="teams.btn_save">Guardar equipo</button>
           </div>
           <div class="banner banner--danger is-hidden" data-ref="banner-team-error"></div>
         </form>
@@ -144,6 +147,9 @@
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-members-card">
+        <div class="modal-card__drag-zone" data-ref="modal-members-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
         <div class="modal-card__header">
           <h2 class="modal-card__title" data-ref="members-modal-title" data-i18n="teams.members_title">Integrantes del equipo</h2>
         </div>
@@ -162,7 +168,7 @@
           </div>
 
           <div class="field-group">
-            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="members-dropdown-wrapper">
+            <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="members-dropdown-wrapper">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-members">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
@@ -173,6 +179,9 @@
 
               <div class="dropdown-backdrop" data-ref="members-dropdown-backdrop">
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="members-dropdown-menu">
+                  <div class="menu-panel__drag-zone" data-ref="members-drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
                   <div class="menu-panel__list menu-panel__list--scrollable" data-ref="members-dropdown-list">
                   </div>
                 </div>
@@ -180,8 +189,8 @@
             </div>
           </div>
 
-          <div class="modal-card__actions">
-            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
+          <div class="modal-card__actions modal-card__actions--end">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
           </div>
         </div>
       </div>
