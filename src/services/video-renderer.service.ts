@@ -340,31 +340,90 @@ async function processRenderJob(
     }
     const yExpr = `${posY}-text_h/2`;
 
-    const drawTextParts: string[] = [
-      `text='${textStr}'`,
-      `fontsize=${fontSize}`,
-      `fontcolor=${fontColor}`,
-      `x=${xExpr}`,
-      `y=${yExpr}`,
-      'shadowcolor=black@0.75',
-      'shadowx=2',
-      'shadowy=2',
-    ];
+    const isKaraoke = tClip.textConfig.highlightStyle === 'karaoke';
+    const words = tClip.textConfig.words || [];
 
-    if (tClip.textConfig.backgroundColor) {
-      const boxColor = tClip.textConfig.backgroundColor.replace('#', '0x');
-      drawTextParts.push(`box=1:boxcolor=${boxColor}@0.8:boxborderw=8`);
+    if (isKaraoke && words.length > 0) {
+      const highlightColor = (tClip.textConfig.highlightColor || '#facc15').replace('#', '0x');
+      const baseColor = fontColor;
+      const charWidth = fontSize * 0.55;
+      const spaceWidth = fontSize * 0.3;
+      const wordLengths = words.map((w: any) => (w.word || '').length * charWidth);
+      const totalWordsW = wordLengths.reduce((a: number, b: number) => a + b, 0) + Math.max(0, words.length - 1) * spaceWidth;
+
+      let startX = posX - totalWordsW / 2;
+      if (align === 'left') startX = posX;
+      else if (align === 'right') startX = posX - totalWordsW;
+
+      for (let wIdx = 0; wIdx < words.length; wIdx++) {
+        const activeWord = words[wIdx];
+        const wStart = Math.max(tStart, tStart + (activeWord.start || 0));
+        const wEnd = Math.min(tEnd, tStart + (activeWord.end || (tEnd - tStart)));
+        if (wEnd <= wStart) continue;
+
+        let curX = startX;
+        for (let j = 0; j < words.length; j++) {
+          const wItem = words[j];
+          const wStr = (wItem.word || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/:/g, '\\:')
+            .replace(/%/g, '\\%');
+          if (!wStr) continue;
+
+          const isHighlight = j === wIdx;
+          const wordColor = isHighlight ? highlightColor : baseColor;
+          const nextBaseSub = `kbase_${k}_${wIdx}_${j}`;
+
+          const drawWordParts: string[] = [
+            `text='${wStr}'`,
+            `fontsize=${fontSize}`,
+            `fontcolor=${wordColor}`,
+            `x=${Math.round(curX)}`,
+            `y=${yExpr}`,
+            'shadowcolor=black@0.85',
+            'shadowx=2',
+            'shadowy=2',
+          ];
+
+          if (tClip.transform?.opacity !== undefined && tClip.transform.opacity < 1) {
+            drawWordParts.push(`alpha=${tClip.transform.opacity.toFixed(2)}`);
+          }
+
+          drawWordParts.push(`enable='between(t,${wStart.toFixed(2)},${wEnd.toFixed(2)})'`);
+          filterComplex.push(`[${currentBase}]drawtext=${drawWordParts.join(':')}[${nextBaseSub}]`);
+          currentBase = nextBaseSub;
+
+          curX += wordLengths[j] + spaceWidth;
+        }
+      }
+    } else {
+      const drawTextParts: string[] = [
+        `text='${textStr}'`,
+        `fontsize=${fontSize}`,
+        `fontcolor=${fontColor}`,
+        `x=${xExpr}`,
+        `y=${yExpr}`,
+        'shadowcolor=black@0.75',
+        'shadowx=2',
+        'shadowy=2',
+      ];
+
+      if (tClip.textConfig.backgroundColor) {
+        const boxColor = tClip.textConfig.backgroundColor.replace('#', '0x');
+        drawTextParts.push(`box=1:boxcolor=${boxColor}@0.8:boxborderw=8`);
+      }
+
+      if (tClip.transform?.opacity !== undefined && tClip.transform.opacity < 1) {
+        drawTextParts.push(`alpha=${tClip.transform.opacity.toFixed(2)}`);
+      }
+
+      drawTextParts.push(`enable='between(t,${tStart},${tEnd})'`);
+
+      const drawTextFilter = `drawtext=${drawTextParts.join(':')}`;
+      filterComplex.push(`[${currentBase}]${drawTextFilter}[${nextBase}]`);
+      currentBase = nextBase;
     }
-
-    if (tClip.transform?.opacity !== undefined && tClip.transform.opacity < 1) {
-      drawTextParts.push(`alpha=${tClip.transform.opacity.toFixed(2)}`);
-    }
-
-    drawTextParts.push(`enable='between(t,${tStart},${tEnd})'`);
-
-    const drawTextFilter = `drawtext=${drawTextParts.join(':')}`;
-    filterComplex.push(`[${currentBase}]${drawTextFilter}[${nextBase}]`);
-    currentBase = nextBase;
   }
 
   for (let j = 0; j < audioClips.length; j++) {

@@ -1872,13 +1872,29 @@ export class VideoTimelineManager {
           project.tracks.push(subtitleTrack);
         }
 
-        const baseColor = style === 'yellow' ? '#fde047' : '#ffffff';
+        const isKaraokeYellow = style === 'karaoke_yellow';
+        const isKaraokeWhite = style === 'karaoke_white';
+        const isKaraoke = isKaraokeYellow || isKaraokeWhite;
+
+        const baseColor = isKaraokeWhite ? '#fde047' : (style === 'yellow' ? '#fde047' : '#ffffff');
+        const highlightColor = isKaraokeWhite ? '#ffffff' : '#facc15';
+        const highlightStyle = isKaraoke ? 'karaoke' : 'none';
         const bgColor = style === 'boxed' ? 'rgba(0, 0, 0, 0.75)' : undefined;
-        const fontSize = 42;
+        const strokeColor = '#000000';
+        const strokeWidth = isKaraoke ? 5 : (style === 'standard' || style === 'yellow' ? 4 : 0);
+        const fontSize = 46;
 
         for (let i = 0; i < result.subtitles.length; i++) {
           const item = result.subtitles[i];
           const dur = Math.max(0.4, item.end - item.start);
+
+          const words = (item.words && item.words.length > 0)
+            ? item.words.map((w: any) => ({
+                end: Math.min(dur, Math.max(0.05, w.end)),
+                start: Math.max(0, w.start),
+                word: w.word,
+              }))
+            : undefined;
 
           const subClip: VideoClip = {
             duration: dur,
@@ -1892,9 +1908,14 @@ export class VideoTimelineManager {
               color: baseColor,
               fontFamily: 'Inter, system-ui, sans-serif',
               fontSize,
-              fontWeight: '700',
+              fontWeight: '800',
+              highlightColor: isKaraoke ? highlightColor : undefined,
+              highlightStyle,
+              strokeColor,
+              strokeWidth,
               text: item.text,
               textAlign: 'center',
+              words,
             },
             transform: {
               x: project.width ? project.width / 2 : 960,

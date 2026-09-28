@@ -13,14 +13,25 @@ export interface VideoTransform {
   y?: number;
 }
 
+export interface VideoWordTiming {
+  end: number;
+  start: number;
+  word: string;
+}
+
 export interface VideoTextConfig {
   backgroundColor?: string;
   color: string;
   fontFamily: string;
   fontSize: number;
   fontWeight?: string;
+  highlightColor?: string;
+  highlightStyle?: 'karaoke' | 'none';
+  strokeColor?: string;
+  strokeWidth?: number;
   text: string;
   textAlign?: 'center' | 'left' | 'right';
+  words?: VideoWordTiming[];
 }
 
 export interface VideoFilters {

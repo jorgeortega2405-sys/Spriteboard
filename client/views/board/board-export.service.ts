@@ -2,7 +2,7 @@ import { showToast } from '../../services/toast.service.js';
 import { get3DElementProjectedFaces } from './board-3d-renderer.js';
 import { drawChart } from './board-chart-renderer.js';
 import { computeElementsBoundingBox, findContainingSection, getConnectorEndpoints } from './board-elements.manager.js';
-import { getSvgPathBoundingBox } from './board-renderer.js';
+import { colorizeSvg, getSvgPathBoundingBox } from './board-renderer.js';
 import { BackgroundType, Board3DElement, BoardElement, BoardPageItem, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
 
 export function generateThumbnail(
@@ -217,18 +217,36 @@ export function exportSvg(
       const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       const dash = el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : '';
 
-      if (el.svgPath) {
+      const r = el.borderRadius || (el as any).cornerRadius || 0;
+      if (el.svgContent) {
+        const colorized = colorizeSvg(el.svgContent, el.fillColor, el.strokeColor, el.strokeWidth);
+        const clipId = `clip_${el.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        let clipDef = '';
+        let clipAttr = '';
+        if (r > 0) {
+          clipDef = `<defs><clipPath id="${clipId}"><rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="${r}" ry="${r}" /></clipPath></defs>`;
+          clipAttr = `clip-path="url(#${clipId})"`;
+        }
+        out += `  ${clipDef}<g transform="translate(${el.x}, ${el.y})" ${clipAttr} opacity="${op}">\n    <svg width="${el.width}" height="${el.height}" viewBox="0 0 ${el.width} ${el.height}">\n      ${colorized}\n    </svg>\n  </g>\n`;
+      } else if (el.svgPath) {
         const bounds = getSvgPathBoundingBox(el.svgPath);
         const pathW = bounds.width || 48;
         const pathH = bounds.height || 48;
         const minX = bounds.x || 0;
         const minY = bounds.y || 0;
-        out += `  <path d="${el.svgPath}" transform="translate(${el.x}, ${el.y}) scale(${el.width / pathW}, ${el.height / pathH}) translate(${-minX}, ${-minY})" fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth * (Math.min(pathW, pathH) / Math.max(el.width, el.height))}" stroke-linejoin="round" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
+        const clipId = `clip_${el.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        let clipDef = '';
+        let clipAttr = '';
+        if (r > 0) {
+          clipDef = `<defs><clipPath id="${clipId}"><rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="${r}" ry="${r}" /></clipPath></defs>`;
+          clipAttr = `clip-path="url(#${clipId})"`;
+        }
+        out += `  ${clipDef}<g ${clipAttr}><path d="${el.svgPath}" transform="translate(${el.x}, ${el.y}) scale(${el.width / pathW}, ${el.height / pathH}) translate(${-minX}, ${-minY})" fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth * (Math.min(pathW, pathH) / Math.max(el.width, el.height))}" stroke-linejoin="round" stroke-linecap="round" ${dash} opacity="${op}" /></g>\n`;
       } else if (el.shapeType === 'rect') {
-        const rx = el.borderRadius ? `rx="${el.borderRadius}" ry="${el.borderRadius}"` : '';
+        const rx = r ? `rx="${r}" ry="${r}"` : '';
         out += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" ${rx} fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'round-rect') {
-        const rxVal = el.borderRadius !== undefined ? el.borderRadius : 12;
+        const rxVal = r || 12;
         out += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="${rxVal}" ry="${rxVal}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'circle') {
         out += `  <ellipse cx="${el.x + el.width / 2}" cy="${el.y + el.height / 2}" rx="${Math.abs(el.width) / 2}" ry="${Math.abs(el.height) / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;

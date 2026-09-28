@@ -36,6 +36,7 @@ export const TEXT_PRESETS = {
 
 export function createShapeElement(shapeType: ShapeType, options: {
   borderRadius?: number;
+  cornerRadius?: number;
   fillColor?: string;
   fontFamily?: string;
   fontSize?: number;
@@ -48,6 +49,7 @@ export function createShapeElement(shapeType: ShapeType, options: {
   strokeColor?: string;
   strokeStyle?: StrokeStyle;
   strokeWidth?: number;
+  svgContent?: string;
   svgPath?: string;
   text?: string;
   textColor?: string;
@@ -63,7 +65,8 @@ export function createShapeElement(shapeType: ShapeType, options: {
   const h = options.height ?? defaultH;
 
   return {
-    borderRadius: options.borderRadius,
+    borderRadius: options.borderRadius !== undefined ? options.borderRadius : options.cornerRadius,
+    cornerRadius: options.cornerRadius !== undefined ? options.cornerRadius : options.borderRadius,
     fillColor: options.fillColor || (isLineOrArrow ? 'transparent' : CANVAS_DEFAULTS.FILL_COLOR),
     fontFamily: options.fontFamily,
     fontSize: options.fontSize,
@@ -77,6 +80,7 @@ export function createShapeElement(shapeType: ShapeType, options: {
     strokeColor: options.strokeColor || (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_COLOR : CANVAS_DEFAULTS.STROKE_COLOR),
     strokeStyle: options.strokeStyle,
     strokeWidth: options.strokeWidth ?? (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_WIDTH : CANVAS_DEFAULTS.STROKE_WIDTH),
+    svgContent: options.svgContent,
     svgPath: options.svgPath,
     text: options.text,
     textColor: options.textColor,
@@ -431,9 +435,17 @@ export function createSectionElement(title = 'Sección', options: {
 export function createImageElement(url: string, options: {
   alt?: string;
   aspectRatio?: number;
+  borderRadius?: number;
+  cornerRadius?: number;
+  fillColor?: string;
   height?: number;
   id?: string;
+  isSvg?: boolean;
   opacity?: number;
+  strokeColor?: string;
+  strokeStyle?: StrokeStyle;
+  strokeWidth?: number;
+  svgContent?: string;
   width?: number;
   x?: number;
   y?: number;
@@ -444,9 +456,17 @@ export function createImageElement(url: string, options: {
   return {
     alt: options.alt || 'Imagen',
     aspectRatio: options.aspectRatio ?? (width / (height || 1)),
+    borderRadius: options.borderRadius !== undefined ? options.borderRadius : options.cornerRadius,
+    cornerRadius: options.cornerRadius !== undefined ? options.cornerRadius : options.borderRadius,
+    fillColor: options.fillColor,
     height,
     id: options.id || `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    isSvg: options.isSvg ?? (url.includes('.svg') || url.startsWith('data:image/svg+xml') || !!options.svgContent),
     opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    strokeColor: options.strokeColor,
+    strokeStyle: options.strokeStyle,
+    strokeWidth: options.strokeWidth,
+    svgContent: options.svgContent,
     type: 'image',
     url,
     width,

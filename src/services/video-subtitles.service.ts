@@ -10,10 +10,17 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+export interface SubtitleWord {
+  end: number;
+  start: number;
+  word: string;
+}
+
 export interface SubtitleItem {
   end: number;
   start: number;
   text: string;
+  words?: SubtitleWord[];
 }
 
 export interface SubtitleGenerationResult {
@@ -97,7 +104,7 @@ export async function generateVideoSubtitles(
 Your task is to transcribe the speech from the provided audio file accurately and generate synchronized subtitle segments with exact start and end timestamps in seconds.
 Guidelines:
 - Return ONLY valid JSON matching the schema with a "subtitles" array.
-- Each subtitle object must contain "start" (float number in seconds), "end" (float number in seconds), and "text" (clean transcribed string).
+- Each subtitle object must contain "start" (float number in seconds), "end" (float number in seconds), "text" (clean transcribed string), and optionally "words" array with {"word": string, "start": float, "end": float}.
 - Break subtitles into short, natural, concise phrases (2 to 7 words per segment) ideal for video captions.
 - Timestamps must be relative to the start of the audio file (0.00s onwards) and strictly ordered chronologically.
 - Remove filler words or repetitions if appropriate, maintaining high fidelity.
@@ -130,6 +137,18 @@ Guidelines:
                   end: { type: 'NUMBER' },
                   start: { type: 'NUMBER' },
                   text: { type: 'STRING' },
+                  words: {
+                    items: {
+                      properties: {
+                        end: { type: 'NUMBER' },
+                        start: { type: 'NUMBER' },
+                        word: { type: 'STRING' },
+                      },
+                      required: ['start', 'end', 'word'],
+                      type: 'OBJECT',
+                    },
+                    type: 'ARRAY',
+                  },
                 },
                 required: ['start', 'end', 'text'],
                 type: 'OBJECT',
@@ -203,11 +222,47 @@ Guidelines:
     const offset = Number(options.offsetSeconds) || 0;
     const items: SubtitleItem[] = (parsedResult.subtitles || [])
       .filter((s) => typeof s.text === 'string' && s.text.trim().length > 0 && typeof s.start === 'number' && typeof s.end === 'number')
-      .map((s) => ({
-        end: Math.round((Math.max(s.start + 0.2, s.end) + offset) * 100) / 100,
-        start: Math.round((Math.max(0, s.start) + offset) * 100) / 100,
-        text: s.text.trim(),
-      }));
+      .map((s) => {
+        const segStart = Math.round((Math.max(0, s.start) + offset) * 100) / 100;
+        const segEnd = Math.round((Math.max(s.start + 0.2, s.end) + offset) * 100) / 100;
+        const rawText = s.text.trim();
+        const duration = Math.max(0.2, segEnd - segStart);
+
+        let words: SubtitleWord[] = [];
+        if (Array.isArray(s.words) && s.words.length > 0) {
+          words = s.words
+            .filter((w) => typeof w.word === 'string' && w.word.trim().length > 0)
+            .map((w) => ({
+              end: Math.round(Math.min(duration, Math.max(0.05, (w.end ?? duration) - (w.start >= s.start ? s.start : 0))) * 100) / 100,
+              start: Math.round(Math.max(0, (w.start ?? 0) - (w.start >= s.start ? s.start : 0)) * 100) / 100,
+              word: w.word.trim(),
+            }));
+        }
+
+        if (words.length === 0) {
+          const splitWords = rawText.split(/\s+/).filter(Boolean);
+          const totalChars = splitWords.reduce((sum, w) => sum + w.length, 0) || 1;
+          let currentElapsed = 0;
+          words = splitWords.map((w) => {
+            const wDur = Math.max(0.1, (w.length / totalChars) * duration);
+            const wStart = Math.round(currentElapsed * 100) / 100;
+            currentElapsed += wDur;
+            const wEnd = Math.round(Math.min(duration, currentElapsed) * 100) / 100;
+            return {
+              end: Math.max(wStart + 0.05, wEnd),
+              start: wStart,
+              word: w,
+            };
+          });
+        }
+
+        return {
+          end: segEnd,
+          start: segStart,
+          text: rawText,
+          words,
+        };
+      });
 
     logger.app.info('VideoSubtitlesService: Subtítulos generados con éxito', {
       clipUrl: mediaUrl,

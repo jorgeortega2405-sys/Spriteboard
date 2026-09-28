@@ -90,17 +90,121 @@ export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageEle
   return existing.complete && existing.naturalWidth > 0 ? existing : null;
 }
 
+export function colorizeSvg(svgContent: string, fillColor?: string, strokeColor?: string, strokeWidth?: number): string {
+  if (!svgContent) return svgContent;
+  let result = svgContent;
+
+  if (!result.includes('xmlns="http://www.w3.org/2000/svg"')) {
+    result = result.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  if (fillColor && fillColor !== 'transparent') {
+    result = result.replace(/<svg\b([^>]*)>/i, (_match, attrs) => {
+      let updated = attrs;
+      if (/fill=["'][^"']*["']/i.test(updated)) {
+        updated = updated.replace(/fill=["'][^"']*["']/i, `fill="${fillColor}"`);
+      } else {
+        updated += ` fill="${fillColor}"`;
+      }
+      return `<svg${updated} style="color: ${fillColor};">`;
+    });
+
+    result = result.replace(/<(path|circle|polygon|polyline|rect|ellipse)\b([^>]*)>/gi, (match, tag, attrs) => {
+      if (/\bfill=["']none["']/i.test(attrs)) {
+        return match;
+      }
+      if (/\bfill=["'][^"']*["']/i.test(attrs)) {
+        return `<${tag}${attrs.replace(/\bfill=["'][^"']*["']/i, `fill="${fillColor}"`)}>`;
+      }
+      return `<${tag} fill="${fillColor}"${attrs}>`;
+    });
+  } else if (fillColor === 'transparent') {
+    result = result.replace(/<(path|circle|polygon|polyline|rect|ellipse)\b([^>]*)>/gi, (match, tag, attrs) => {
+      if (/\bfill=["'][^"']*["']/i.test(attrs)) {
+        return `<${tag}${attrs.replace(/\bfill=["'][^"']*["']/i, `fill="none"`)}>`;
+      }
+      return `<${tag} fill="none"${attrs}>`;
+    });
+  }
+
+  if (strokeColor && strokeColor !== 'transparent') {
+    const sw = strokeWidth !== undefined ? strokeWidth : 1.5;
+    result = result.replace(/<(path|circle|polygon|polyline|rect|ellipse|line)\b([^>]*)>/gi, (match, tag, attrs) => {
+      if (/\bstroke=["']none["']/i.test(attrs) && (!strokeWidth || strokeWidth === 0)) {
+        return match;
+      }
+      let updated = attrs;
+      if (/\bstroke=["'][^"']*["']/i.test(updated)) {
+        updated = updated.replace(/\bstroke=["'][^"']*["']/i, `stroke="${strokeColor}"`);
+      } else if (sw > 0) {
+        updated += ` stroke="${strokeColor}"`;
+      }
+      if (/\bstroke-width=["'][^"']*["']/i.test(updated)) {
+        updated = updated.replace(/\bstroke-width=["'][^"']*["']/i, `stroke-width="${sw}"`);
+      } else if (sw > 0) {
+        updated += ` stroke-width="${sw}"`;
+      }
+      return `<${tag}${updated}>`;
+    });
+  } else if (strokeColor === 'transparent') {
+    result = result.replace(/<(path|circle|polygon|polyline|rect|ellipse|line)\b([^>]*)>/gi, (match, tag, attrs) => {
+      if (/\bstroke=["'][^"']*["']/i.test(attrs)) {
+        return `<${tag}${attrs.replace(/\bstroke=["'][^"']*["']/i, `stroke="none"`)}>`;
+      }
+      return match;
+    });
+  }
+
+  return result;
+}
+
+export function drawRoundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  const clampedR = Math.min(Math.max(0, r), Math.abs(w) / 2, Math.abs(h) / 2);
+  if (typeof (ctx as any).roundRect === 'function') {
+    (ctx as any).roundRect(x, y, w, h, clampedR);
+  } else {
+    ctx.moveTo(x + clampedR, y);
+    ctx.lineTo(x + w - clampedR, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + clampedR);
+    ctx.lineTo(x + w, y + h - clampedR);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - clampedR, y + h);
+    ctx.lineTo(x + clampedR, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - clampedR);
+    ctx.lineTo(x, y + clampedR);
+    ctx.quadraticCurveTo(x, y, x + clampedR, y);
+  }
+}
+
 export function drawImage(
   ctx: CanvasRenderingContext2D,
   imageEl: BoardImageElement,
   onImageLoaded?: () => void
 ): void {
-  const isFailed = failedImageUrls.has(imageEl.url);
-  const cached = getCachedImage(imageEl.url, onImageLoaded);
+  let targetUrl = imageEl.url;
+  if (imageEl.svgContent || (imageEl.url && imageEl.url.startsWith('data:image/svg+xml') && (imageEl.fillColor || imageEl.strokeColor))) {
+    const rawSvg = imageEl.svgContent || decodeURIComponent(imageEl.url.replace(/^data:image\/svg\+xml;[^,]*,/, ''));
+    const colorized = colorizeSvg(rawSvg, imageEl.fillColor, imageEl.strokeColor, imageEl.strokeWidth);
+    targetUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(colorized)}`;
+  }
+
+  const isFailed = failedImageUrls.has(targetUrl);
+  const cached = getCachedImage(targetUrl, onImageLoaded);
+  const r = Math.max(0, imageEl.borderRadius || imageEl.cornerRadius || 0);
+
+  ctx.save();
+  if (imageEl.opacity !== undefined) {
+    ctx.globalAlpha = imageEl.opacity;
+  }
+
+  if (r > 0) {
+    ctx.beginPath();
+    drawRoundedRectPath(ctx, imageEl.x, imageEl.y, imageEl.width, imageEl.height, r);
+    ctx.clip();
+  }
+
   if (cached) {
     ctx.drawImage(cached, imageEl.x, imageEl.y, imageEl.width, imageEl.height);
   } else if (isFailed) {
-    ctx.save();
     ctx.fillStyle = '#1e293b';
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 1.5;
@@ -113,9 +217,7 @@ export function drawImage(
     const rawLabel = imageEl.alt || 'Imagen no disponible';
     const truncated = rawLabel.length > 32 ? `${rawLabel.slice(0, 29)}...` : rawLabel;
     ctx.fillText(`🖼️ ${truncated}`, imageEl.x + imageEl.width / 2, imageEl.y + imageEl.height / 2);
-    ctx.restore();
   } else {
-    ctx.save();
     ctx.fillStyle = '#f1f5f9';
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1;
@@ -126,6 +228,25 @@ export function drawImage(
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Cargando imagen...', imageEl.x + imageEl.width / 2, imageEl.y + imageEl.height / 2);
+  }
+
+  ctx.restore();
+
+  if (imageEl.strokeWidth && imageEl.strokeWidth > 0 && imageEl.strokeColor && imageEl.strokeColor !== 'transparent') {
+    ctx.save();
+    if (imageEl.opacity !== undefined) {
+      ctx.globalAlpha = imageEl.opacity;
+    }
+    ctx.strokeStyle = imageEl.strokeColor;
+    ctx.lineWidth = imageEl.strokeWidth;
+    applyLineDash(ctx, imageEl.strokeStyle, imageEl.strokeWidth);
+    ctx.beginPath();
+    if (r > 0) {
+      drawRoundedRectPath(ctx, imageEl.x, imageEl.y, imageEl.width, imageEl.height, r);
+    } else {
+      ctx.rect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+    }
+    ctx.stroke();
     ctx.restore();
   }
 }
@@ -349,7 +470,7 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: BoardStrokeEle
   ctx.restore();
 }
 
-export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElement, isEditing = false): void {
+export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElement, isEditing = false, onImageLoaded?: () => void): void {
   ctx.save();
   ctx.globalAlpha = shape.opacity !== undefined ? shape.opacity : 1;
   ctx.strokeStyle = shape.strokeColor;
@@ -363,8 +484,36 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
   const y = shape.y;
   const w = shape.width;
   const h = shape.height;
+  const r = Math.max(0, shape.borderRadius || shape.cornerRadius || 0);
 
-  if (shape.svgPath) {
+  if (shape.svgContent) {
+    const colorized = colorizeSvg(shape.svgContent, shape.fillColor, shape.strokeColor, shape.strokeWidth);
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(colorized)}`;
+    const img = getCachedImage(dataUrl, onImageLoaded);
+
+    if (r > 0) {
+      ctx.save();
+      ctx.beginPath();
+      drawRoundedRectPath(ctx, x, y, w, h, r);
+      ctx.clip();
+      if (img) {
+        ctx.drawImage(img, x, y, w, h);
+      }
+      ctx.restore();
+    } else if (img) {
+      ctx.drawImage(img, x, y, w, h);
+    }
+
+    if (shape.strokeWidth > 0 && shape.strokeColor && shape.strokeColor !== 'transparent') {
+      ctx.beginPath();
+      if (r > 0) {
+        drawRoundedRectPath(ctx, x, y, w, h, r);
+      } else {
+        ctx.rect(x, y, w, h);
+      }
+      ctx.stroke();
+    }
+  } else if (shape.svgPath) {
     let pathObj = svgPath2dCache.get(shape.svgPath);
     if (!pathObj) {
       try {
@@ -380,6 +529,12 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       const minY = bounds.y;
 
       ctx.save();
+      if (r > 0) {
+        ctx.beginPath();
+        drawRoundedRectPath(ctx, x, y, w, h, r);
+        ctx.clip();
+      }
+
       ctx.translate(x, y);
       const scaleX = w / pathW;
       const scaleY = h / pathH;
@@ -396,46 +551,34 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
         ctx.stroke(pathObj);
       }
       ctx.restore();
+
+      if (r > 0 && shape.strokeWidth > 0 && shape.strokeColor && shape.strokeColor !== 'transparent') {
+        ctx.beginPath();
+        drawRoundedRectPath(ctx, x, y, w, h, r);
+        ctx.stroke();
+      }
     }
   } else {
+    const isNonRect = shape.shapeType !== 'rect' && shape.shapeType !== 'round-rect' && shape.shapeType !== 'pill' && shape.shapeType !== 'line' && shape.shapeType !== 'arrow';
+    if (r > 0 && isNonRect) {
+      ctx.save();
+      ctx.beginPath();
+      drawRoundedRectPath(ctx, x, y, w, h, r);
+      ctx.clip();
+    }
+
     ctx.beginPath();
 
     if (shape.shapeType === 'rect') {
-      const r = shape.borderRadius || 0;
       if (r > 0) {
-        const clampedR = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
-        if (typeof (ctx as any).roundRect === 'function') {
-          (ctx as any).roundRect(x, y, w, h, clampedR);
-        } else {
-          ctx.moveTo(x + clampedR, y);
-          ctx.lineTo(x + w - clampedR, y);
-          ctx.quadraticCurveTo(x + w, y, x + w, y + clampedR);
-          ctx.lineTo(x + w, y + h - clampedR);
-          ctx.quadraticCurveTo(x + w, y + h, x + w - clampedR, y + h);
-          ctx.lineTo(x + clampedR, y + h);
-          ctx.quadraticCurveTo(x, y + h, x, y + h - clampedR);
-          ctx.lineTo(x, y + clampedR);
-          ctx.quadraticCurveTo(x, y, x + clampedR, y);
-        }
+        drawRoundedRectPath(ctx, x, y, w, h, r);
       } else {
         ctx.rect(x, y, w, h);
       }
     } else if (shape.shapeType === 'round-rect') {
       const defaultR = Math.min(16, Math.abs(w) / 4, Math.abs(h) / 4);
-      const r = shape.borderRadius !== undefined ? Math.min(shape.borderRadius, Math.abs(w) / 2, Math.abs(h) / 2) : defaultR;
-      if (typeof (ctx as any).roundRect === 'function') {
-        (ctx as any).roundRect(x, y, w, h, r);
-      } else {
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-      }
+      const rad = r > 0 ? r : defaultR;
+      drawRoundedRectPath(ctx, x, y, w, h, rad);
     } else if (shape.shapeType === 'circle') {
       ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w) / 2, Math.abs(h) / 2, 0, 0, Math.PI * 2);
     } else if (shape.shapeType === 'line') {
@@ -499,12 +642,8 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI, true);
       ctx.closePath();
     } else if (shape.shapeType === 'pill') {
-      const r = Math.min(Math.abs(w) / 2, Math.abs(h) / 2);
-      if (typeof (ctx as any).roundRect === 'function') {
-        (ctx as any).roundRect(x, y, w, h, r);
-      } else {
-        ctx.rect(x, y, w, h);
-      }
+      const rad = Math.min(Math.abs(w) / 2, Math.abs(h) / 2);
+      drawRoundedRectPath(ctx, x, y, w, h, rad);
     } else if (shape.shapeType === 'document') {
       const waveH = Math.min(16, Math.abs(h) * 0.15);
       ctx.moveTo(x, y);
@@ -544,6 +683,10 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       ctx.beginPath();
       ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI * 2);
       ctx.stroke();
+    }
+
+    if (r > 0 && isNonRect) {
+      ctx.restore();
     }
   }
 
@@ -1333,7 +1476,7 @@ export function drawAlignmentGuides(
   ctx.save();
 
   if (guides && guides.length > 0) {
-    ctx.strokeStyle = '#e024c3';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.2 / camera.zoom;
     ctx.setLineDash([4 / camera.zoom, 3 / camera.zoom]);
 
@@ -1356,7 +1499,7 @@ export function drawAlignmentGuides(
     const badgeH = 16 / camera.zoom;
     const badgeR = badgeH / 2;
 
-    ctx.strokeStyle = '#c026d3';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.25 / camera.zoom;
     ctx.setLineDash([]);
 
@@ -1393,7 +1536,7 @@ export function drawAlignmentGuides(
       const badgeX = cx - badgeW / 2;
       const badgeY = cy - badgeH / 2;
 
-      ctx.fillStyle = '#c026d3';
+      ctx.fillStyle = '#2563eb';
       ctx.beginPath();
       if (typeof ctx.roundRect === 'function') {
         ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeR);

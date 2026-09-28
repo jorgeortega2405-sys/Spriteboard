@@ -4,7 +4,7 @@ import { calculateResizedBoundingBox, computeElementsBoundingBox, convertDiagram
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/board/board-export.service.js';
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
-import { applyElementAnimation, applyElementEffect, applyLineDash, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawBoardCollaboratorLocks, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
+import { applyElementAnimation, applyElementEffect, applyLineDash, colorizeSvg, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawBoardCollaboratorLocks, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawRoundedRectPath, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
 import { BoardRenderCache, boardRenderCache } from '../views/board/board-render-cache.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide, ResizeSnapResult, SnapResult } from '../views/board/board-snapping.manager.js';
 import { BoardSpatialIndex } from '../views/board/board-spatial-index.js';
@@ -22,6 +22,7 @@ export {
   calculateDragSnapping,
   calculateResizeSnapping,
   calculateResizedBoundingBox,
+  colorizeSvg,
   computeElementsBoundingBox,
   convertDiagramToBoardElements,
   create3DElement,
@@ -56,6 +57,7 @@ export {
   drawMockupElement,
   drawMultiSelectionBounds,
   drawPixelGridLines,
+  drawRoundedRectPath,
   drawSection,
   drawSelectionBox,
   drawShape,

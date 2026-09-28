@@ -3407,6 +3407,10 @@ export class StageCanvasController {
       if (this.selectedElementIds.has(el.id)) {
         if ('strokeColor' in el) (el as any).strokeColor = color;
         if (el.type === 'stroke') (el as any).color = color;
+        if (el.type === 'image') {
+          (el as any).strokeColor = color;
+          if (!(el as any).strokeWidth) (el as any).strokeWidth = 2;
+        }
         this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
@@ -3423,6 +3427,10 @@ export class StageCanvasController {
       if (this.selectedElementIds.has(el.id)) {
         if ('fillColor' in el) (el as any).fillColor = color;
         if ('color' in el && el.type === 'sticky') (el as any).color = color;
+        if (el.type === 'image') {
+          (el as any).fillColor = color;
+          (el as any).isSvg = true;
+        }
         this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
@@ -3653,17 +3661,21 @@ export class StageCanvasController {
       const elements = this.getActiveSlide().elements;
       const selected = elements.filter((e) => this.selectedElementIds.has(e.id));
       const isSingleImage = selected.length === 1 && selected[0].type === 'image';
+      const isSvgImage = selected.some((el) => el.type === 'image' && !!(el.isSvg || el.svgContent || el.url?.includes('.svg') || el.url?.startsWith('data:image/svg+xml')));
       const hasText = selected.some((el) => el.type === 'text' || el.type === 'sticky' || (el as any).text !== undefined);
       const hasConnector = selected.some((el) => el.type === 'connector');
       const hasShape = selected.some((el) => el.type === 'shape' || el.type === 'sticky' || el.type === 'section');
+      const hasCorners = selected.some((el) => el.type === 'shape' || el.type === 'image');
+      const hasFillable = selected.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky' || el.type === 'section' || (el.type === 'image' && !!(el.isSvg || el.svgContent || el.url?.includes('.svg') || el.url?.startsWith('data:image/svg+xml'))));
+      const hasStrokeable = selected.some((el) => el.type === 'shape' || el.type === 'stroke' || el.type === 'connector' || el.type === 'image');
 
-      if (groupImage) groupImage.classList.toggle('is-hidden', !isSingleImage);
+      if (groupImage) groupImage.classList.toggle('is-hidden', !isSingleImage || isSvgImage);
       if (groupText) groupText.classList.toggle('is-hidden', !hasText);
       if (groupMarkers) groupMarkers.classList.toggle('is-hidden', !hasConnector);
-      if (groupFill) groupFill.classList.toggle('is-hidden', !hasShape && !hasText);
-      if (groupStroke) groupStroke.classList.toggle('is-hidden', hasConnector);
-      if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', hasConnector);
-      if (groupCorners) groupCorners.classList.toggle('is-hidden', !hasShape);
+      if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable && !hasText);
+      if (groupStroke) groupStroke.classList.toggle('is-hidden', !hasStrokeable && hasConnector);
+      if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', !hasStrokeable && hasConnector);
+      if (groupCorners) groupCorners.classList.toggle('is-hidden', !hasCorners);
 
       const first = selected[0];
       if (first) {
@@ -3782,6 +3794,13 @@ export class StageCanvasController {
         }
         if (key === 'cornerRadius') {
           (el as any).borderRadius = value;
+        }
+        if (key === 'strokeWidth' && el.type === 'image' && value > 0 && (!(el as any).strokeColor || (el as any).strokeColor === 'transparent')) {
+          (el as any).strokeColor = '#1e293b';
+        }
+        if (key === 'strokeStyle' && el.type === 'image' && (!(el as any).strokeWidth || (el as any).strokeWidth === 0)) {
+          (el as any).strokeWidth = 2;
+          if (!(el as any).strokeColor || (el as any).strokeColor === 'transparent') (el as any).strokeColor = '#1e293b';
         }
         if (key === 'startMarker' && el.type === 'connector') {
           (el as any).arrowStart = value === 'none' ? false : value;
@@ -4173,13 +4192,15 @@ export class StageCanvasController {
     this.collaborationManager.broadcastAddElement(textEl, this.activeSlideId);
   }
 
-  public insertShape(shapeType: ShapeType, svgPath?: string, fill?: string, stroke?: string, x?: number, y?: number): void {
+  public insertShape(shapeType: ShapeType, svgPath?: string, fill?: string, stroke?: string, x?: number, y?: number, svgContent?: string): void {
+    const isSvgXml = !!((svgPath && svgPath.trim().startsWith('<svg')) || (svgContent && svgContent.trim().startsWith('<svg')));
     const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(shapeType);
     const shapeEl = createShapeElement(shapeType, {
       fillColor: fill || this.currentFillColor,
       strokeColor: stroke || this.currentStrokeColor,
       strokeWidth: stroke ? 2 : this.currentStrokeWidth,
-      svgPath: isNativeBasic ? undefined : svgPath,
+      svgContent: svgContent || (isSvgXml ? (svgPath || undefined) : undefined),
+      svgPath: (isNativeBasic || isSvgXml) ? undefined : svgPath,
       x,
       y,
     });
@@ -4228,12 +4249,68 @@ export class StageCanvasController {
       };
       const directShape: ShapeType = shapeMap[cleanId] || ((shape as any).shapeType || 'rect');
       const isNativeBasic = ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle', 'star', 'triangle'].includes(cleanId) || ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(directShape);
-      this.insertShape(directShape, isNativeBasic ? undefined : shape.pathD, (shape as any).fillColor, (shape as any).strokeColor);
+      const isSvgXml = !!(shape.pathD && shape.pathD.trim().startsWith('<svg'));
+      this.insertShape(
+        directShape,
+        (isNativeBasic || isSvgXml) ? undefined : shape.pathD,
+        (shape as any).fillColor,
+        (shape as any).strokeColor,
+        undefined,
+        undefined,
+        isSvgXml ? shape.pathD : undefined
+      );
     }
   }
 
   public insertShapeSvg(pathD: string, name?: string, color?: string): void {
-    this.insertShape('rect', pathD, color || this.currentFillColor, 'transparent');
+    const isSvgXml = pathD && pathD.trim().startsWith('<svg');
+    this.insertShape('rect', isSvgXml ? undefined : pathD, color || this.currentFillColor, 'transparent', undefined, undefined, isSvgXml ? pathD : undefined);
+  }
+
+  public insertElementFromLibrary(item: {
+    element_type?: string;
+    file_url?: string;
+    height?: number;
+    svg_content?: string | null;
+    title?: string;
+    uuid?: string;
+    width?: number;
+  }): void {
+    this.saveHistoryState();
+    const elWidth = item.width || 180;
+    const elHeight = item.height || 180;
+
+    let newEl: BoardElement;
+    if (item.svg_content) {
+      newEl = createShapeElement('rect', {
+        fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
+        height: elHeight,
+        strokeColor: this.currentStrokeColor || CANVAS_DEFAULTS.STROKE_COLOR,
+        strokeWidth: 2,
+        svgContent: item.svg_content,
+        width: elWidth,
+      });
+    } else {
+      const url = item.file_url || '';
+      const isSvgUrl = url.toLowerCase().endsWith('.svg') || url.startsWith('data:image/svg');
+      newEl = createImageElement(url, {
+        alt: item.title || 'Elemento',
+        fillColor: isSvgUrl ? (this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR) : undefined,
+        height: elHeight,
+        isSvg: isSvgUrl,
+        strokeColor: isSvgUrl ? (this.currentStrokeColor || CANVAS_DEFAULTS.STROKE_COLOR) : undefined,
+        strokeWidth: isSvgUrl ? 2 : 0,
+        width: elWidth,
+      });
+    }
+
+    this.getActiveSlide().elements.push(newEl);
+    this.selectedElementIds = new Set([newEl.id]);
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(newEl, this.activeSlideId);
   }
 
   public insertStickyNote(color?: string, text?: string, x?: number, y?: number): void {
@@ -4253,9 +4330,14 @@ export class StageCanvasController {
   }
 
   public insertImage(url: string, width?: number, height?: number, filename?: string): void {
+    const isSvgUrl = url.toLowerCase().endsWith('.svg') || url.startsWith('data:image/svg');
     const imgEl = createImageElement(url, {
       alt: filename || 'Imagen',
+      fillColor: isSvgUrl ? this.currentFillColor : undefined,
       height,
+      isSvg: isSvgUrl,
+      strokeColor: isSvgUrl ? this.currentStrokeColor : undefined,
+      strokeWidth: isSvgUrl ? 2 : 0,
       width,
     });
     this.saveHistoryState();

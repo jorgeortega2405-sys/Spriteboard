@@ -498,7 +498,8 @@ export class VideoController {
         strokeWidth = 2;
       }
 
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="${size}" height="${size}"><defs><filter id="shape-shadow" x="-20%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.35)"/></filter></defs><g transform="translate(2, 2)" filter="url(#shape-shadow)"><path d="${shape.pathD}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g></svg>`;
+      const isSvgXml = shape.pathD.trim().startsWith('<svg');
+      const svg = isSvgXml ? shape.pathD : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="${size}" height="${size}"><defs><filter id="shape-shadow" x="-20%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.35)"/></filter></defs><g transform="translate(2, 2)" filter="url(#shape-shadow)"><path d="${shape.pathD}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g></svg>`;
       assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     } else if (shape.type === 'sticker' && shape.file) {
       assetUrl = `/assets/img/stickers/${shape.file}`;
@@ -516,6 +517,46 @@ export class VideoController {
       duration: dur,
       mediaType: 'image',
       name: shape.name || 'Forma',
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: size,
+        opacity: 1,
+        width: size,
+        x: Math.round((this._project.width - size) / 2),
+        y: Math.round((this._project.height - size) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertElementFromLibrary(item: {
+    element_type?: string;
+    file_url?: string;
+    height?: number;
+    svg_content?: string | null;
+    title?: string;
+    uuid?: string;
+    width?: number;
+  }): void {
+    let assetUrl = '';
+    const size = Math.min(360, Math.round(this._project.width * 0.25));
+
+    if (item.svg_content) {
+      assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(item.svg_content)}`;
+    } else if (item.file_url) {
+      assetUrl = item.file_url;
+    }
+    if (!assetUrl) return;
+
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: item.title || 'Elemento',
       sourceDuration: dur,
       startTime: playhead,
       transform: {

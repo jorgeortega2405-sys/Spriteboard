@@ -2119,6 +2119,10 @@ export class BoardController {
           el.strokeColor = normalized;
           if (el.strokeWidth === 0) el.strokeWidth = 2;
         }
+        if (el.type === 'image') {
+          el.strokeColor = normalized;
+          if (!el.strokeWidth || el.strokeWidth === 0) el.strokeWidth = 2;
+        }
         if (el.type === 'shape-3d') {
           el.strokeColor = normalized;
           if (el.strokeWidth === 0) el.strokeWidth = 1.5;
@@ -2160,6 +2164,8 @@ export class BoardController {
           el.fillColor = normalized;
         } else if (el.type === 'sticky') {
           el.color = normalized;
+        } else if (el.type === 'image') {
+          el.fillColor = normalized;
         }
         this.collaborationManager.broadcastUpdateElement(el);
       }
@@ -2524,10 +2530,11 @@ export class BoardController {
       const isStroke = el.type === 'stroke';
       const isPixel = el.type === 'pixel-grid';
       const isImage = el.type === 'image';
+      const isSvgImage = isImage && !!(el.isSvg || el.svgContent || el.url?.includes('.svg') || el.url?.startsWith('data:image/svg+xml'));
       const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
 
       if (groupImage) {
-        groupImage.classList.toggle('is-hidden', !isImage);
+        groupImage.classList.toggle('is-hidden', !isImage || isSvgImage);
       }
 
       if (groupPixelProps) {
@@ -2535,10 +2542,10 @@ export class BoardController {
       }
 
       if (groupFill) {
-        const showFill = (isShape && !isLineShape) || isSticky || is3D;
+        const showFill = (isShape && !isLineShape) || isSticky || is3D || isSvgImage;
         groupFill.classList.toggle('is-hidden', !showFill);
         if (showFill && this.topFillSwatchEl) {
-          const fillColor = isShape ? el.fillColor : (isSticky ? el.color : (is3D ? el.fillColor : '#000000'));
+          const fillColor = isShape ? el.fillColor : (isSticky ? el.color : (is3D ? el.fillColor : (isSvgImage ? (el.fillColor || '#1e293b') : '#000000')));
           if (fillColor === 'transparent') {
             this.topFillSwatchEl.classList.add('is-transparent');
             this.topFillSwatchEl.style.backgroundColor = 'transparent';
@@ -2550,10 +2557,10 @@ export class BoardController {
       }
 
       if (groupStrokeColor) {
-        const showStroke = isLineShape || isConnector || isStroke || is3D || (isShape && el.strokeWidth > 0);
+        const showStroke = isLineShape || isConnector || isStroke || is3D || isSvgImage || (isShape && el.strokeWidth > 0);
         groupStrokeColor.classList.toggle('is-hidden', !showStroke);
         if (showStroke && this.topStrokeSwatchEl) {
-          const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (is3D ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b')));
+          const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (is3D ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : (isSvgImage ? (el.strokeColor || '#1e293b') : '#1e293b'))));
           if (strokeColor === 'transparent') {
             this.topStrokeSwatchEl.classList.add('is-transparent');
             this.topStrokeSwatchEl.style.backgroundColor = 'transparent';
@@ -2565,12 +2572,12 @@ export class BoardController {
       }
 
       if (groupStrokeStyle) {
-        const showStrokeStyle = isShape || isConnector || isStroke || is3D;
+        const showStrokeStyle = isShape || isConnector || isStroke || is3D || isSvgImage;
         groupStrokeStyle.classList.toggle('is-hidden', !showStrokeStyle);
       }
 
       if (groupCorners) {
-        const showCorners = isShape && !isLineShape;
+        const showCorners = (isShape && !isLineShape) || isImage;
         groupCorners.classList.toggle('is-hidden', !showCorners);
       }
 
@@ -2620,8 +2627,8 @@ export class BoardController {
 
       this.syncPopoversWithElement(el);
     } else {
-      const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky' || el.type === 'shape-3d');
-      const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d');
+      const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky' || el.type === 'shape-3d' || (el.type === 'image' && (el.isSvg || el.svgContent || el.url?.includes('.svg') || el.url?.startsWith('data:image/svg+xml'))));
+      const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d' || el.type === 'image');
       const hasTextual = selectedEls.some((el) => el.type === 'text' || el.type === 'sticky' || (el.type === 'shape' && !!el.text));
 
       if (groupImage) groupImage.classList.add('is-hidden');
@@ -2629,7 +2636,7 @@ export class BoardController {
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
       if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
       if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', !hasStrokeable);
-      if (groupCorners) groupCorners.classList.add('is-hidden');
+      if (groupCorners) groupCorners.classList.toggle('is-hidden', !selectedEls.some((el) => el.type === 'shape' || el.type === 'image'));
       if (groupMarkers) groupMarkers.classList.add('is-hidden');
       if (groupText) groupText.classList.toggle('is-hidden', !hasTextual);
     }
@@ -2640,10 +2647,11 @@ export class BoardController {
     const is3D = el.type === 'shape-3d';
     const isConnector = el.type === 'connector';
     const isStroke = el.type === 'stroke';
+    const isImage = el.type === 'image';
 
     const inputStrokeW = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
     const labelStrokeW = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
-    const currentW = isShape ? el.strokeWidth : (is3D ? el.strokeWidth : (isConnector ? el.strokeWidth : (isStroke ? el.size : 0)));
+    const currentW = isShape ? el.strokeWidth : (is3D ? el.strokeWidth : (isConnector ? el.strokeWidth : (isStroke ? el.size : (isImage ? (el.strokeWidth || 0) : 0))));
     if (inputStrokeW) inputStrokeW.value = `${currentW}`;
     if (labelStrokeW) labelStrokeW.textContent = `${currentW}`;
 
@@ -2654,7 +2662,7 @@ export class BoardController {
 
     const inputCorners = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-corner-radius"]');
     const labelCorners = this.container.querySelector<HTMLElement>('[data-ref="label-popover-corner-radius"]');
-    const currentR = isShape ? (el.borderRadius || 0) : 0;
+    const currentR = (isShape || isImage) ? (el.borderRadius || (el as any).cornerRadius || 0) : 0;
     if (inputCorners) inputCorners.value = `${currentR}`;
     if (labelCorners) labelCorners.textContent = `${currentR}`;
 
@@ -3004,6 +3012,7 @@ export class BoardController {
           if (el.type === 'shape') el.strokeWidth = 0;
           if (el.type === 'stroke') el.size = 0;
           if (el.type === 'connector') el.strokeWidth = 0;
+          if (el.type === 'image') el.strokeWidth = 0;
         } else {
           if (el.type === 'shape') {
             el.strokeStyle = preset;
@@ -3017,6 +3026,11 @@ export class BoardController {
           if (el.type === 'connector') {
             el.strokeStyle = preset;
             if (el.strokeWidth === 0) el.strokeWidth = 2;
+          }
+          if (el.type === 'image') {
+            el.strokeStyle = preset;
+            if ((el.strokeWidth || 0) === 0) el.strokeWidth = 2;
+            if (!el.strokeColor || el.strokeColor === 'transparent') el.strokeColor = '#1e293b';
           }
         }
         this.collaborationManager.broadcastUpdateElement(el);
@@ -3037,6 +3051,10 @@ export class BoardController {
       if (el.type === 'shape') {
         el.strokeWidth = val;
         if (val > 0 && el.strokeColor === 'transparent') el.strokeColor = '#1e293b';
+      }
+      if (el.type === 'image') {
+        el.strokeWidth = val;
+        if (val > 0 && (!el.strokeColor || el.strokeColor === 'transparent')) el.strokeColor = '#1e293b';
       }
       if (el.type === 'stroke') el.size = Math.max(1, val);
       if (el.type === 'connector') el.strokeWidth = Math.max(1, val);
@@ -3060,15 +3078,16 @@ export class BoardController {
       if (labelCorners) labelCorners.textContent = `${val}`;
       if (!this.selectedElementId) return;
       const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el && el.type === 'shape') {
+      if (el && (el.type === 'shape' || el.type === 'image')) {
         el.borderRadius = val;
+        (el as any).cornerRadius = val;
         this.requestRedraw();
       }
     }, { signal });
     inputCorners?.addEventListener('change', () => {
       if (!this.selectedElementId) return;
       const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el && el.type === 'shape') {
+      if (el && (el.type === 'shape' || el.type === 'image')) {
         this.pushHistoryState();
         this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
@@ -5815,13 +5834,15 @@ export class BoardController {
 
       const directShape: ShapeType = shapeMap[cleanId] || (isLineOrArrow ? 'line' : 'rect');
 
+      const isSvgXml = !!(shape.pathD && shape.pathD.trim().startsWith('<svg'));
       const isNativeBasic = ['circle', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle'].includes(cleanId);
       const shapeEl = createShapeElement(directShape, {
         fillColor: isLineOrArrow ? 'transparent' : (color || this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR),
         height: elHeight,
         strokeColor: isLineOrArrow ? (color || this.currentColor || CANVAS_DEFAULTS.LINE_STROKE_COLOR) : CANVAS_DEFAULTS.STROKE_COLOR,
         strokeWidth: isLineOrArrow ? 2 : 0,
-        svgPath: isNativeBasic ? undefined : (shape.pathD || undefined),
+        svgContent: isSvgXml ? shape.pathD : undefined,
+        svgPath: (isNativeBasic || isSvgXml) ? undefined : (shape.pathD || undefined),
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
         y: Math.round(centerWorld.y - elHeight / 2),
@@ -5879,34 +5900,27 @@ export class BoardController {
 
     let newEl: BoardElement;
 
-    if (item.svg_content && (item.element_type === 'icon' || item.element_type === 'graphic')) {
-      const pathMatch = item.svg_content.match(/<path[^>]*\bd=["']([^"']+)["']/i);
-      if (pathMatch && pathMatch[1]) {
-        newEl = createShapeElement('rect', {
-          fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
-          height: elHeight,
-          strokeColor: this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR,
-          strokeWidth: 2,
-          svgPath: pathMatch[1],
-          width: elWidth,
-          x: Math.round(centerWorld.x - elWidth / 2),
-          y: Math.round(centerWorld.y - elHeight / 2),
-        });
-      } else {
-        const url = item.file_url || `data:image/svg+xml;utf8,${encodeURIComponent(item.svg_content)}`;
-        newEl = createImageElement(url, {
-          alt: item.title || 'Elemento',
-          height: elHeight,
-          width: elWidth,
-          x: Math.round(centerWorld.x - elWidth / 2),
-          y: Math.round(centerWorld.y - elHeight / 2),
-        });
-      }
+    if (item.svg_content) {
+      newEl = createShapeElement('rect', {
+        fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
+        height: elHeight,
+        strokeColor: this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR,
+        strokeWidth: 2,
+        svgContent: item.svg_content,
+        width: elWidth,
+        x: Math.round(centerWorld.x - elWidth / 2),
+        y: Math.round(centerWorld.y - elHeight / 2),
+      });
     } else {
       const url = item.file_url || '';
+      const isSvgUrl = url.toLowerCase().endsWith('.svg') || url.startsWith('data:image/svg');
       newEl = createImageElement(url, {
         alt: item.title || 'Elemento',
+        fillColor: isSvgUrl ? (this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR) : undefined,
         height: elHeight,
+        isSvg: isSvgUrl,
+        strokeColor: isSvgUrl ? (this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR) : undefined,
+        strokeWidth: isSvgUrl ? 2 : 0,
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
         y: Math.round(centerWorld.y - elHeight / 2),
