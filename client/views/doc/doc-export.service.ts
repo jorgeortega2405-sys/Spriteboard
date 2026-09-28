@@ -333,7 +333,7 @@ export function exportDocPdf(project: DocProject, title: string): void {
   printWindow.document.close();
 }
 
-export function exportDocWord(project: DocProject, title: string): void {
+export function getDocWordBlob(project: DocProject, title: string): Blob {
   const docTitle = sanitizeFilename(title || 'Documento');
   const watermarkText = project.settings.watermark?.enabled && project.settings.watermark.text ? project.settings.watermark.text : '';
 
@@ -384,7 +384,12 @@ export function exportDocWord(project: DocProject, title: string): void {
     </html>
   `;
 
-  const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+  return new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+}
+
+export function exportDocWord(project: DocProject, title: string): void {
+  const docTitle = sanitizeFilename(title || 'Documento');
+  const blob = getDocWordBlob(project, title);
   downloadBlob(blob, `${docTitle}.doc`);
 }
 

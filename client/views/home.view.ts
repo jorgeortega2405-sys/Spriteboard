@@ -21,9 +21,11 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { canBatchDownload } from '../types/auth.types.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
 import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
-import { exportDocWord } from './doc/doc-export.service.js';
+import { downloadZip, ZipFileInput } from '../utils/zip.util.js';
+import { exportDocWord, getDocWordBlob } from './doc/doc-export.service.js';
 
 const BATCH_SIZE = 20;
 
@@ -2378,7 +2380,7 @@ class HomeController {
   private async handleBulkDownload(): Promise<void> {
     const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
     if (selectedCanvases.length === 0) {
-      showToast('Selecciona al menos un lienzo para descargar', 'info');
+      showToast(t('canvas.select_one_to_download') || 'Selecciona al menos un lienzo para descargar', 'info');
       return;
     }
 
@@ -2387,22 +2389,46 @@ class HomeController {
       return;
     }
 
-    showToast(t('canvas.selection_download_multi', { count: selectedCanvases.length }) || `Descargando ${selectedCanvases.length} lienzos...`);
+    if (!canBatchDownload(currentUser)) {
+      showToast(t('subscription.batch_download_pro_required') || 'La descarga múltiple en ZIP requiere una suscripción Pro o superior.', 'info');
+      openUpgradeModal('pro');
+      return;
+    }
 
-    for (let i = 0; i < selectedCanvases.length; i++) {
-      const c = selectedCanvases[i];
-      if (c) {
-        await this.downloadSingleCanvas(c);
-      }
-      if (i < selectedCanvases.length - 1) {
-        await new Promise((r) => setTimeout(r, 250));
+    showToast(t('canvas.selection_download_zip', { count: selectedCanvases.length }) || `Descargando ${selectedCanvases.length} lienzos en un archivo ZIP...`);
+
+    const filesToZip: ZipFileInput[] = [];
+    const usedNames = new Set<string>();
+
+    for (const canvas of selectedCanvases) {
+      const rendered = await this.renderCanvasToBlob(canvas);
+      if (rendered && rendered.blob) {
+        let baseName = rendered.name;
+        let counter = 1;
+        while (usedNames.has(baseName)) {
+          const dotIdx = rendered.name.lastIndexOf('.');
+          if (dotIdx > 0) {
+            baseName = `${rendered.name.slice(0, dotIdx)} (${counter})${rendered.name.slice(dotIdx)}`;
+          } else {
+            baseName = `${rendered.name} (${counter})`;
+          }
+          counter++;
+        }
+        usedNames.add(baseName);
+        filesToZip.push({ data: rendered.blob, name: baseName });
       }
     }
 
+    if (filesToZip.length === 0) {
+      showToast(t('canvas.download_error') || 'No se pudieron procesar los lienzos seleccionados', 'danger');
+      return;
+    }
+
+    await downloadZip(filesToZip, 'Spriteboard_Disenos.zip');
     showToast(t('canvas.download_success') || 'Descarga completada', 'success');
   }
 
-  private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+  private async renderCanvasToBlob(canvas: CanvasItem): Promise<{ blob: Blob; name: string } | null> {
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
 
     const cleanName = (canvas.name || 'lienzo')
@@ -2449,8 +2475,8 @@ class HomeController {
             version: 1,
           };
         }
-        exportDocWord(docProject, fullCanvas.name);
-        return;
+        const blob = getDocWordBlob(docProject, fullCanvas.name);
+        return { blob, name: `${cleanName}.doc` };
       }
 
       const baseW = fullCanvas.width || 800;
@@ -2468,7 +2494,7 @@ class HomeController {
       outCanvas.width = baseW;
       outCanvas.height = baseH;
       const outCtx = outCanvas.getContext('2d');
-      if (!outCtx) return;
+      if (!outCtx) return null;
 
       outCtx.imageSmoothingEnabled = false;
 
@@ -2511,16 +2537,25 @@ class HomeController {
 
       const blob = await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, 'image/png'));
       if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${cleanName}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        return { blob, name: `${cleanName}.png` };
       }
     } catch {}
+
+    return null;
+  }
+
+  private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+    const rendered = await this.renderCanvasToBlob(canvas);
+    if (rendered && rendered.blob) {
+      const url = URL.createObjectURL(rendered.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = rendered.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   }
 
   private handleBulkMove(): void {

@@ -6,6 +6,7 @@ import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openRenameFolderModal } from '../components/folder-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
+import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
@@ -14,31 +15,33 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { canBatchDownload } from '../types/auth.types.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
 import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { formatVideoDuration } from '../utils/validators.util.js';
-import { exportDocWord } from './doc/doc-export.service.js';
+import { downloadZip, ZipFileInput } from '../utils/zip.util.js';
+import { exportDocWord, getDocWordBlob } from './doc/doc-export.service.js';
 
 const BATCH_SIZE = 20;
 
 function formatEditedTime(dateStr?: string | null): string {
-  if (!dateStr) return 'hace un momento';
+  if (!dateStr) return t('time.just_now');
   const date = new Date(dateStr);
   const now = new Date();
   const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (isNaN(diffSec) || diffSec < 60) return 'hace un momento';
+  if (isNaN(diffSec) || diffSec < 60) return t('time.just_now');
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return diffMin === 1 ? 'hace 1 minuto' : `hace ${diffMin} minutos`;
+  if (diffMin < 60) return diffMin === 1 ? t('time.minute_ago') : t('time.minutes_ago', { count: diffMin });
   const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return diffHours === 1 ? 'hace 1 hora' : `hace ${diffHours} horas`;
+  if (diffHours < 24) return diffHours === 1 ? t('time.hour_ago') : t('time.hours_ago', { count: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`;
+  if (diffDays < 7) return diffDays === 1 ? t('time.day_ago') : t('time.days_ago', { count: diffDays });
   const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 4) return diffWeeks === 1 ? 'hace 1 semana' : `hace ${diffWeeks} semanas`;
+  if (diffWeeks < 4) return diffWeeks === 1 ? t('time.week_ago') : t('time.weeks_ago', { count: diffWeeks });
   const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) return diffMonths === 1 ? 'hace 1 mes' : `hace ${diffMonths} meses`;
-  return diffDays > 365 ? 'hace más de 1 año' : date.toLocaleDateString();
+  if (diffMonths < 12) return diffMonths === 1 ? t('time.month_ago') : t('time.months_ago', { count: diffMonths });
+  return diffDays > 365 ? t('time.more_than_year') : date.toLocaleDateString();
 }
 
 class FolderController {
@@ -1322,7 +1325,7 @@ class FolderController {
   private async handleBulkDownload(): Promise<void> {
     const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
     if (selectedCanvases.length === 0) {
-      showToast('Selecciona al menos un lienzo para descargar', 'info');
+      showToast(t('canvas.select_one_to_download') || 'Selecciona al menos un lienzo para descargar', 'info');
       return;
     }
 
@@ -1331,22 +1334,46 @@ class FolderController {
       return;
     }
 
-    showToast(t('canvas.selection_download_multi', { count: selectedCanvases.length }) || `Descargando ${selectedCanvases.length} lienzos...`);
+    if (!canBatchDownload(currentUser)) {
+      showToast(t('subscription.batch_download_pro_required') || 'La descarga múltiple en ZIP requiere una suscripción Pro o superior.', 'info');
+      openUpgradeModal('pro');
+      return;
+    }
 
-    for (let i = 0; i < selectedCanvases.length; i++) {
-      const c = selectedCanvases[i];
-      if (c) {
-        await this.downloadSingleCanvas(c);
-      }
-      if (i < selectedCanvases.length - 1) {
-        await new Promise((r) => setTimeout(r, 250));
+    showToast(t('canvas.selection_download_zip', { count: selectedCanvases.length }) || `Descargando ${selectedCanvases.length} lienzos en un archivo ZIP...`);
+
+    const filesToZip: ZipFileInput[] = [];
+    const usedNames = new Set<string>();
+
+    for (const canvas of selectedCanvases) {
+      const rendered = await this.renderCanvasToBlob(canvas);
+      if (rendered && rendered.blob) {
+        let baseName = rendered.name;
+        let counter = 1;
+        while (usedNames.has(baseName)) {
+          const dotIdx = rendered.name.lastIndexOf('.');
+          if (dotIdx > 0) {
+            baseName = `${rendered.name.slice(0, dotIdx)} (${counter})${rendered.name.slice(dotIdx)}`;
+          } else {
+            baseName = `${rendered.name} (${counter})`;
+          }
+          counter++;
+        }
+        usedNames.add(baseName);
+        filesToZip.push({ data: rendered.blob, name: baseName });
       }
     }
 
+    if (filesToZip.length === 0) {
+      showToast(t('canvas.download_error') || 'No se pudieron procesar los lienzos seleccionados', 'danger');
+      return;
+    }
+
+    await downloadZip(filesToZip, 'Spriteboard_Disenos.zip');
     showToast(t('canvas.download_success') || 'Descarga completada', 'success');
   }
 
-  private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+  private async renderCanvasToBlob(canvas: CanvasItem): Promise<{ blob: Blob; name: string } | null> {
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
 
     const cleanName = (canvas.name || 'lienzo')
@@ -1393,8 +1420,8 @@ class FolderController {
             version: 1,
           };
         }
-        exportDocWord(docProject, fullCanvas.name);
-        return;
+        const blob = getDocWordBlob(docProject, fullCanvas.name);
+        return { blob, name: `${cleanName}.doc` };
       }
 
       const baseW = fullCanvas.width || 800;
@@ -1412,7 +1439,7 @@ class FolderController {
       outCanvas.width = baseW;
       outCanvas.height = baseH;
       const outCtx = outCanvas.getContext('2d');
-      if (!outCtx) return;
+      if (!outCtx) return null;
 
       outCtx.imageSmoothingEnabled = false;
 
@@ -1455,16 +1482,25 @@ class FolderController {
 
       const blob = await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, 'image/png'));
       if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${cleanName}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        return { blob, name: `${cleanName}.png` };
       }
     } catch {}
+
+    return null;
+  }
+
+  private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+    const rendered = await this.renderCanvasToBlob(canvas);
+    if (rendered && rendered.blob) {
+      const url = URL.createObjectURL(rendered.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = rendered.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   }
 
   private handleBulkMove(): void {

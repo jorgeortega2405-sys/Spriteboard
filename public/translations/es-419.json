@@ -9,7 +9,9 @@
     "cancel": "Cancelar",
     "continue": "Continuar",
     "save": "Guardar",
-    "loading": "Procesando..."
+    "loading": "Procesando...",
+    "copy": "Copiar",
+    "delete": "Eliminar"
   },
   "nav": {
     "go_home": "Ir al inicio",
@@ -178,7 +180,8 @@
       "login_link": "Iniciar sesión",
       "loading": "Actualizando...",
       "success_msg": "Contraseña actualizada correctamente. Redirigiendo..."
-    }
+    },
+    "login_required": "Inicia sesión para enviar mensajes al asistente."
   },
   "settings": {
     "your_account": {
@@ -262,7 +265,10 @@
       "social_facebook_placeholder": "página o perfil",
       "social_x": "X (Twitter)",
       "social_x_placeholder": "usuario (ej. spriteboard)",
-      "btn_save_public_profile": "Guardar perfil público"
+      "btn_save_public_profile": "Guardar perfil público",
+      "handle_invalid_regex": "El nombre de usuario solo puede contener letras, números, puntos y guiones bajos.",
+      "handle_saved_toast": "Nombre de usuario actualizado exitosamente.",
+      "public_profile_saved_toast": "Perfil público guardado exitosamente."
     },
     "profile": {
       "title": "Perfil público",
@@ -396,7 +402,10 @@
       "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google.",
       "account_protected_banner_title": "Seguridad gestionada por el sistema",
       "account_protected_banner_desc": "Esta cuenta está protegida por el sistema. El cambio de contraseña, la autenticación en dos pasos y la eliminación de cuenta están bloqueados.",
-      "account_protected_badge": "Protegida"
+      "account_protected_badge": "Protegida",
+      "current_password_incorrect": "La contraseña actual ingresada es incorrecta.",
+      "current_password_label": "Contraseña o código de 6 dígitos",
+      "modal_current_password_error": "Por favor ingresa tu contraseña actual para confirmar."
     },
     "billing": {
       "title": "Facturación y Suscripciones",
@@ -468,7 +477,8 @@
       "ai_mindmaps_title": "Mapas mentales",
       "ai_docs_title": "Documentos IA",
       "ai_boards_title": "Lienzo y elementos",
-      "ai_presentations_title": "Presentaciones"
+      "ai_presentations_title": "Presentaciones",
+      "auto_renewal_desc": "Detalles sobre la renovación automática de tu suscripción."
     },
     "purchases": {
       "title": "Historial de Compras",
@@ -530,7 +540,8 @@
     "weeks_ago": "hace {count} semanas",
     "month_ago": "hace 1 mes",
     "months_ago": "hace {count} meses",
-    "over_year_ago": "hace más de 1 año"
+    "over_year_ago": "hace más de 1 año",
+    "more_than_year": "hace más de 1 año"
   },
   "templates": {
     "title": "Plantillas",
@@ -694,7 +705,8 @@
     "network_error": "No se pudo conectar con el servidor. Revisa tu conexión.",
     "generic_error": "Ocurrió un error al procesar tu solicitud.",
     "handle_updated": "Identificador de diseñador actualizado correctamente.",
-    "public_profile_updated": "Perfil público actualizado exitosamente."
+    "public_profile_updated": "Perfil público actualizado exitosamente.",
+    "copied": "Copiado al portapapeles"
   },
   "validation": {
     "email_required": "Por favor ingresa tu correo electrónico.",
@@ -884,11 +896,13 @@
     "duplicate_error": "No se pudo duplicar el lienzo",
     "download_success": "Lienzo descargado exitosamente",
     "download_error": "No se pudo descargar el lienzo",
+    "select_one_to_download": "Selecciona al menos un lienzo para descargar",
     "selection_count_one": "1 seleccionado",
     "selection_count_many": "{count} seleccionados",
     "selection_cancel": "Cancelar selección",
     "selection_download": "Descargar",
     "selection_download_multi": "Descargando {count} lienzos...",
+    "selection_download_zip": "Descargando {count} lienzos en un archivo ZIP...",
     "selection_move": "Mover a carpeta",
     "selection_move_many_desc": "Mover {count} lienzos a una carpeta seleccionada.",
     "selection_move_many_success": "Lienzos movidos exitosamente",
@@ -956,7 +970,9 @@
       "type_svg": "Vectorial SVG (.svg)",
       "type_txt": "Texto sin formato (.txt)",
       "type_word": "Documento Word (.doc)"
-    }
+    },
+    "toast_created_guest": "Lienzo creado en modo invitado",
+    "trash_only_owner": "Solo el propietario puede mover este diseño a la papelera"
   },
   "teams": {
     "title": "Tus equipos",
@@ -1038,9 +1054,11 @@
     "sso_delete_confirm": "¿Estás seguro de que deseas eliminar la configuración de SSO para este equipo?",
     "sso_toast_saved": "Configuración de SSO guardada exitosamente.",
     "sso_toast_deleted": "Configuración de SSO eliminada exitosamente.",
-    "sso_invalid_domain": "Por favor ingresa un dominio corporativo válido (ej. empresa.com)."
+    "sso_invalid_domain": "Por favor ingresa un dominio corporativo válido (ej. empresa.com).",
+    "code_copied": "URL copiada al portapapeles.",
+    "load_error": "Error al cargar equipos",
+    "load_members_error": "Error al cargar integrantes del equipo"
   },
-
   "design": {
     "layers_limit_reached": "Has alcanzado el límite máximo de 25 capas por lienzo."
   },
@@ -1206,7 +1224,8 @@
     "drop_element_desc": "Formatos admitidos: SVG vector o PNG transparente",
     "btn_upload_font": "Subir una fuente",
     "uploaded_fonts_title": "Fuentes subidas",
-    "text_styles_title": "Estilos de texto de marca"
+    "text_styles_title": "Estilos de texto de marca",
+    "btn_add_template": "Vincular plantilla"
   },
   "your_apps": {
     "title": "Apps",
@@ -1324,7 +1343,8 @@
     "how_pool_works_title": "¿Cómo funciona el modelo de pagos?",
     "how_pool_works_1": "Sostenible y sin riesgo: El fondo está garantizado por el 25% de los ingresos de suscripciones PRO del mes.",
     "how_pool_works_2": "Meritocrático: Mientras más valor aporten tus plantillas PRO a los usuarios, mayor es tu porcentaje del fondo común.",
-    "how_pool_works_3": "100% en Dólares (USD): Retira tus fondos a cualquier banco o tarjeta de débito compatible con Stripe en tu país."
+    "how_pool_works_3": "100% en Dólares (USD): Retira tus fondos a cualquier banco o tarjeta de débito compatible con Stripe en tu país.",
+    "templates_title": "Mis plantillas de diseñador"
   },
   "uploads": {
     "drop_to_add": "Suelta para agregar",
@@ -1334,5 +1354,22 @@
     "upload_success_single": "Archivo subido correctamente.",
     "upload_error": "Error al subir los archivos.",
     "login_required": "Debes iniciar sesión para subir fotos y videos."
+  },
+  "subscription": {
+    "batch_download_pro_required": "La descarga múltiple en ZIP requiere una suscripción Pro o superior."
+  },
+  "cookies": {
+    "banner_title": "Preferencias de cookies y privacidad",
+    "banner_desc": "Utilizamos cookies y tecnologías similares para mejorar tu experiencia y seguridad en Spriteboard.",
+    "btn_accept": "Aceptar cookies",
+    "btn_manage": "Administrar",
+    "btn_reject": "Rechazar cookies"
+  },
+  "elements": {
+    "designer_required": "Solo los usuarios con rol de Diseñador pueden subir elementos.",
+    "login_required": "Debes iniciar sesión para subir un elemento."
+  },
+  "plans": {
+    "upgrade_to_business": "Actualizar a Business"
   }
 }

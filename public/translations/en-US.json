@@ -9,7 +9,9 @@
     "cancel": "Cancel",
     "continue": "Continue",
     "save": "Save",
-    "loading": "Processing..."
+    "loading": "Processing...",
+    "copy": "Copy",
+    "delete": "Delete"
   },
   "nav": {
     "go_home": "Go to home",
@@ -178,7 +180,8 @@
       "login_link": "Log in",
       "loading": "Updating...",
       "success_msg": "Password updated successfully. Redirecting..."
-    }
+    },
+    "login_required": "Log in to send messages to the assistant."
   },
   "settings": {
     "your_account": {
@@ -262,7 +265,10 @@
       "social_facebook_placeholder": "page or profile",
       "social_x": "X (Twitter)",
       "social_x_placeholder": "username (e.g. spriteboard)",
-      "btn_save_public_profile": "Save public profile"
+      "btn_save_public_profile": "Save public profile",
+      "handle_invalid_regex": "Username can only contain letters, numbers, periods, and underscores.",
+      "handle_saved_toast": "Username updated successfully.",
+      "public_profile_saved_toast": "Public profile saved successfully."
     },
     "profile": {
       "title": "Public Profile",
@@ -396,7 +402,10 @@
       "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google.",
       "account_protected_banner_title": "System managed security",
       "account_protected_banner_desc": "This account is protected by the system. Password change, two-factor authentication, and account deletion are locked.",
-      "account_protected_badge": "Protected"
+      "account_protected_badge": "Protected",
+      "current_password_incorrect": "The current password entered is incorrect.",
+      "current_password_label": "Password or 6-digit code",
+      "modal_current_password_error": "Please enter your current password to confirm."
     },
     "billing": {
       "title": "Facturación y Suscripciones",
@@ -468,7 +477,8 @@
       "ai_mindmaps_title": "Mind Maps",
       "ai_docs_title": "AI Documents",
       "ai_boards_title": "Canvas & Elements",
-      "ai_presentations_title": "Presentations"
+      "ai_presentations_title": "Presentations",
+      "auto_renewal_desc": "Details about your subscription automatic renewal."
     },
     "purchases": {
       "title": "Historial de Compras",
@@ -530,7 +540,8 @@
     "weeks_ago": "{count} weeks ago",
     "month_ago": "1 month ago",
     "months_ago": "{count} months ago",
-    "over_year_ago": "over 1 year ago"
+    "over_year_ago": "over 1 year ago",
+    "more_than_year": "over 1 year ago"
   },
   "templates": {
     "title": "Templates",
@@ -694,7 +705,8 @@
     "network_error": "No se pudo conectar con el servidor. Revisa tu conexión.",
     "generic_error": "Ocurrió un error al procesar tu solicitud.",
     "handle_updated": "Designer handle updated successfully.",
-    "public_profile_updated": "Public profile updated successfully."
+    "public_profile_updated": "Public profile updated successfully.",
+    "copied": "Copied to clipboard"
   },
   "validation": {
     "email_required": "Por favor ingresa tu correo electrónico.",
@@ -884,11 +896,13 @@
     "duplicate_error": "Could not duplicate canvas",
     "download_success": "Canvas downloaded successfully",
     "download_error": "Could not download canvas",
+    "select_one_to_download": "Select at least one canvas to download",
     "selection_count_one": "1 selected",
     "selection_count_many": "{count} selected",
     "selection_cancel": "Cancel selection",
     "selection_download": "Download",
     "selection_download_multi": "Downloading {count} canvases...",
+    "selection_download_zip": "Downloading {count} canvases in a ZIP file...",
     "selection_move": "Move to folder",
     "selection_move_many_desc": "Move {count} canvases to selected folder.",
     "selection_move_many_success": "Canvases moved successfully",
@@ -956,7 +970,9 @@
       "type_svg": "Vector SVG (.svg)",
       "type_txt": "Plain Text (.txt)",
       "type_word": "Word Document (.doc)"
-    }
+    },
+    "toast_created_guest": "Canvas created in guest mode",
+    "trash_only_owner": "Only the owner can move this design to trash"
   },
   "teams": {
     "title": "Your teams",
@@ -1038,7 +1054,10 @@
     "sso_delete_confirm": "Are you sure you want to delete the SSO configuration for this team?",
     "sso_toast_saved": "SSO configuration saved successfully.",
     "sso_toast_deleted": "SSO configuration deleted successfully.",
-    "sso_invalid_domain": "Please enter a valid corporate domain (e.g. company.com)."
+    "sso_invalid_domain": "Please enter a valid corporate domain (e.g. company.com).",
+    "code_copied": "URL copied to clipboard.",
+    "load_error": "Error loading teams",
+    "load_members_error": "Error loading team members"
   },
   "design": {
     "layers_limit_reached": "You have reached the maximum limit of 25 layers per canvas."
@@ -1205,7 +1224,8 @@
     "drop_element_desc": "Supported formats: SVG vector or transparent PNG",
     "btn_upload_font": "Upload a font",
     "uploaded_fonts_title": "Uploaded fonts",
-    "text_styles_title": "Brand text styles"
+    "text_styles_title": "Brand text styles",
+    "btn_add_template": "Link template"
   },
   "your_apps": {
     "title": "Apps",
@@ -1323,7 +1343,8 @@
     "how_pool_works_title": "How does the payout model work?",
     "how_pool_works_1": "Sustainable & Zero-Risk: The pool is funded exclusively with 25% of monthly PRO subscription revenues.",
     "how_pool_works_2": "Merit-Based: The more users create with your PRO templates, the higher your share of the monthly pool.",
-    "how_pool_works_3": "100% in USD: Withdraw directly to your local bank account or supported debit card via Stripe."
+    "how_pool_works_3": "100% in USD: Withdraw directly to your local bank account or supported debit card via Stripe.",
+    "templates_title": "My designer templates"
   },
   "uploads": {
     "drop_to_add": "Drop to add",
@@ -1333,5 +1354,22 @@
     "upload_success_single": "File uploaded successfully.",
     "upload_error": "Failed to upload files.",
     "login_required": "You must log in to upload photos and videos."
+  },
+  "subscription": {
+    "batch_download_pro_required": "Bulk downloading in ZIP requires a Pro or higher subscription."
+  },
+  "cookies": {
+    "banner_title": "Cookie & privacy preferences",
+    "banner_desc": "We use cookies and similar technologies to improve your experience and security on Spriteboard.",
+    "btn_accept": "Accept cookies",
+    "btn_manage": "Manage",
+    "btn_reject": "Reject cookies"
+  },
+  "elements": {
+    "designer_required": "Only users with the Designer role can upload elements.",
+    "login_required": "You must log in to upload an element."
+  },
+  "plans": {
+    "upgrade_to_business": "Upgrade to Business"
   }
 }
