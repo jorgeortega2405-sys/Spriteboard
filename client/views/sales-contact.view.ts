@@ -119,9 +119,6 @@ export class SalesContactController {
   private bindEvents(): void {
     const { signal } = this.abortController;
 
-    const btnBackToUpgrade = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-upgrade"]');
-    btnBackToUpgrade?.addEventListener('click', () => navigate('/upgrade'), { signal });
-
     const btnWizardBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-wizard-back"]');
     btnWizardBack?.addEventListener('click', () => this.goToStage(1), { signal });
 
