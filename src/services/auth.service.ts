@@ -493,3 +493,26 @@ export async function updateUserSubscriptionInSessions(
     logger.db.error('Error al actualizar suscripción en sesiones de Redis', err);
   }
 }
+
+const DESKTOP_AUTH_PREFIX = 'desktop_auth:';
+const DESKTOP_AUTH_TTL_SECONDS = 60;
+
+export async function createDesktopAuthToken(userId: number): Promise<string> {
+  const token = crypto.randomBytes(32).toString('hex');
+  const key = `${DESKTOP_AUTH_PREFIX}${token}`;
+  await redis.setex(key, DESKTOP_AUTH_TTL_SECONDS, String(userId));
+  logger.security.info('Token de autenticación de escritorio generado', { userId });
+  return token;
+}
+
+export async function consumeDesktopAuthToken(token: string): Promise<number | null> {
+  if (!token || typeof token !== 'string' || token.length < 32) return null;
+  const key = `${DESKTOP_AUTH_PREFIX}${token}`;
+  const userIdStr = await redis.get(key);
+  if (!userIdStr) return null;
+  await redis.del(key);
+  const userId = parseInt(userIdStr, 10);
+  if (isNaN(userId)) return null;
+  logger.security.info('Token de autenticación de escritorio canjeado exitosamente', { userId });
+  return userId;
+}

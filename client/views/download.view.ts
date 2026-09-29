@@ -34,12 +34,32 @@ class DownloadViewController implements ViewController {
   }
 
   private renderOsView(): void {
+    const isDesktopApp = Boolean((window as unknown as { spriteDesktop?: { isDesktop?: boolean } }).spriteDesktop?.isDesktop);
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="download-title"]');
     const descEl = this.container.querySelector<HTMLElement>('[data-ref="download-desc"]');
     const sectionWindows = this.container.querySelector<HTMLElement>('[data-ref="section-windows"]');
     const sectionMac = this.container.querySelector<HTMLElement>('[data-ref="section-mac"]');
     const sectionChromebook = this.container.querySelector<HTMLElement>('[data-ref="section-chromebook"]');
+    const sectionInstalled = this.container.querySelector<HTMLElement>('[data-ref="section-installed"]');
+    const dividerEl = this.container.querySelector<HTMLElement>('[data-ref="download-divider"]');
+    const footerEl = this.container.querySelector<HTMLElement>('[data-ref="download-footer"]');
     const footerContainer = this.container.querySelector<HTMLElement>('[data-ref="footer-links-container"]');
+
+    if (isDesktopApp) {
+      if (titleEl) titleEl.textContent = 'Spriteboard para Escritorio';
+      if (descEl) descEl.textContent = 'Estás ejecutando la aplicación nativa de Spriteboard.';
+      if (sectionWindows) sectionWindows.style.display = 'none';
+      if (sectionMac) sectionMac.style.display = 'none';
+      if (sectionChromebook) sectionChromebook.style.display = 'none';
+      if (sectionInstalled) sectionInstalled.style.display = 'flex';
+      if (dividerEl) dividerEl.style.display = 'none';
+      if (footerEl) footerEl.style.display = 'none';
+      return;
+    }
+
+    if (sectionInstalled) sectionInstalled.style.display = 'none';
+    if (dividerEl) dividerEl.style.display = '';
+    if (footerEl) footerEl.style.display = '';
 
     if (titleEl) {
       if (this.currentOs === 'windows') {
@@ -100,6 +120,27 @@ class DownloadViewController implements ViewController {
 
   public bindEvents(): void {
     const signal = this.abortController?.signal;
+
+    const btnOpenHomeInstalled = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-home-installed"]');
+    btnOpenHomeInstalled?.addEventListener(
+      'click',
+      () => {
+        navigate('/');
+      },
+      { signal }
+    );
+
+    const btnCheckUpdates = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-check-updates-installed"]');
+    btnCheckUpdates?.addEventListener(
+      'click',
+      () => {
+        const spriteDesktop = (window as unknown as { spriteDesktop?: { checkForUpdates?: (manual?: boolean) => void } }).spriteDesktop;
+        if (spriteDesktop?.checkForUpdates) {
+          spriteDesktop.checkForUpdates(true);
+        }
+      },
+      { signal }
+    );
 
     const btnDownloadWindows = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-windows"]');
     btnDownloadWindows?.addEventListener(

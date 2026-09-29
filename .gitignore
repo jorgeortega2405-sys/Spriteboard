@@ -50,7 +50,10 @@ data/geoip/*.gz
 admin_tool/cache/
 
 # Assets e iconos SVG de figuras y stickers
-public/assets/
+public/assets/*
+!public/assets/img/
+public/assets/img/*
+!public/assets/img/download/
 
 # Blobs de lienzos comprimidos
 data/canvases/*

@@ -156,6 +156,8 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
 
   const stepMain = container.querySelector<HTMLElement>('[data-ref="login-step-main"]');
   const step2FA = container.querySelector<HTMLElement>('[data-ref="login-step-2fa"]');
+  const stepDesktop = container.querySelector<HTMLElement>('[data-ref="login-step-desktop"]');
+  const stepHandoff = container.querySelector<HTMLElement>('[data-ref="login-step-browser-handoff"]');
 
   const emailInput = container.querySelector<HTMLInputElement>('[data-ref="login-email"]');
   const passwordInput = container.querySelector<HTMLInputElement>('[data-ref="login-password"]');
@@ -168,6 +170,11 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   const subtitleEl = container.querySelector<HTMLElement>('[data-ref="login-subtitle"]');
   const bannersMain = createBannerManager(container, { errorRef: 'login-error' });
 
+  const desktopGoogleBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-desktop-google"]');
+  const desktopEmailBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-desktop-browser-email"]');
+  const desktopManualBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-desktop-show-manual"]');
+  const launchDesktopBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-launch-desktop-app"]');
+
   const code2FAInput = container.querySelector<HTMLInputElement>('[data-ref="input-login-2fa-code"]');
   const submit2FABtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-2fa"]');
   const backToLoginLink = container.querySelector<HTMLElement>('[data-ref="btn-back-to-login"]');
@@ -175,6 +182,9 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
 
   const urlParams = new URLSearchParams(window.location.search);
   const isAddingAccount = Boolean(currentUser) || urlParams.get('action') === 'add-account';
+  const isDesktopApp = Boolean((window as unknown as { spriteDesktop?: { isDesktop?: boolean } }).spriteDesktop?.isDesktop);
+  const isDesktopHandoffFlow = urlParams.get('source') === 'desktop';
+  const desktopTokenParam = urlParams.get('desktop_token');
 
   if (isAddingAccount) {
     if (titleEl) {
@@ -194,13 +204,66 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   }
 
   bindNavigationLinks(container, {
-    'login-home-link': '/',
     'btn-forgot-password': '/forgot-password',
+    'btn-handoff-continue-web': '/',
     'btn-to-register': '/register',
+    'login-home-link': '/',
   });
 
   googleBtn?.addEventListener('click', () => {
-    window.location.href = API_ROUTES.auth.google;
+    const targetUrl = isDesktopHandoffFlow ? `${API_ROUTES.auth.google}?source=desktop` : API_ROUTES.auth.google;
+    window.location.href = targetUrl;
+  });
+
+  desktopGoogleBtn?.addEventListener('click', async () => {
+    try {
+      const res = await getApi(`${API_ROUTES.auth.googleUrl}?source=desktop`);
+      const data = await res.json();
+      if (data?.url) {
+        const spriteDesktop = (window as unknown as { spriteDesktop?: { openExternal?: (url: string) => void } }).spriteDesktop;
+        if (spriteDesktop?.openExternal) {
+          spriteDesktop.openExternal(data.url);
+        } else {
+          window.open(data.url, '_blank');
+        }
+        return;
+      }
+    } catch (_) {}
+    const origin = window.location.origin;
+    const fallbackUrl = `${origin}${API_ROUTES.auth.google}?source=desktop`;
+    window.open(fallbackUrl, '_blank');
+  });
+
+  desktopEmailBtn?.addEventListener('click', () => {
+    const origin = window.location.origin;
+    const targetUrl = `${origin}/login?source=desktop`;
+    const spriteDesktop = (window as unknown as { spriteDesktop?: { openExternal?: (url: string) => void } }).spriteDesktop;
+    if (spriteDesktop?.openExternal) {
+      spriteDesktop.openExternal(targetUrl);
+    } else {
+      window.open(targetUrl, '_blank');
+    }
+  });
+
+  desktopManualBtn?.addEventListener('click', () => {
+    activateStep('main');
+  });
+
+  let currentDesktopToken = desktopTokenParam || '';
+
+  const triggerDesktopHandoff = (token: string) => {
+    currentDesktopToken = token;
+    activateStep('handoff');
+    const deepLinkUrl = `spriteboard://auth/callback?token=${encodeURIComponent(token)}`;
+    try {
+      window.location.href = deepLinkUrl;
+    } catch (_) {}
+  };
+
+  launchDesktopBtn?.addEventListener('click', () => {
+    if (currentDesktopToken) {
+      window.location.href = `spriteboard://auth/callback?token=${encodeURIComponent(currentDesktopToken)}`;
+    }
   });
 
   let ssoLoginUrl = '';
@@ -251,8 +314,8 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   }
 
   setupPasswordToggle(toggleBtn, passwordInput, {
-    showTooltip: t('auth.login.show_password'),
     hideTooltip: t('auth.login.hide_password'),
+    showTooltip: t('auth.login.show_password'),
   });
 
   const oauthError = urlParams.get('error');
@@ -260,30 +323,42 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
     bannersMain.showError(t('toasts.generic_error'));
   }
 
-  const activateStep = (stepName: 'main' | '2fa') => {
+  const activateStep = (stepName: 'desktop' | 'handoff' | 'main' | '2fa') => {
     bannersMain.hideAll();
     banners2FA.hideAll();
 
+    if (stepMain) stepMain.style.display = stepName === 'main' ? 'block' : 'none';
+    if (step2FA) step2FA.style.display = stepName === '2fa' ? 'block' : 'none';
+    if (stepDesktop) stepDesktop.style.display = stepName === 'desktop' ? 'block' : 'none';
+    if (stepHandoff) stepHandoff.style.display = stepName === 'handoff' ? 'block' : 'none';
+
     if (stepName === '2fa') {
-      if (stepMain) stepMain.style.display = 'none';
-      if (step2FA) step2FA.style.display = 'block';
       window.history.pushState({}, '', '/login/verification-aditional');
       requestAnimationFrame(() => code2FAInput?.focus());
-    } else {
-      if (step2FA) step2FA.style.display = 'none';
-      if (stepMain) stepMain.style.display = 'block';
+    } else if (stepName === 'main') {
       window.history.pushState({}, '', '/login');
       requestAnimationFrame(() => emailInput?.focus());
     }
   };
 
   if (is2FARoute) {
-    if (stepMain) stepMain.style.display = 'none';
-    if (step2FA) step2FA.style.display = 'block';
-    requestAnimationFrame(() => code2FAInput?.focus());
+    activateStep('2fa');
+  } else if (desktopTokenParam) {
+    triggerDesktopHandoff(desktopTokenParam);
+  } else if (isDesktopHandoffFlow && currentUser) {
+    activateStep('handoff');
+    void postApi(API_ROUTES.auth.desktopToken)
+      .then((res) => res.json())
+      .then((data: { token?: string }) => {
+        if (data?.token) {
+          triggerDesktopHandoff(data.token);
+        }
+      })
+      .catch(() => {});
+  } else if (isDesktopApp) {
+    activateStep('desktop');
   } else {
-    if (step2FA) step2FA.style.display = 'none';
-    if (stepMain) stepMain.style.display = 'block';
+    activateStep('main');
   }
 
   const executeLogin = async () => {
@@ -323,6 +398,20 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
         setCurrentUser(data.user);
         if (data.accounts) setLinkedAccounts(data.accounts);
         initWebSocket();
+
+        if (isDesktopHandoffFlow) {
+          try {
+            const tokenRes = await postApi(API_ROUTES.auth.desktopToken);
+            if (tokenRes.ok) {
+              const tokenData = await tokenRes.json();
+              if (tokenData?.token) {
+                triggerDesktopHandoff(tokenData.token);
+                return;
+              }
+            }
+          } catch (_) {}
+        }
+
         navigate('/');
       } catch {
         bannersMain.showError(t('toasts.network_error'));
@@ -348,8 +437,8 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
     await withButtonLoading(submit2FABtn, t('auth.login_2fa.loading') || 'Verificando...', async () => {
       try {
         const res = await postApi(API_ROUTES.auth.login2fa, {
-          tempToken: state.tempToken,
           code,
+          tempToken: state.tempToken,
         });
 
         const data = await res.json();
@@ -363,6 +452,20 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
         if (data.accounts) setLinkedAccounts(data.accounts);
         clearTwoFactorState();
         initWebSocket();
+
+        if (isDesktopHandoffFlow) {
+          try {
+            const tokenRes = await postApi(API_ROUTES.auth.desktopToken);
+            if (tokenRes.ok) {
+              const tokenData = await tokenRes.json();
+              if (tokenData?.token) {
+                triggerDesktopHandoff(tokenData.token);
+                return;
+              }
+            }
+          } catch (_) {}
+        }
+
         navigate('/');
       } catch {
         banners2FA.showError(t('toasts.network_error'));
@@ -376,7 +479,7 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   backToLoginLink?.addEventListener('click', (e) => {
     e.preventDefault();
     clearTwoFactorState();
-    activateStep('main');
+    activateStep(isDesktopApp ? 'desktop' : 'main');
   });
 
   return container;

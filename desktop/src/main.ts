@@ -1,4 +1,5 @@
-import { app, BaseWindow, Menu, MenuItemConstructorOptions, shell } from 'electron';
+import { app, BaseWindow, clipboard, dialog, ipcMain, Menu, MenuItemConstructorOptions, shell } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DESKTOP_CONFIG, getAppTargetUrl } from './config.js';
@@ -12,6 +13,26 @@ let appUpdater: AppUpdater | null = null;
 let mainWindow: BaseWindow | null = null;
 let tabManager: TabManager | null = null;
 
+function handleDeepLinkUrl(deepLink: string): void {
+  try {
+    const urlObj = new URL(deepLink);
+    const token = urlObj.searchParams.get('token');
+    const relativePath = urlObj.searchParams.get('path');
+    if (token && tabManager) {
+      const exchangeUrl = new URL(`/api/auth/desktop-exchange?token=${encodeURIComponent(token)}`, getAppTargetUrl()).toString();
+      const wc = tabManager.getActiveWebContents();
+      if (wc) {
+        wc.loadURL(exchangeUrl);
+      } else {
+        tabManager.createTab(exchangeUrl, true);
+      }
+    } else if (relativePath && tabManager) {
+      const targetUrl = new URL(relativePath, getAppTargetUrl()).toString();
+      tabManager.createTab(targetUrl, true);
+    }
+  } catch {}
+}
+
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
     app.setAsDefaultProtocolClient('spriteboard', process.execPath, [path.resolve(process.argv[1])]);
@@ -19,6 +40,76 @@ if (process.defaultApp) {
 } else {
   app.setAsDefaultProtocolClient('spriteboard');
 }
+
+ipcMain.handle('open-external-url', async (_event, targetUrl: string) => {
+  if (typeof targetUrl === 'string' && (targetUrl.startsWith('http://') || targetUrl.startsWith('https://'))) {
+    await shell.openExternal(targetUrl);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('save-file-dialog', async (_event, options: { dataBase64: string; defaultPath?: string; filters?: { extensions: string[]; name: string }[] }) => {
+  try {
+    const focusedWindow = BaseWindow.getFocusedWindow();
+    const result = await dialog.showSaveDialog(focusedWindow as any, {
+      defaultPath: options.defaultPath,
+      filters: options.filters || [],
+    });
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, success: false };
+    }
+    const buffer = Buffer.from(options.dataBase64, 'base64');
+    await fs.promises.writeFile(result.filePath, buffer);
+    return { canceled: false, filePath: result.filePath, success: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Error desconocido', success: false };
+  }
+});
+
+ipcMain.handle('clipboard-read-image', async () => {
+  try {
+    const image = clipboard.readImage();
+    if (!image.isEmpty()) {
+      return image.toDataURL();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('clipboard-read-text', async () => {
+  try {
+    return clipboard.readText();
+  } catch {
+    return '';
+  }
+});
+
+ipcMain.handle('clipboard-write-text', async (_event, text: string) => {
+  try {
+    clipboard.writeText(String(text || ''));
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+  handleDeepLinkUrl(url);
+});
 
 const gotTheLock = DESKTOP_CONFIG.isDev ? true : app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -32,15 +123,8 @@ if (!gotTheLock) {
       mainWindow.focus();
 
       const deepLink = commandLine.find((arg) => arg.startsWith('spriteboard://'));
-      if (deepLink && tabManager) {
-        try {
-          const urlObj = new URL(deepLink);
-          const relativePath = urlObj.searchParams.get('path');
-          if (relativePath) {
-            const targetUrl = new URL(relativePath, getAppTargetUrl()).toString();
-            tabManager.createTab(targetUrl, true);
-          }
-        } catch {}
+      if (deepLink) {
+        handleDeepLinkUrl(deepLink);
       }
     }
   });
@@ -210,8 +294,21 @@ function buildMenu(targetOrigin: string): Menu {
 }
 
 async function createMainWindow(): Promise<void> {
-  const targetUrl = getAppTargetUrl();
-  const targetOrigin = new URL(targetUrl).origin;
+  const initialDeepLink = process.argv.find((arg) => arg.startsWith('spriteboard://'));
+  let initialUrl = getAppTargetUrl();
+  if (initialDeepLink) {
+    try {
+      const urlObj = new URL(initialDeepLink);
+      const token = urlObj.searchParams.get('token');
+      const relativePath = urlObj.searchParams.get('path');
+      if (token) {
+        initialUrl = new URL(`/api/auth/desktop-exchange?token=${encodeURIComponent(token)}`, getAppTargetUrl()).toString();
+      } else if (relativePath) {
+        initialUrl = new URL(relativePath, getAppTargetUrl()).toString();
+      }
+    } catch {}
+  }
+  const targetOrigin = new URL(getAppTargetUrl()).origin;
 
   mainWindow = new BaseWindow({
     backgroundColor: '#0e0e10',
@@ -246,7 +343,7 @@ async function createMainWindow(): Promise<void> {
     mainWindow = null;
   });
 
-  await tabManager.createTab(targetUrl, true);
+  await tabManager.createTab(initialUrl, true);
   mainWindow.show();
 
   setTimeout(() => {

@@ -4,7 +4,7 @@ import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, consumeDesktopAuthToken, createDesktopAuthToken, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { geoIpService } from '../services/geoip.service.js';
 import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
@@ -524,6 +524,16 @@ export async function redirectToGoogle(req: Request, res: Response): Promise<voi
   res.redirect(url);
 }
 
+export async function getGoogleAuthUrlApi(req: Request, res: Response): Promise<void> {
+  const serverConfig = await getServerConfig();
+  if (!serverConfig.allow_google_login) {
+    sendBadRequest(res, 'El inicio de sesión con Google está temporalmente deshabilitado.');
+    return;
+  }
+  const url = getGoogleAuthUrl(req, res);
+  sendSuccess(res, { url });
+}
+
 export function redirectToGoogleLink(req: Request, res: Response): void {
   const currentUser = getCurrentUser(req);
   if (!currentUser) {
@@ -696,6 +706,10 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
       }
     }
 
+    const isDesktopFlow =
+      (storedState && storedState.startsWith('desktop_')) ||
+      (state && String(state).startsWith('desktop_'));
+
     if (userPayload.two_factor_enabled) {
       const tempToken = crypto.randomBytes(32).toString('hex');
       await savePending2FALogin(tempToken, { userId: userPayload.id, email: userPayload.email }, 300);
@@ -719,13 +733,19 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
         path: '/',
       });
 
-      res.redirect(`/login/verification-aditional?token=${tempToken}&email=${encodeURIComponent(userPayload.email)}`);
+      res.redirect(`/login/verification-aditional?token=${tempToken}&email=${encodeURIComponent(userPayload.email)}${isDesktopFlow ? '&source=desktop' : ''}`);
       return;
     }
 
     await addAccountToSession(res, req, userPayload);
 
     logger.security.info('Inicio de sesión exitoso con Google OAuth', { userId: userPayload.id, email: userPayload.email });
+
+    if (isDesktopFlow) {
+      const desktopToken = await createDesktopAuthToken(userPayload.id);
+      res.redirect(`/login?source=desktop&desktop_token=${encodeURIComponent(desktopToken)}`);
+      return;
+    }
 
     res.redirect('/');
   } catch (err) {
@@ -876,5 +896,71 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       error,
       'Ha ocurrido un error inesperado al actualizar tu contraseña. Por favor intenta más tarde.'
     );
+  }
+}
+
+export async function createDesktopToken(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+    const token = await createDesktopAuthToken(user.id);
+    sendSuccess(res, { token });
+  } catch (error) {
+    sendInternalError(res, 'Error al generar token para aplicación de escritorio', error, 'Error al procesar la solicitud.');
+  }
+}
+
+export async function exchangeDesktopToken(req: Request, res: Response): Promise<void> {
+  try {
+    const token = (req.query.token as string) || (req.body?.token as string);
+    if (!token || typeof token !== 'string') {
+      sendBadRequest(res, 'Token no proporcionado o inválido.');
+      return;
+    }
+
+    const userId = await consumeDesktopAuthToken(token.trim());
+    if (!userId) {
+      sendUnauthorized(res, 'El token de autenticación es inválido o ha expirado.');
+      return;
+    }
+
+    const userRow = await findUserById(userId);
+    if (!userRow) {
+      sendUnauthorized(res, 'Usuario no encontrado.');
+      return;
+    }
+
+    const user = sanitizeUser(userRow);
+    const clientIp = getClientIp(req);
+    const geo = geoIpService.lookup(clientIp);
+    void updateUserLastLoginGeo(user.id, {
+      ip: clientIp,
+      country: geo.countryName,
+      city: geo.city,
+      asn: geo.asn,
+      isp: geo.asOrg,
+    });
+
+    await addAccountToSession(res, req, user);
+
+    logger.security.info('Sesión de escritorio iniciada mediante token de intercambio', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    if (req.accepts('html') && !req.xhr && req.headers['sec-fetch-dest'] === 'document') {
+      res.redirect('/');
+      return;
+    }
+
+    sendSuccess(res, {
+      message: 'Autenticación exitosa en aplicación de escritorio.',
+      user,
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al intercambiar token de escritorio', error, 'Error al iniciar sesión.');
   }
 }

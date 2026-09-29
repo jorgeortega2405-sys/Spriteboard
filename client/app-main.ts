@@ -2,10 +2,11 @@ import { navigate, render, showEarlySkeleton } from './app-router.js';
 import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service.js';
 import { initCookieBanner } from './services/bottom-banner.service.js';
 import { initGlobalDropzone } from './services/global-dropzone.service.js';
-import { getCurrentLanguage, initI18n, setLanguage } from './services/i18n.service.js';
+import { getCurrentLanguage, initI18n, setLanguage, t } from './services/i18n.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { initWebVitals } from './services/telemetry.service.js';
 import { initTheme } from './services/theme.service.js';
+import { showToast } from './services/toast.service.js';
 import { initTooltips } from './services/tooltip.service.js';
 import { initWebSocket } from './services/websocket.service.js';
 
@@ -133,12 +134,29 @@ function initLinkInterception(): void {
   });
 }
 
+function initKeyboardShortcuts(): void {
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+    if (isCmdOrCtrl && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      const saveEvent = new CustomEvent('spriteboard:save', { cancelable: true });
+      const dispatched = window.dispatchEvent(saveEvent);
+      if (!dispatched) {
+        showToast(t('common.saved') || 'Cambios guardados');
+      }
+    }
+  });
+}
+
 async function init(): Promise<void> {
   initTheme();
   showEarlySkeleton();
   initTooltips();
   initScrollShadow();
   initLinkInterception();
+  initKeyboardShortcuts();
   initGlobalDropzone();
   initWebVitals();
 

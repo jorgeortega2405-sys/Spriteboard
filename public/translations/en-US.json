@@ -116,7 +116,16 @@
       "sso_btn_team": "Continue with SSO ({team})",
       "no_account": "Don't have an account?",
       "create_account": "Create account",
-      "loading": "Logging in..."
+      "loading": "Logging in...",
+      "desktop_title": "Sign in to Spriteboard",
+      "desktop_subtitle": "Choose how you want to access your account",
+      "desktop_google_btn": "Continue with Google",
+      "desktop_email_btn": "Use email address",
+      "desktop_manual_link": "Sign in directly in the app",
+      "desktop_handoff_title": "Connecting to Spriteboard...",
+      "desktop_handoff_subtitle": "Your session has been verified. You can now return to the desktop application.",
+      "desktop_handoff_btn": "Open Spriteboard",
+      "desktop_handoff_web_link": "Continue on the web version"
     },
     "login_2fa": {
       "title": "Two-factor authentication",

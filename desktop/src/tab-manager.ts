@@ -23,6 +23,9 @@ export function isInternalTarget(url: string, targetOrigin: string): boolean {
     if (parsed.port === String(DESKTOP_CONFIG.adminPort)) {
       return false;
     }
+    if (parsed.searchParams.get('source') === 'desktop' || parsed.pathname.startsWith('/api/auth/google')) {
+      return false;
+    }
     return parsed.origin === targetOrigin;
   } catch {
     return false;
@@ -136,6 +139,13 @@ export class TabManager {
     });
 
     view.webContents.on('will-navigate', (event, targetUrl) => {
+      if (!isInternalTarget(targetUrl, this.targetOrigin)) {
+        event.preventDefault();
+        shell.openExternal(targetUrl);
+      }
+    });
+
+    view.webContents.on('will-redirect', (event, targetUrl) => {
       if (!isInternalTarget(targetUrl, this.targetOrigin)) {
         event.preventDefault();
         shell.openExternal(targetUrl);

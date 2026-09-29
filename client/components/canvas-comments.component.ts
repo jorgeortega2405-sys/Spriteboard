@@ -179,11 +179,229 @@ export class CanvasCommentsController {
   }
 
   public async init(): Promise<void> {
+    this.ensureDomMounted();
     this.queryElements();
     this.bindEvents();
     this.initRecentEmojis();
     await this.fetchComments();
     this.renderPins();
+  }
+
+  private ensureDomMounted(): void {
+    if (this.container.querySelector('[data-ref="canvas-comments-layer"]')) {
+      return;
+    }
+    const targetParent = this.container.querySelector<HTMLElement>(
+      '[data-ref="board-viewport"], [data-ref="presentation-viewport"], [data-ref="stage-viewport"], [data-ref="doc-viewport-wrapper"], [data-ref="sheet-viewport"], [data-ref="video-viewport-wrapper"]'
+    ) || this.container.querySelector<HTMLElement>('.component-bottom--canvas, .view-wrapper') || this.container;
+
+    const fragment = document.createElement('div');
+    fragment.innerHTML = `
+      <div class="canvas-comments-layer" data-ref="canvas-comments-layer"></div>
+
+      <div class="canvas-comments-panel is-hidden" data-ref="canvas-comments-panel">
+        <div class="canvas-comments-panel__header">
+          <div class="canvas-comments-filter-dropdown" data-ref="comments-filter-dropdown">
+            <button type="button" class="canvas-comments-filter-btn" data-ref="btn-comments-filter" aria-label="Filtrar comentarios">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              <span class="canvas-comments-filter-text" data-ref="comments-filter-text">Página actual</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+            <div class="canvas-comments-filter-menu is-hidden" data-ref="comments-filter-menu">
+              <button type="button" class="canvas-comments-filter-item is-active" data-ref="btn-filter-current-page" data-filter="current_page">
+                <span>Página actual</span>
+              </button>
+              <button type="button" class="canvas-comments-filter-item" data-ref="btn-filter-all" data-filter="all">
+                <span>Todos los comentarios</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="canvas-comments-close-btn" data-ref="btn-close-comments-panel" aria-label="Cerrar comentarios">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="canvas-comments-panel__body" data-ref="comments-panel-body">
+          <div class="canvas-comments-empty" data-ref="comments-empty-state">
+            <p class="canvas-comments-empty__text" data-ref="comments-empty-text">No hay comentarios en este lienzo.</p>
+          </div>
+          <div class="canvas-comments-list is-hidden" data-ref="comments-list"></div>
+        </div>
+
+        <div class="canvas-comments-panel__footer">
+          <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-panel-add-comment">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_comment"></use></svg>
+            <span>Comentar</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-comment-composer is-hidden" data-ref="canvas-comment-composer">
+        <div class="canvas-comment-composer__header">
+          <span class="canvas-comment-composer__title" data-ref="composer-title">Nuevo comentario</span>
+          <button type="button" class="canvas-comment-composer__close" data-ref="btn-close-composer" aria-label="Cerrar compositor">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-comment-composer__body">
+          <textarea class="canvas-comment-composer__input" data-ref="input-comment-content" placeholder="Agrega un comentario o @menciona a alguien" rows="2"></textarea>
+          <div class="canvas-mentions-popup is-hidden" data-ref="comment-mentions-popup"></div>
+        </div>
+        <div class="canvas-comment-composer__toolbar">
+          <div class="canvas-comment-composer__actions">
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-mention" data-tooltip="Mencionar" aria-label="Mencionar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#alternate_email"></use></svg>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-emoji" data-tooltip="Insertar emoji" aria-label="Insertar emoji">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_reaction"></use></svg>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-sticker" data-tooltip="Stickers" aria-label="Stickers">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-image" data-tooltip="Subir imagen" aria-label="Subir imagen">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
+            </button>
+            <input class="is-hidden" data-ref="input-composer-image-file" type="file" accept="image/*" />
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-bold" data-tooltip="Negrita" aria-label="Negrita">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+            </button>
+          </div>
+          <button type="button" class="canvas-composer-send-btn is-disabled" data-ref="btn-composer-send" data-tooltip="Enviar comentario" aria-label="Enviar comentario">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_upward"></use></svg>
+          </button>
+        </div>
+
+        <div class="canvas-emoji-picker is-hidden" data-ref="canvas-emoji-picker">
+          <div class="canvas-emoji-picker__search">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="canvas-emoji-picker__input" data-ref="input-emoji-search" type="text" placeholder="Buscar emojis" autocomplete="off" />
+          </div>
+
+          <div class="canvas-emoji-picker__tabs" data-ref="emoji-picker-tabs">
+            <button type="button" class="canvas-emoji-tab is-active" data-ref="tab-emoji-recent" data-category="recent" data-tooltip="Más usados" aria-label="Más usados">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-smileys" data-category="smileys" data-tooltip="Emojis y personas" aria-label="Emojis y personas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mood"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-animals" data-category="animals" data-tooltip="Animales y naturaleza" aria-label="Animales y naturaleza">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pets"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-food" data-category="food" data-tooltip="Comida y bebida" aria-label="Comida y bebida">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restaurant"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-travel" data-category="travel" data-tooltip="Viajes y lugares" aria-label="Viajes y lugares">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#directions_car"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-activities" data-category="activities" data-tooltip="Actividades" aria-label="Actividades">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sports_soccer"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-objects" data-category="objects" data-tooltip="Objetos" aria-label="Objetos">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lightbulb"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-symbols" data-category="symbols" data-tooltip="Símbolos" aria-label="Símbolos">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-flags" data-category="flags" data-tooltip="Banderas" aria-label="Banderas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flag"></use></svg>
+            </button>
+          </div>
+
+          <div class="canvas-emoji-picker__content" data-ref="emoji-picker-content"></div>
+
+          <div class="canvas-emoji-picker__footer">
+            <div class="canvas-emoji-skintone-wrapper" data-ref="emoji-skintone-wrapper">
+              <button type="button" class="canvas-emoji-skintone-btn" data-ref="btn-emoji-skintone" aria-label="Tono de piel">
+                <span class="canvas-emoji-skintone-hand" data-ref="emoji-skintone-current-hand">✋</span>
+                <span>Tono de piel</span>
+              </button>
+              <div class="canvas-emoji-skintone-menu is-hidden" data-ref="emoji-skintone-menu">
+                <button type="button" class="canvas-skintone-option" data-ref="tone-default" data-tone="">✋</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-light" data-tone="🏻">✋🏻</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med-light" data-tone="🏼">✋🏼</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med" data-tone="🏽">✋🏽</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med-dark" data-tone="🏾">✋🏾</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-dark" data-tone="🏿">✋🏿</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-comment-thread is-hidden" data-ref="canvas-comment-thread">
+        <div class="canvas-comment-thread__header">
+          <button type="button" class="canvas-thread-nav-btn" data-ref="btn-thread-back" data-tooltip="Volver a comentarios" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <div class="canvas-thread-pager">
+            <button type="button" class="canvas-thread-pager__btn" data-ref="btn-thread-prev" aria-label="Comentario anterior">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+            <span class="canvas-thread-pager__text" data-ref="thread-pager-text">1/1</span>
+            <button type="button" class="canvas-thread-pager__btn" data-ref="btn-thread-next" aria-label="Siguiente comentario">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+          <div class="canvas-thread-header-actions">
+            <button type="button" class="canvas-thread-nav-btn" data-ref="btn-thread-options" data-tooltip="Opciones" aria-label="Opciones">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+            </button>
+            <div class="canvas-thread-options-menu is-hidden" data-ref="thread-options-menu">
+              <button type="button" class="canvas-thread-option-item" data-ref="btn-thread-resolve">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                <span data-ref="thread-resolve-text">Resolver comentario</span>
+              </button>
+              <button type="button" class="canvas-thread-option-item canvas-thread-option-item--danger" data-ref="btn-thread-delete">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
+                <span>Eliminar comentario</span>
+              </button>
+            </div>
+            <button type="button" class="canvas-thread-nav-btn" data-ref="btn-close-thread" aria-label="Cerrar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-comment-thread__body" data-ref="thread-body">
+          <div class="canvas-comment-item" data-ref="thread-main-comment"></div>
+          <div class="canvas-comment-replies" data-ref="thread-replies-list"></div>
+        </div>
+
+        <div class="canvas-comment-thread__footer">
+          <div class="canvas-comment-reply-composer">
+            <textarea class="canvas-comment-composer__input canvas-comment-composer__input--reply" data-ref="input-reply-content" placeholder="Responder.." rows="1"></textarea>
+            <div class="canvas-mentions-popup is-hidden" data-ref="reply-mentions-popup"></div>
+            <div class="canvas-comment-composer__toolbar">
+              <div class="canvas-comment-composer__actions">
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-mention" data-tooltip="Mencionar" aria-label="Mencionar">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#alternate_email"></use></svg>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-emoji" data-tooltip="Insertar emoji" aria-label="Insertar emoji">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_reaction"></use></svg>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-sticker" data-tooltip="Stickers" aria-label="Stickers">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-image" data-tooltip="Subir imagen" aria-label="Subir imagen">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
+                </button>
+                <input class="is-hidden" data-ref="input-reply-image-file" type="file" accept="image/*" />
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-bold" data-tooltip="Negrita" aria-label="Negrita">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+                </button>
+              </div>
+              <button type="button" class="canvas-composer-send-btn is-disabled" data-ref="btn-reply-send" data-tooltip="Enviar respuesta" aria-label="Enviar respuesta">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_upward"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    while (fragment.firstElementChild) {
+      targetParent.appendChild(fragment.firstElementChild);
+    }
   }
 
   private queryElements(): void {
@@ -1362,6 +1580,9 @@ export class CanvasCommentsController {
     this.hideComposer();
     this.hideThread();
     this.hideCommentsPanel();
-    this.commentsLayer?.replaceChildren();
+    this.commentsLayer?.remove();
+    this.commentsPanel?.remove();
+    this.composerCard?.remove();
+    this.threadCard?.remove();
   }
 }

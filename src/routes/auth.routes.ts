@@ -1,4 +1,4 @@
-import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleLink, redirectToGoogleVerify, resendRegistrationCode, resetPassword, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
+import { createDesktopToken, exchangeDesktopToken, forgotPassword, getGoogleAuthUrlApi, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleLink, redirectToGoogleVerify, resendRegistrationCode, resetPassword, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { forgotPasswordLimiter, loginLimiter, registerLimiter, resetPasswordLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
@@ -19,7 +19,12 @@ router.post('/auth/switch-account', switchAccount);
 router.post('/switch-account', switchAccount);
 router.get('/me', me);
 
+router.post('/auth/desktop-token', requireAuth, createDesktopToken);
+router.get('/auth/desktop-exchange', exchangeDesktopToken);
+router.post('/auth/desktop-exchange', exchangeDesktopToken);
+
 router.get('/auth/google', redirectToGoogle);
+router.get('/auth/google/url', getGoogleAuthUrlApi);
 router.get('/auth/google/link', requireAuth, redirectToGoogleLink);
 router.get('/auth/google/verify', requireAuth, redirectToGoogleVerify);
 router.get('/auth/google/callback', googleCallback);

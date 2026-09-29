@@ -75,5 +75,52 @@
           </div>
         </div>
       </div>
+
+      <!-- PASO ESCRITORIO: Inicio de Sesión para App de Escritorio -->
+      <div class="auth-step" data-ref="login-step-desktop" style="display: none;">
+        <div class="card__header" data-ref="login-desktop-header">
+          <h1 class="card__title" data-ref="login-desktop-title" data-i18n="auth.login.desktop_title"></h1>
+          <p class="card__subtitle" data-ref="login-desktop-subtitle" data-i18n="auth.login.desktop_subtitle"></p>
+        </div>
+
+        <div class="card__body" data-ref="login-desktop-form">
+          <button type="button" class="component-button component-button--h55 component-button--w-full" data-ref="btn-desktop-google">
+            <svg class="google-icon" data-ref="google-desktop-icon" width="20" height="20" aria-hidden="true"><use href="/icons.svg#google_colored"></use></svg>
+            <span class="component-button__text" data-ref="google-desktop-btn-text" data-i18n="auth.login.desktop_google_btn"></span>
+          </button>
+
+          <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-desktop-browser-email" style="margin-top: 12px;">
+            <span class="material-symbols-rounded" style="font-size: 20px; margin-right: 8px;">mail</span>
+            <span class="component-button__text" data-ref="email-desktop-btn-text" data-i18n="auth.login.desktop_email_btn"></span>
+          </button>
+
+          <div class="banner banner--danger" data-ref="login-desktop-error" style="display: none;"></div>
+
+          <div class="link-row" data-ref="login-desktop-manual-row" style="justify-content: center; margin-top: 18px;">
+            <button type="button" class="link" data-ref="btn-desktop-show-manual" data-i18n="auth.login.desktop_manual_link"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO HANDOFF: Redirección hacia App de Escritorio -->
+      <div class="auth-step" data-ref="login-step-browser-handoff" style="display: none;">
+        <div class="card__header" data-ref="login-handoff-header">
+          <h1 class="card__title" data-ref="login-handoff-title" data-i18n="auth.login.desktop_handoff_title"></h1>
+          <p class="card__subtitle" data-ref="login-handoff-subtitle" data-i18n="auth.login.desktop_handoff_subtitle"></p>
+        </div>
+
+        <div class="card__body" data-ref="login-handoff-form" style="text-align: center;">
+          <div class="handoff-icon-wrapper" data-ref="handoff-icon-wrapper" style="margin-bottom: 20px;">
+            <span class="material-symbols-rounded" style="font-size: 56px; color: var(--color-primary, #6366f1);">devices</span>
+          </div>
+
+          <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-launch-desktop-app" data-i18n="auth.login.desktop_handoff_btn">
+          </button>
+
+          <div class="link-row" data-ref="login-handoff-web-row" style="justify-content: center; margin-top: 16px;">
+            <a class="link" data-ref="btn-handoff-continue-web" href="/" data-i18n="auth.login.desktop_handoff_web_link"></a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>

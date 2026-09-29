@@ -233,7 +233,41 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     },
   });
 
-  const triggerBlobDownload = (blob: Blob, filename: string) => {
+  const triggerBlobDownload = async (blob: Blob, filename: string) => {
+    const spriteDesktop = (window as unknown as {
+      spriteDesktop?: {
+        saveFile?: (options: { dataBase64: string; defaultPath?: string; filters?: { extensions: string[]; name: string }[] }) => Promise<{ canceled?: boolean; filePath?: string; success?: boolean }>;
+      };
+    }).spriteDesktop;
+
+    if (spriteDesktop?.saveFile) {
+      try {
+        const buffer = await blob.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const dataBase64 = btoa(binary);
+
+        const ext = filename.split('.').pop() || 'png';
+        const result = await spriteDesktop.saveFile({
+          dataBase64,
+          defaultPath: filename,
+          filters: [{ extensions: [ext], name: ext.toUpperCase() }],
+        });
+
+        if (result?.success) {
+          showToast(t('canvas.download_success') || 'Archivo guardado correctamente');
+          return;
+        }
+        if (result?.canceled) {
+          return;
+        }
+      } catch (_) {}
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

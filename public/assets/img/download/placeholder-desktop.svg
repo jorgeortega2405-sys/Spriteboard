@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 460" fill="none" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="640" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fef3c7" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+    <linearGradient id="screen2" x1="0" y1="0" x2="480" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <filter id="shadow2" x="-10%" y="-10%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-opacity="0.15" flood-color="#78350f" />
+    </filter>
+  </defs>
+  <rect width="640" height="460" rx="24" fill="url(#bg2)" />
+  <circle cx="80" cy="180" r="30" fill="#d97706" opacity="0.3" />
+  <circle cx="80" cy="180" r="24" fill="#b45309" opacity="0.4" />
+  <rect x="540" y="140" width="60" height="85" rx="8" fill="#f59e0b" opacity="0.35" />
+  <g transform="translate(80, 50)" filter="url(#shadow2)">
+    <rect width="480" height="300" rx="16" fill="#18181b" />
+    <rect x="12" y="12" width="456" height="276" rx="8" fill="url(#screen2)" />
+    <rect x="12" y="12" width="456" height="32" fill="#09090b" fill-opacity="0.6" />
+    <circle cx="30" cy="28" r="4" fill="#ef4444" />
+    <circle cx="44" cy="28" r="4" fill="#f59e0b" />
+    <circle cx="58" cy="28" r="4" fill="#10b981" />
+    <rect x="180" y="21" width="120" height="14" rx="7" fill="#ffffff" fill-opacity="0.15" />
+    <rect x="22" y="54" width="34" height="224" rx="6" fill="#ffffff" fill-opacity="0.08" />
+    <circle cx="39" cy="74" r="8" fill="#8b5cf6" />
+    <circle cx="39" cy="100" r="7" fill="#ffffff" fill-opacity="0.3" />
+    <circle cx="39" cy="124" r="7" fill="#ffffff" fill-opacity="0.3" />
+    <circle cx="39" cy="148" r="7" fill="#ffffff" fill-opacity="0.3" />
+    <rect x="66" y="54" width="392" height="224" rx="6" fill="#ffffff" />
+    <rect x="90" y="75" width="160" height="180" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <rect x="105" y="90" width="130" height="75" rx="6" fill="#f43f5e" fill-opacity="0.85" />
+    <circle cx="170" cy="125" r="18" fill="#ffffff" />
+    <rect x="105" y="178" width="100" height="10" rx="5" fill="#0f172a" />
+    <rect x="105" y="195" width="70" height="8" rx="4" fill="#64748b" />
+    <rect x="268" y="75" width="170" height="85" rx="8" fill="#ede9fe" />
+    <rect x="282" y="90" width="80" height="8" rx="4" fill="#6d28d9" />
+    <rect x="282" y="115" width="14" height="32" rx="3" fill="#8b5cf6" />
+    <rect x="304" y="105" width="14" height="42" rx="3" fill="#a78bfa" />
+    <rect x="326" y="95" width="14" height="52" rx="3" fill="#6366f1" />
+    <rect x="348" y="120" width="14" height="27" rx="3" fill="#c4b5fd" />
+    <g transform="translate(268, 172)">
+      <rect width="80" height="80" rx="4" fill="#fef08a" />
+      <rect x="10" y="14" width="60" height="6" rx="3" fill="#854d0e" fill-opacity="0.6" />
+      <rect x="10" y="26" width="45" height="6" rx="3" fill="#854d0e" fill-opacity="0.4" />
+      <circle cx="65" cy="65" r="8" fill="#ca8a04" />
+    </g>
+    <path d="M-40 300h560c12 0 18 10 12 18l-8 12H-44l-8-12c-6-8 0-18 12-18z" fill="#27272a" />
+    <rect x="200" y="302" width="80" height="6" rx="3" fill="#52525b" />
+  </g>
+</svg>

@@ -12,8 +12,10 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export const STATE_COOKIE_NAME = 'oauth_state';
 
-export function getGoogleAuthUrl(_req: Request, res: Response): string {
-  const state = crypto.randomBytes(24).toString('hex');
+export function getGoogleAuthUrl(req: Request, res: Response): string {
+  const isDesktop = req.query.source === 'desktop';
+  const prefix = isDesktop ? 'desktop_' : '';
+  const state = `${prefix}${crypto.randomBytes(24).toString('hex')}`;
 
   res.cookie(STATE_COOKIE_NAME, state, {
     httpOnly: true,

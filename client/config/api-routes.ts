@@ -165,10 +165,13 @@ export const API_ROUTES = {
     request: '/api/support/request',
   },
   auth: {
+    desktopExchange: (token: string) => `/api/auth/desktop-exchange?token=${encodeURIComponent(token)}`,
+    desktopToken: '/api/auth/desktop-token',
     forgotPassword: '/api/forgot-password',
     google: '/api/auth/google',
     googleCallback: '/api/auth/google/callback',
     googleLink: '/api/auth/google/link',
+    googleUrl: '/api/auth/google/url',
     googleVerify: '/api/auth/google/verify',
     login: '/api/login',
     login2fa: '/api/login/verify-2fa',

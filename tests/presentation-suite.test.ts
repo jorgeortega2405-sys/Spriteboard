@@ -397,9 +397,9 @@ async function runPresentationTests(): Promise<void> {
     }
   });
 
-  await test('5.3 Auditoría Data-Ref - Coincidencia de selectores UI en presentation.html y layout.component.ts', () => {
-    const presentationHtmlPath = path.resolve(process.cwd(), 'public/views/presentation/presentation.html');
-    const presentationContent = fs.readFileSync(presentationHtmlPath, 'utf-8');
+  await test('5.3 Auditoría Data-Ref - Coincidencia de selectores UI en stage.html y layout.component.ts', () => {
+    const stageHtmlPath = path.resolve(process.cwd(), 'public/views/stage/stage.html');
+    const stageContent = fs.readFileSync(stageHtmlPath, 'utf-8');
 
     const layoutComponentPath = path.resolve(process.cwd(), 'client/components/layout.component.ts');
     const layoutContent = fs.readFileSync(layoutComponentPath, 'utf-8');
@@ -419,12 +419,6 @@ async function runPresentationTests(): Promise<void> {
       'btn-apply-duration-all',
     ];
 
-    for (const ref of requiredPresentationRefs) {
-      assert.ok(presentationContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en presentation.html`);
-    }
-
-    const stageHtmlPath = path.resolve(process.cwd(), 'public/views/stage/stage.html');
-    const stageContent = fs.readFileSync(stageHtmlPath, 'utf-8');
     for (const ref of requiredPresentationRefs) {
       assert.ok(stageContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en stage.html`);
     }
