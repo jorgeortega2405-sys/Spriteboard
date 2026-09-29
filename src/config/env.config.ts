@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   appName: process.env.APP_NAME || 'Spriteboard',
@@ -5,6 +7,7 @@ export const config = {
   trustProxy: process.env.TRUST_PROXY ? (Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY) : 1,
   sessionSecret: process.env.SESSION_SECRET || 'spriteboard_session_secret_key_2026',
   csrfSecret: process.env.CSRF_SECRET || process.env.SESSION_SECRET || 'spriteboard_csrf_secret_key_2026',
+  appEncryptionKey: process.env.APP_ENCRYPTION_KEY || '',
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -64,5 +67,22 @@ export const config = {
     endpoint: process.env.PHOTOROOM_ENDPOINT || 'https://sdk.photoroom.com/v1/segment',
   },
 };
+
+if (config.nodeEnv === 'production') {
+  const missingSecrets: string[] = [];
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'spriteboard_session_secret_key_2026') {
+    missingSecrets.push('SESSION_SECRET');
+  }
+  if (!process.env.CSRF_SECRET || process.env.CSRF_SECRET === 'spriteboard_csrf_secret_key_2026') {
+    missingSecrets.push('CSRF_SECRET');
+  }
+  if (!process.env.APP_ENCRYPTION_KEY) {
+    missingSecrets.push('APP_ENCRYPTION_KEY');
+  }
+  if (missingSecrets.length > 0) {
+    throw new Error(`CRITICAL CONFIGURATION ERROR: Missing or default secrets in production: ${missingSecrets.join(', ')}`);
+  }
+}
+
 
 

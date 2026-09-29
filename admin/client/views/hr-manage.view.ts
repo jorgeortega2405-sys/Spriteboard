@@ -439,40 +439,36 @@ class HrManageController implements ViewController {
 
     const changeTypeDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-change-type"]');
     if (changeTypeDropdown) {
-      setupDropdown({
-        container: changeTypeDropdown,
-        onSelect: (item) => {
-          selectedChangeType = item.getAttribute('data-value') || 'promotion';
+      setupDropdown(changeTypeDropdown, {
+        onSelect: (val) => {
+          selectedChangeType = val || 'promotion';
         },
       });
     }
 
     const deptDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-department"]');
     if (deptDropdown) {
-      setupDropdown({
-        container: deptDropdown,
-        onSelect: (item) => {
-          selectedDepartment = item.getAttribute('data-value') || 'Ingeniería';
+      setupDropdown(deptDropdown, {
+        onSelect: (val) => {
+          selectedDepartment = val || 'Ingeniería';
         },
       });
     }
 
     const currencyDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-currency"]');
     if (currencyDropdown) {
-      setupDropdown({
-        container: currencyDropdown,
-        onSelect: (item) => {
-          selectedCurrency = item.getAttribute('data-value') || 'USD';
+      setupDropdown(currencyDropdown, {
+        onSelect: (val) => {
+          selectedCurrency = val || 'USD';
         },
       });
     }
 
     const roleDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-role"]');
     if (roleDropdown) {
-      setupDropdown({
-        container: roleDropdown,
-        onSelect: (item) => {
-          selectedRole = item.getAttribute('data-value') || '';
+      setupDropdown(roleDropdown, {
+        onSelect: (val) => {
+          selectedRole = val || '';
         },
       });
     }
@@ -590,10 +586,9 @@ class HrManageController implements ViewController {
 
     const ptoDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-pto-type"]');
     if (ptoDropdown) {
-      setupDropdown({
-        container: ptoDropdown,
-        onSelect: (item) => {
-          selectedPtoType = item.getAttribute('data-value') || 'vacation';
+      setupDropdown(ptoDropdown, {
+        onSelect: (val) => {
+          selectedPtoType = val || 'vacation';
         },
       });
     }
@@ -689,10 +684,9 @@ class HrManageController implements ViewController {
 
     const docDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-doc-type"]');
     if (docDropdown) {
-      setupDropdown({
-        container: docDropdown,
-        onSelect: (item) => {
-          selectedDocType = item.getAttribute('data-value') || 'contract';
+      setupDropdown(docDropdown, {
+        onSelect: (val) => {
+          selectedDocType = val || 'contract';
         },
       });
     }
@@ -792,10 +786,9 @@ class HrManageController implements ViewController {
 
     const statusDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-status"]');
     if (statusDropdown) {
-      setupDropdown({
-        container: statusDropdown,
-        onSelect: (item) => {
-          selectedStatus = item.getAttribute('data-value') || 'active';
+      setupDropdown(statusDropdown, {
+        onSelect: (val) => {
+          selectedStatus = val || 'active';
         },
       });
     }

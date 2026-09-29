@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasThumbnail, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -675,5 +675,27 @@ export async function patchCanvasHandler(req: Request, res: Response): Promise<v
       return;
     }
     sendInternalError(res, 'Error al actualizar lienzo en patch canvas controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
+  }
+}
+
+export async function getCanvasThumbnailHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      sendBadRequest(res, 'Identificador de lienzo inválido.');
+      return;
+    }
+
+    const thumb = await getCanvasThumbnail(uuid);
+    if (!thumb) {
+      sendNotFound(res, 'Miniatura no encontrada.');
+      return;
+    }
+
+    res.setHeader('Content-Type', thumb.contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.send(thumb.buffer);
+  } catch (err: any) {
+    sendInternalError(res, 'Error al obtener miniatura de lienzo', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }

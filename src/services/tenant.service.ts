@@ -1,6 +1,7 @@
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { EnterpriseTenant, EnterpriseTenantType } from '../types/enterprise.types.js';
+import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
@@ -52,6 +53,27 @@ export function cleanDomain(rawDomain: string): string {
   return clean;
 }
 
+function formatTenantRow(r: mysql.RowDataPacket): EnterpriseTenant {
+  return {
+    id: r.id,
+    uuid: r.uuid,
+    owner_id: r.owner_id,
+    tenant_type: r.tenant_type,
+    name: r.name,
+    domain: r.domain,
+    sso_enabled: Boolean(r.sso_enabled),
+    idp_entity_id: r.idp_entity_id,
+    idp_sso_url: r.idp_sso_url,
+    idp_certificate: r.idp_certificate ? decryptAtRest(r.idp_certificate) : r.idp_certificate,
+    scim_enabled: Boolean(r.scim_enabled),
+    scim_token_hash: r.scim_token_hash,
+    target_team_id: r.target_team_id,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    users_count: r.users_count !== undefined ? (Number(r.users_count) || 0) : undefined,
+  };
+}
+
 export async function getTenantById(id: number): Promise<EnterpriseTenant | null> {
   try {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
@@ -67,25 +89,7 @@ export async function getTenantById(id: number): Promise<EnterpriseTenant | null
       return null;
     }
 
-    const r = rows[0];
-    return {
-      id: r.id,
-      uuid: r.uuid,
-      owner_id: r.owner_id,
-      tenant_type: r.tenant_type,
-      name: r.name,
-      domain: r.domain,
-      sso_enabled: Boolean(r.sso_enabled),
-      idp_entity_id: r.idp_entity_id,
-      idp_sso_url: r.idp_sso_url,
-      idp_certificate: r.idp_certificate,
-      scim_enabled: Boolean(r.scim_enabled),
-      scim_token_hash: r.scim_token_hash,
-      target_team_id: r.target_team_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      users_count: Number(r.users_count) || 0,
-    };
+    return formatTenantRow(rows[0]);
   } catch (err) {
     logger.db.error('Error al consultar tenant por id', err);
     throw err;
@@ -127,25 +131,7 @@ export async function getTenantByOwner(
       return null;
     }
 
-    const r = rows[0];
-    return {
-      id: r.id,
-      uuid: r.uuid,
-      owner_id: r.owner_id,
-      tenant_type: r.tenant_type,
-      name: r.name,
-      domain: r.domain,
-      sso_enabled: Boolean(r.sso_enabled),
-      idp_entity_id: r.idp_entity_id,
-      idp_sso_url: r.idp_sso_url,
-      idp_certificate: r.idp_certificate,
-      scim_enabled: Boolean(r.scim_enabled),
-      scim_token_hash: r.scim_token_hash,
-      target_team_id: r.target_team_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      users_count: Number(r.users_count) || 0,
-    };
+    return formatTenantRow(rows[0]);
   } catch (err) {
     logger.db.error('Error al consultar tenant por owner', err);
     throw err;
@@ -164,24 +150,7 @@ export async function getTenantByDomain(domain: string): Promise<EnterpriseTenan
 
     if (rows.length === 0) return null;
 
-    const r = rows[0];
-    return {
-      id: r.id,
-      uuid: r.uuid,
-      owner_id: r.owner_id,
-      tenant_type: r.tenant_type,
-      name: r.name,
-      domain: r.domain,
-      sso_enabled: Boolean(r.sso_enabled),
-      idp_entity_id: r.idp_entity_id,
-      idp_sso_url: r.idp_sso_url,
-      idp_certificate: r.idp_certificate,
-      scim_enabled: Boolean(r.scim_enabled),
-      scim_token_hash: r.scim_token_hash,
-      target_team_id: r.target_team_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    };
+    return formatTenantRow(rows[0]);
   } catch (err) {
     logger.db.error('Error al consultar tenant por dominio', err);
     throw err;
@@ -197,24 +166,7 @@ export async function getTenantByUuid(uuid: string): Promise<EnterpriseTenant | 
 
     if (rows.length === 0) return null;
 
-    const r = rows[0];
-    return {
-      id: r.id,
-      uuid: r.uuid,
-      owner_id: r.owner_id,
-      tenant_type: r.tenant_type,
-      name: r.name,
-      domain: r.domain,
-      sso_enabled: Boolean(r.sso_enabled),
-      idp_entity_id: r.idp_entity_id,
-      idp_sso_url: r.idp_sso_url,
-      idp_certificate: r.idp_certificate,
-      scim_enabled: Boolean(r.scim_enabled),
-      scim_token_hash: r.scim_token_hash,
-      target_team_id: r.target_team_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    };
+    return formatTenantRow(rows[0]);
   } catch (err) {
     logger.db.error('Error al consultar tenant por UUID', err);
     throw err;
@@ -231,24 +183,7 @@ export async function getTenantByScimToken(rawToken: string): Promise<Enterprise
 
     if (rows.length === 0) return null;
 
-    const r = rows[0];
-    return {
-      id: r.id,
-      uuid: r.uuid,
-      owner_id: r.owner_id,
-      tenant_type: r.tenant_type,
-      name: r.name,
-      domain: r.domain,
-      sso_enabled: Boolean(r.sso_enabled),
-      idp_entity_id: r.idp_entity_id,
-      idp_sso_url: r.idp_sso_url,
-      idp_certificate: r.idp_certificate,
-      scim_enabled: Boolean(r.scim_enabled),
-      scim_token_hash: r.scim_token_hash,
-      target_team_id: r.target_team_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    };
+    return formatTenantRow(rows[0]);
   } catch (err) {
     logger.db.error('Error al consultar tenant por token SCIM', err);
     throw err;
@@ -290,6 +225,10 @@ export async function upsertTenant(
     const existing = await getTenantByOwner(ownerId, type);
 
     if (existing) {
+      const encryptedCert = dto.idp_certificate !== undefined
+        ? (dto.idp_certificate ? encryptAtRest(dto.idp_certificate) : null)
+        : null;
+
       await pool.execute(
         `UPDATE enterprise_tenants
          SET name = ?,
@@ -307,7 +246,7 @@ export async function upsertTenant(
           dto.sso_enabled !== undefined ? dto.sso_enabled : null,
           dto.idp_entity_id !== undefined ? dto.idp_entity_id : null,
           dto.idp_sso_url !== undefined ? dto.idp_sso_url : null,
-          dto.idp_certificate !== undefined ? dto.idp_certificate : null,
+          encryptedCert,
           dto.scim_enabled !== undefined ? dto.scim_enabled : null,
           dto.target_team_id !== undefined ? dto.target_team_id : null,
           existing.id,
@@ -318,6 +257,7 @@ export async function upsertTenant(
     }
 
     const uuid = crypto.randomUUID();
+    const encryptedCert = dto.idp_certificate ? encryptAtRest(dto.idp_certificate) : null;
     const [result] = await pool.execute<mysql.ResultSetHeader>(
       `INSERT INTO enterprise_tenants
        (uuid, owner_id, tenant_type, name, domain, sso_enabled, idp_entity_id, idp_sso_url, idp_certificate, scim_enabled, target_team_id)
@@ -331,7 +271,7 @@ export async function upsertTenant(
         dto.sso_enabled || false,
         dto.idp_entity_id || null,
         dto.idp_sso_url || null,
-        dto.idp_certificate || null,
+        encryptedCert,
         dto.scim_enabled || false,
         dto.target_team_id || null,
       ]

@@ -6,7 +6,8 @@ import { Router } from 'express';
 import { handleDownloadDocument, handleGetCareerHistory, handleGetEmployeeDetails, handleGetOrgChart, handleGetTimeOffCalendar, handleHireEmployee, handleListEmployees, handleListTimeOffRequests, handlePromoteEmployee, handleReviewTimeOffRequest, handleSubmitTimeOffRequest, handleUpdateEmployeeStatus, handleUploadDocument } from '../controllers/hr.controller.js';
 import { requireAuth, requirePermission } from '../middlewares/auth.middleware.js';
 
-const contractsDir = path.resolve(process.cwd(), 'admin/data/contracts');
+const baseAdminDir = process.cwd().endsWith('admin') ? process.cwd() : path.join(process.cwd(), 'admin');
+const contractsDir = path.resolve(baseAdminDir, 'data', 'contracts');
 if (!fs.existsSync(contractsDir)) {
   fs.mkdirSync(contractsDir, { recursive: true });
 }

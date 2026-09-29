@@ -253,7 +253,8 @@ export async function hireEmployee(
     );
 
     if (contractFile) {
-      const contractsDir = path.resolve(process.cwd(), 'admin/data/contracts');
+      const baseAdminDir = process.cwd().endsWith('admin') ? process.cwd() : path.join(process.cwd(), 'admin');
+      const contractsDir = path.resolve(baseAdminDir, 'data', 'contracts');
       if (!fs.existsSync(contractsDir)) {
         fs.mkdirSync(contractsDir, { recursive: true });
       }
@@ -875,7 +876,8 @@ export async function addEmployeeDocument(
   const emp = await getEmployeeById(employeeIdOrUuid, true);
   if (!emp) throw new Error('Colaborador no encontrado.');
 
-  const contractsDir = path.resolve(process.cwd(), 'admin/data/contracts');
+  const baseAdminDir = process.cwd().endsWith('admin') ? process.cwd() : path.join(process.cwd(), 'admin');
+  const contractsDir = path.resolve(baseAdminDir, 'data', 'contracts');
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
   }

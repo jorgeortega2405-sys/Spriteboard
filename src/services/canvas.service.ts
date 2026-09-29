@@ -5,7 +5,7 @@ import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CanvasType, CreateCanvasDto, GetUserCanvasesOptions, PaginatedCanvasesResult, PatchCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
-import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
+import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, deleteCanvasThumbnail, hasCanvasBlob, readCanvasBlobDecompressed, readCanvasThumbnail, saveCanvasBlob, saveCanvasThumbnail } from './canvas-storage-blob.service.js';
 import { ensureDefaultFolder } from './folder.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
@@ -114,6 +114,19 @@ export function resolveCanvasType(dto?: { canvas_type?: string; unit?: string; d
   return 'board';
 }
 
+async function processPreviewThumbnail(uuid: string, thumbnail?: string | null): Promise<string | null> {
+  if (!thumbnail) return null;
+  if (thumbnail.startsWith('data:image/') || thumbnail.length > 500) {
+    try {
+      return await saveCanvasThumbnail(uuid, thumbnail);
+    } catch (err) {
+      logger.db.error(`Error al persistir miniatura S3 para ${uuid}`, err);
+      return thumbnail;
+    }
+  }
+  return thumbnail;
+}
+
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
@@ -128,7 +141,10 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
   const shortCode = generateShortCode();
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
-  const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
+  let previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
+  if (previewThumbnail) {
+    previewThumbnail = await processPreviewThumbnail(uuid, previewThumbnail);
+  }
 
   let targetTeam: { id: number; owner_id: number; name: string } | null = null;
   if (dto.team_uuid || dto.team_id) {
@@ -717,7 +733,10 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
   const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || defaultH)));
   const unit = canvasType;
   const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
-  const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
+  let previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
+  if (previewThumbnail) {
+    previewThumbnail = await processPreviewThumbnail(uuid, previewThumbnail);
+  }
   const accessLevel = dto.access_level;
 
   try {
@@ -1376,6 +1395,7 @@ export async function permanentlyDeleteCanvas(uuid: string, userId: number): Pro
       await redis.del(`canvas:meta:${uuid}`);
       await deleteCanvasBlob(uuid);
       await deleteCanvasAllSnapshotsBlobs(uuid);
+      await deleteCanvasThumbnail(uuid);
       await pool.execute("DELETE FROM user_favorites WHERE item_type = 'canvas' AND item_id = ?", [uuid]);
       await invalidateUserCanvasesCache(userId);
       await invalidateUserStorageCache(userId);
@@ -1402,6 +1422,7 @@ export async function emptyTrash(userId: number): Promise<boolean> {
         await redis.del(`canvas:meta:${u}`);
         await deleteCanvasBlob(u);
         await deleteCanvasAllSnapshotsBlobs(u);
+        await deleteCanvasThumbnail(u);
       } catch {}
     }
     try {
@@ -1483,10 +1504,20 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       : fullData;
 
     const originalType = original.canvas_type || (original.unit === 'presentation' ? 'presentation' : (original.unit === 'social' ? 'social' : (original.unit === 'doc' ? 'doc' : 'board')));
+    let duplicateThumbnail = original.preview_thumbnail;
+    if (duplicateThumbnail && (duplicateThumbnail.startsWith('data:image/') || duplicateThumbnail.length > 500)) {
+      duplicateThumbnail = await processPreviewThumbnail(newUuid, duplicateThumbnail);
+    } else if (duplicateThumbnail === `/api/canvases/${uuid}/thumbnail`) {
+      const origThumb = await readCanvasThumbnail(uuid);
+      if (origThumb) {
+        duplicateThumbnail = await saveCanvasThumbnail(newUuid, origThumb.buffer);
+      }
+    }
+
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
       `INSERT INTO canvases (uuid, user_id, name, width, height, unit, canvas_type, size_bytes, compressed_bytes, access_level, short_code, data, preview_thumbnail)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
-      [newUuid, userId, newName, original.width, original.height, original.unit, originalType, sizeBytes, compressedBytes, newShortCode, dbData, original.preview_thumbnail]
+      [newUuid, userId, newName, original.width, original.height, original.unit, originalType, sizeBytes, compressedBytes, newShortCode, dbData, duplicateThumbnail]
     );
 
     logger.db.info(`Lienzo ${uuid} duplicado como ${newUuid} por usuario ${userId}`);
@@ -1856,8 +1887,9 @@ export async function patchCanvas(uuid: string, userId: number, dto: PatchCanvas
   }
 
   if (dto.preview_thumbnail !== undefined) {
+    const processedThumb = await processPreviewThumbnail(uuid, dto.preview_thumbnail);
     updates.push('preview_thumbnail = ?');
-    params.push(dto.preview_thumbnail);
+    params.push(processedThumb);
   }
 
   if (isOwner && dto.access_level !== undefined) {
@@ -1883,4 +1915,35 @@ export async function patchCanvas(uuid: string, userId: number, dto: PatchCanvas
   );
 
   return updatedRows[0] as Canvas;
+}
+
+export async function getCanvasThumbnail(uuid: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const thumb = await readCanvasThumbnail(uuid);
+  if (thumb) {
+    return thumb;
+  }
+
+  const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+    'SELECT preview_thumbnail FROM canvases WHERE uuid = ? LIMIT 1',
+    [uuid]
+  );
+
+  if (rows.length > 0 && rows[0].preview_thumbnail) {
+    const rawThumb = String(rows[0].preview_thumbnail);
+    if (rawThumb.startsWith('data:image/')) {
+      const dataUriMatch = rawThumb.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+      if (dataUriMatch) {
+        const mimeType = `image/${dataUriMatch[1] === 'jpg' ? 'jpeg' : dataUriMatch[1]}`;
+        const buffer = Buffer.from(dataUriMatch[2], 'base64');
+        void saveCanvasThumbnail(uuid, buffer);
+        void canvasPool.execute('UPDATE canvases SET preview_thumbnail = ? WHERE uuid = ?', [
+          `/api/canvases/${uuid}/thumbnail`,
+          uuid,
+        ]);
+        return { buffer, contentType: mimeType };
+      }
+    }
+  }
+
+  return null;
 }

@@ -12,6 +12,7 @@ export const COOKIE_NAME = 'sprite_session';
 export const MAX_CONCURRENT_ACCOUNTS = 5;
 export const REVOCATION_PREFIX = 'session_revoked:';
 export const SESSION_PREFIX = 'session:';
+export const SESSION_STATE_PREFIX = 'session:state:';
 export const USER_SESSIONS_PREFIX = 'user_sessions:';
 export const SESSION_EVENTS_CHANNEL = 'auth:session_events';
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -27,8 +28,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function createMultiAccountToken(session: MultiAccountSessionPayload): string {
   const now = Date.now();
+  let accountsToEncode = session.accounts;
+  const candidateStr = JSON.stringify({
+    ...session,
+    iat: session.iat || now,
+    exp: session.exp || (now + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  if (candidateStr.length > 2048 && Array.isArray(session.accounts)) {
+    accountsToEncode = session.accounts.map((acc) => {
+      const { permissions, ...rest } = acc;
+      return rest;
+    });
+  }
+
   const sessionWithMeta: MultiAccountSessionPayload = {
     ...session,
+    accounts: accountsToEncode,
     iat: session.iat || now,
     exp: session.exp || (now + 7 * 24 * 60 * 60 * 1000),
   };
@@ -189,6 +205,7 @@ export async function revokeSession(sessionId: string, userId?: number): Promise
     }
 
     await redis.del(sessionKey);
+    await redis.del(`${SESSION_STATE_PREFIX}${sessionId}`);
 
     if (effectiveUserId) {
       const userSessionsKey = `${USER_SESSIONS_PREFIX}${effectiveUserId}`;
@@ -223,6 +240,7 @@ export async function revokeAllUserSessions(
       const pipeline = redis.pipeline();
       for (const sid of sessionIds) {
         pipeline.del(`${SESSION_PREFIX}${sid}`);
+        pipeline.del(`${SESSION_STATE_PREFIX}${sid}`);
       }
       pipeline.del(userSessionsKey);
       await pipeline.exec();
@@ -294,14 +312,50 @@ export function verifySessionToken(token: string): UserPayload | null {
   return activeAccount || session.accounts[0] || null;
 }
 
+export async function saveSessionStateToRedis(session: MultiAccountSessionPayload): Promise<void> {
+  const sid = session.sessionId || session.accounts?.find((a) => a.id === session.activeId)?.sessionId;
+  if (!sid) return;
+  try {
+    await redis.setex(`${SESSION_STATE_PREFIX}${sid}`, SESSION_TTL_SECONDS, JSON.stringify(session));
+  } catch (err) {
+    logger.db.error('Error al guardar estado de sesión en Redis', err);
+  }
+}
+
+export async function getSessionStateFromRedis(sessionId: string): Promise<MultiAccountSessionPayload | null> {
+  if (!sessionId) return null;
+  try {
+    const raw = await redis.get(`${SESSION_STATE_PREFIX}${sessionId}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as MultiAccountSessionPayload;
+  } catch (err) {
+    logger.db.error('Error al obtener estado de sesión desde Redis', err);
+    return null;
+  }
+}
+
 export function getMultiAccountSession(req: Request): MultiAccountSessionPayload | null {
+  if ((req as any)._cachedMultiAccountSession) {
+    return (req as any)._cachedMultiAccountSession;
+  }
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return null;
-  return verifyMultiAccountToken(token);
+  const session = verifyMultiAccountToken(token);
+  if (session) {
+    (req as any)._cachedMultiAccountSession = session;
+  }
+  return session;
 }
 
 export function setMultiAccountCookie(res: Response, session: MultiAccountSessionPayload): void {
   if (res.headersSent) return;
+  if (!session.sessionId) {
+    const active = session.accounts?.find((a) => a.id === session.activeId);
+    session.sessionId = active?.sessionId;
+  }
+  if (session.sessionId) {
+    void saveSessionStateToRedis(session);
+  }
   const token = createMultiAccountToken(session);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,

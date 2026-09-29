@@ -106,21 +106,35 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, delayMs = 35
   };
 }
 
+export interface DropdownOptions {
+  backdrop?: HTMLElement | null;
+  container?: HTMLElement | null;
+  isSelect?: boolean;
+  matchWidth?: boolean;
+  menu?: HTMLElement | null;
+  offset?: [number, number];
+  onClose?: () => void;
+  onOpen?: () => void;
+  onSelect?: (val: any, item?: HTMLElement) => boolean | void | Promise<boolean | void>;
+  placement?: Placement;
+  trigger?: HTMLElement | null;
+}
+
 export function setupDropdown(
-  wrapper: HTMLElement | null,
-  options: {
-    backdrop?: HTMLElement | null;
-    isSelect?: boolean;
-    matchWidth?: boolean;
-    menu?: HTMLElement | null;
-    offset?: [number, number];
-    onClose?: () => void;
-    onOpen?: () => void;
-    onSelect?: (val: any, item?: HTMLElement) => boolean | void | Promise<boolean | void>;
-    placement?: Placement;
-    trigger?: HTMLElement | null;
-  } = {}
+  wrapperOrOptions: HTMLElement | null | DropdownOptions,
+  maybeOptions: DropdownOptions = {}
 ): { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } {
+  let wrapper: HTMLElement | null = null;
+  let options: DropdownOptions = {};
+
+  if (wrapperOrOptions && (typeof (wrapperOrOptions as any).nodeType === 'number' || wrapperOrOptions instanceof HTMLElement)) {
+    wrapper = wrapperOrOptions as HTMLElement;
+    options = maybeOptions;
+  } else if (wrapperOrOptions && typeof wrapperOrOptions === 'object') {
+    options = wrapperOrOptions as DropdownOptions;
+    wrapper = options.container || null;
+  }
+
   if (!wrapper) return { close: () => {}, destroy: () => {}, open: () => {}, toggle: () => {}, update: () => {} };
 
   const trigger =

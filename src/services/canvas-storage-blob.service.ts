@@ -256,3 +256,92 @@ export async function deleteCanvasAllSnapshotsBlobs(canvasUuid: string): Promise
     await fs.promises.rm(targetDir, { force: true, recursive: true });
   } catch {}
 }
+
+export function getCanvasThumbnailS3Key(uuid: string): string {
+  const safeUuid = sanitizeUuid(uuid);
+  return `canvases/thumbnails/${safeUuid}.webp`;
+}
+
+export function getCanvasThumbnailBlobPath(uuid: string): string {
+  const safeUuid = sanitizeUuid(uuid);
+  return path.join(CANVAS_STORAGE_DIR, 'thumbnails', `${safeUuid}.webp`);
+}
+
+export async function saveCanvasThumbnail(uuid: string, dataOrBuffer: string | Buffer): Promise<string> {
+  const safeUuid = sanitizeUuid(uuid);
+  let buffer: Buffer;
+  let mimeType = 'image/webp';
+
+  if (Buffer.isBuffer(dataOrBuffer)) {
+    buffer = dataOrBuffer;
+  } else if (typeof dataOrBuffer === 'string') {
+    const dataUriMatch = dataOrBuffer.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (dataUriMatch) {
+      mimeType = `image/${dataUriMatch[1] === 'jpg' ? 'jpeg' : dataUriMatch[1]}`;
+      buffer = Buffer.from(dataUriMatch[2], 'base64');
+    } else {
+      buffer = Buffer.from(dataOrBuffer, 'base64');
+    }
+  } else {
+    throw new Error('Formato de miniatura inválido.');
+  }
+
+  const s3Key = getCanvasThumbnailS3Key(safeUuid);
+  const localPath = getCanvasThumbnailBlobPath(safeUuid);
+
+  try {
+    await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.promises.writeFile(localPath, buffer);
+  } catch (err) {
+    logger.db.error(`Error al persistir miniatura local para lienzo ${safeUuid}`, err);
+  }
+
+  try {
+    await putObject(s3Key, buffer, mimeType);
+  } catch (err) {
+    logger.db.error(`Error al subir miniatura a S3 para lienzo ${safeUuid}`, err);
+  }
+
+  return `/api/canvases/${safeUuid}/thumbnail`;
+}
+
+export async function readCanvasThumbnail(uuid: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const safeUuid = sanitizeUuid(uuid);
+  const s3Key = getCanvasThumbnailS3Key(safeUuid);
+
+  try {
+    const s3Obj = await getObject(s3Key);
+    if (s3Obj && s3Obj.buffer) {
+      return {
+        buffer: s3Obj.buffer,
+        contentType: s3Obj.contentType || 'image/webp',
+      };
+    }
+  } catch (err) {
+    logger.db.error(`Error al leer miniatura de lienzo ${safeUuid} desde S3`, err);
+  }
+
+  try {
+    const localPath = getCanvasThumbnailBlobPath(safeUuid);
+    const buffer = await fs.promises.readFile(localPath);
+    putObject(s3Key, buffer, 'image/webp').catch(() => {});
+    return {
+      buffer,
+      contentType: 'image/webp',
+    };
+  } catch (err) {
+    logger.db.error(`Error al leer miniatura local para lienzo ${safeUuid}`, err);
+    return null;
+  }
+}
+
+export async function deleteCanvasThumbnail(uuid: string): Promise<void> {
+  const safeUuid = sanitizeUuid(uuid);
+  const s3Key = getCanvasThumbnailS3Key(safeUuid);
+  await deleteObject(s3Key);
+
+  try {
+    const localPath = getCanvasThumbnailBlobPath(safeUuid);
+    await fs.promises.unlink(localPath);
+  } catch {}
+}

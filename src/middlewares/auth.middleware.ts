@@ -1,6 +1,6 @@
-import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
+import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, getSessionStateFromRedis, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
 import { getUserEffectivePermissions, hasAllPermissions, hasAnyPermission } from '../services/permission.service.js';
-import { SessionAccount, UserPayload, UserRole } from '../types/auth.types.js';
+import { SessionAccount, UserPayload } from '../types/auth.types.js';
 import { NextFunction, Request, Response } from 'express';
 
 export function getCurrentUser(req: Request): UserPayload | null {
@@ -22,21 +22,33 @@ export function getLinkedAccounts(req: Request): SessionAccount[] {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const user = getCurrentUser(req);
+  let user = getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
     return;
   }
 
+  const currentUserId = user.id;
   const session = getMultiAccountSession(req);
   if (session) {
-    const activeAccount = session.accounts.find((a) => a.id === user.id);
+    const activeAccount = session.accounts.find((a) => a.id === currentUserId);
     const sid = activeAccount?.sessionId || session.sessionId;
-    const revoked = await isSessionRevoked(user.id, session.iat, sid);
+    const revoked = await isSessionRevoked(currentUserId, session.iat, sid);
     if (revoked) {
       clearSessionCookie(res);
       res.status(401).json({ error: 'Sesión expirada o revocada. Inicia sesión de nuevo.' });
       return;
+    }
+
+    if (sid) {
+      const redisSession = await getSessionStateFromRedis(sid);
+      if (redisSession) {
+        (req as any)._cachedMultiAccountSession = redisSession;
+        const redisActive = redisSession.accounts.find((a) => a.id === redisSession.activeId) || redisSession.accounts[0];
+        if (redisActive) {
+          user = redisActive;
+        }
+      }
     }
   }
 
@@ -111,22 +123,3 @@ export function requireAllPermissions(...neededPerms: string[]) {
   };
 }
 
-export function requireRole(...allowedRoles: UserRole[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
-      return;
-    }
-
-    const currentRole = user.role || 'USER';
-    const userRoles: UserRole[] = user.roles || [currentRole];
-    const hasRole = allowedRoles.some((r) => userRoles.includes(r) || currentRole === r);
-    if (!hasRole) {
-      res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes.' });
-      return;
-    }
-
-    next();
-  };
-}

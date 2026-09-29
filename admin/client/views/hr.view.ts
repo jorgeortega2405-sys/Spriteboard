@@ -1261,60 +1261,54 @@ class HrController implements ViewController {
 
     const hireDeptDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-department"]');
     if (hireDeptDropdown) {
-      setupDropdown({
-        container: hireDeptDropdown,
-        onSelect: (item) => {
-          selectedDepartment = item.getAttribute('data-value') || 'Ingeniería';
+      setupDropdown(hireDeptDropdown, {
+        onSelect: (val) => {
+          selectedDepartment = val || 'Ingeniería';
         },
       });
     }
 
     const hireMgrDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-manager"]');
     if (hireMgrDropdown) {
-      setupDropdown({
-        container: hireMgrDropdown,
-        onSelect: (item) => {
-          selectedManagerId = item.getAttribute('data-value') || '';
+      setupDropdown(hireMgrDropdown, {
+        onSelect: (val) => {
+          selectedManagerId = val || '';
         },
       });
     }
 
     const hireContractDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-contract-type"]');
     if (hireContractDropdown) {
-      setupDropdown({
-        container: hireContractDropdown,
-        onSelect: (item) => {
-          selectedContractType = item.getAttribute('data-value') || 'full_time';
+      setupDropdown(hireContractDropdown, {
+        onSelect: (val) => {
+          selectedContractType = val || 'full_time';
         },
       });
     }
 
     const hireWorkModeDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-work-mode"]');
     if (hireWorkModeDropdown) {
-      setupDropdown({
-        container: hireWorkModeDropdown,
-        onSelect: (item) => {
-          selectedWorkMode = item.getAttribute('data-value') || 'remote';
+      setupDropdown(hireWorkModeDropdown, {
+        onSelect: (val) => {
+          selectedWorkMode = val || 'remote';
         },
       });
     }
 
     const hireCurrencyDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-currency"]');
     if (hireCurrencyDropdown) {
-      setupDropdown({
-        container: hireCurrencyDropdown,
-        onSelect: (item) => {
-          selectedCurrency = item.getAttribute('data-value') || 'USD';
+      setupDropdown(hireCurrencyDropdown, {
+        onSelect: (val) => {
+          selectedCurrency = val || 'USD';
         },
       });
     }
 
     const hireRoleDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-hire-role"]');
     if (hireRoleDropdown) {
-      setupDropdown({
-        container: hireRoleDropdown,
-        onSelect: (item) => {
-          selectedRole = item.getAttribute('data-value') || 'USER';
+      setupDropdown(hireRoleDropdown, {
+        onSelect: (val) => {
+          selectedRole = val || 'USER';
         },
       });
     }
@@ -1677,20 +1671,18 @@ class HrController implements ViewController {
 
     const ptoEmpDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-pto-emp"]');
     if (ptoEmpDropdown) {
-      setupDropdown({
-        container: ptoEmpDropdown,
-        onSelect: (item) => {
-          selectedEmpId = item.getAttribute('data-value') || '';
+      setupDropdown(ptoEmpDropdown, {
+        onSelect: (val) => {
+          selectedEmpId = val || '';
         },
       });
     }
 
     const ptoTypeDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-pto-type"]');
     if (ptoTypeDropdown) {
-      setupDropdown({
-        container: ptoTypeDropdown,
-        onSelect: (item) => {
-          selectedPtoType = item.getAttribute('data-value') || 'vacation';
+      setupDropdown(ptoTypeDropdown, {
+        onSelect: (val) => {
+          selectedPtoType = val || 'vacation';
         },
       });
     }
@@ -1803,10 +1795,9 @@ class HrController implements ViewController {
 
     const docTypeDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-doc-type"]');
     if (docTypeDropdown) {
-      setupDropdown({
-        container: docTypeDropdown,
-        onSelect: (item) => {
-          selectedDocType = item.getAttribute('data-value') || 'contract';
+      setupDropdown(docTypeDropdown, {
+        onSelect: (val) => {
+          selectedDocType = val || 'contract';
         },
       });
     }
@@ -1905,10 +1896,9 @@ class HrController implements ViewController {
 
     const statusDropdown = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-modal-status"]');
     if (statusDropdown) {
-      setupDropdown({
-        container: statusDropdown,
-        onSelect: (item) => {
-          selectedStatus = item.getAttribute('data-value') || 'active';
+      setupDropdown(statusDropdown, {
+        onSelect: (val) => {
+          selectedStatus = val || 'active';
         },
       });
     }

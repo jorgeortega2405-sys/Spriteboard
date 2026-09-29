@@ -1,19 +1,20 @@
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
 import { SubscriptionTierId } from '../types/subscription.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
+import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
 import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 import { assignUserRole, getUserRoles, setUserRoles } from './role.service.js';
 import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,7 +121,11 @@ export async function getUser2FASecret(userId: number): Promise<{ two_factor_sec
     [userId]
   );
   if (rows.length === 0) return null;
-  return rows[0] as { two_factor_secret: string | null; two_factor_recovery_codes: string | null };
+  const row = rows[0] as { two_factor_secret: string | null; two_factor_recovery_codes: string | null };
+  return {
+    two_factor_secret: row.two_factor_secret ? decryptAtRest(row.two_factor_secret) : null,
+    two_factor_recovery_codes: row.two_factor_recovery_codes ? decryptAtRest(row.two_factor_recovery_codes) : null,
+  };
 }
 
 export async function createUser(data: {
@@ -258,9 +263,11 @@ export async function enableUser2FA(
   backupCodes: string[]
 ): Promise<boolean> {
   const hashedCodes = backupCodes.map((code) => hashBackupCode(code));
+  const encryptedSecret = encryptAtRest(secret);
+  const encryptedCodes = encryptAtRest(JSON.stringify(hashedCodes));
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET two_factor_enabled = TRUE, two_factor_secret = ?, two_factor_recovery_codes = ? WHERE id = ?',
-    [secret, JSON.stringify(hashedCodes), userId]
+    [encryptedSecret, encryptedCodes, userId]
   );
   await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
@@ -296,9 +303,10 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
 
   codes.splice(codeIndex, 1);
 
+  const encryptedCodes = encryptAtRest(JSON.stringify(codes));
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?',
-    [JSON.stringify(codes), userId]
+    [encryptedCodes, userId]
   );
   await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
@@ -311,7 +319,7 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
   }
 
   const permissions = await getUserEffectivePermissions(userId);
-  if (!hasPermission(permissions, 'account:delete') || user.roles?.includes('SYSTEM_ACCOUNT') || user.role === 'SYSTEM_ACCOUNT') {
+  if (!hasPermission(permissions, 'account:delete') || user.roles?.includes('SYSTEM_ACCOUNT')) {
     logger.security.warn('Intento de eliminación de cuenta bloqueado para cuenta del sistema o por falta de permisos', { userId });
     return false;
   }

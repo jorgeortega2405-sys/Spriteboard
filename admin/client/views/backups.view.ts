@@ -1206,12 +1206,10 @@ class BackupsController implements ViewController {
 
     const intervalDropdownEl = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-sched-interval"]');
     if (intervalDropdownEl) {
-      setupDropdown({
-        container: intervalDropdownEl,
-        onSelect: (item) => {
-          const val = item.getAttribute('data-value') as BackupScheduleInterval;
+      setupDropdown(intervalDropdownEl, {
+        onSelect: (val) => {
           if (val) {
-            selectedInterval = val;
+            selectedInterval = val as BackupScheduleInterval;
             if (fieldTime) fieldTime.style.display = (val === 'hourly' || val === 'custom_hours') ? 'none' : 'block';
             if (fieldDow) fieldDow.style.display = val === 'weekly' ? 'block' : 'none';
             if (fieldDom) fieldDom.style.display = val === 'monthly' ? 'block' : 'none';
@@ -1223,12 +1221,11 @@ class BackupsController implements ViewController {
 
     const dowDropdownEl = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-sched-dow"]');
     if (dowDropdownEl) {
-      setupDropdown({
-        container: dowDropdownEl,
-        onSelect: (item) => {
-          const val = parseInt(item.getAttribute('data-value') || '1', 10);
-          if (val) {
-            selectedDow = val;
+      setupDropdown(dowDropdownEl, {
+        onSelect: (val) => {
+          const parsed = parseInt(val || '1', 10);
+          if (parsed) {
+            selectedDow = parsed;
           }
         },
       });
