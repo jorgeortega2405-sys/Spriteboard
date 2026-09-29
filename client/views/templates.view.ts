@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { getCategoryBadgeIconSvg } from '../components/create-canvas-graphics.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
@@ -8,12 +9,9 @@ import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { canPublishTemplates } from '../types/auth.types.js';
-import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
+import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupLazyImages } from '../utils/dom.util.js';
 
 const BATCH_SIZE = 20;
-
-type TemplateTypeFilter = 'all' | 'board' | 'doc' | 'presentation' | 'favorites';
 
 class TemplatesController {
   private container: HTMLElement;
@@ -23,8 +21,9 @@ class TemplatesController {
   private carouselController: CarouselController | null = null;
   private cleanupDrag: (() => void) | null = null;
 
-  private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private exploreCarouselWrapper: HTMLElement | null = null;
+  private exploreCarouselController: CarouselController | null = null;
+  private cleanupExploreDrag: (() => void) | null = null;
 
   private badgesContainer: HTMLElement | null = null;
   private gridEl: HTMLElement | null = null;
@@ -39,15 +38,8 @@ class TemplatesController {
   private isRenderingBatch = false;
 
   private activeCategory = 'all';
-  private currentTypeFilter: TemplateTypeFilter = 'all';
-  private currentSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private searchQuery = '';
   private favoritedTemplateIds = new Set<string>();
-
-  private isDesigner = false;
-  private btnApplyDesigner: HTMLButtonElement | null = null;
-  private btnApplyDesignerText: HTMLElement | null = null;
-  private badgeApplyDesignerStatus: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -55,16 +47,6 @@ class TemplatesController {
   }
 
   public async init(): Promise<void> {
-    this.isDesigner = canPublishTemplates(currentUser);
-    this.btnApplyDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-designer"]');
-    this.btnApplyDesignerText = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-designer-text"]');
-    this.badgeApplyDesignerStatus = this.container.querySelector<HTMLElement>('[data-ref="badge-apply-designer-status"]');
-
-    if (!this.isDesigner && this.btnApplyDesigner) {
-      this.btnApplyDesigner.style.display = 'inline-flex';
-      void this.setupApplyDesignerButton();
-    }
-
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
     if (this.gridEl) {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
@@ -81,42 +63,6 @@ class TemplatesController {
     this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="templates-sentinel"]');
 
-    const typeDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-type"]');
-    if (typeDropdownWrapper) {
-      this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
-        matchWidth: false,
-        onSelect: (val: string) => {
-          const next = (val as TemplateTypeFilter) || 'all';
-          if (this.currentTypeFilter === next) return;
-          this.currentTypeFilter = next;
-          const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
-          typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
-            item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentTypeFilter);
-          });
-          this.renderTemplates();
-        },
-        placement: 'bottom-end',
-      });
-    }
-
-    const sortDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-sort"]');
-    if (sortDropdownWrapper) {
-      this.sortDropdownController = setupDropdown(sortDropdownWrapper, {
-        matchWidth: false,
-        onSelect: (val: string) => {
-          const next = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
-          if (this.currentSort === next) return;
-          this.currentSort = next;
-          const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
-          sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
-            item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentSort);
-          });
-          this.renderTemplates();
-        },
-        placement: 'bottom-end',
-      });
-    }
-
     this.renderCategoryBadges();
     this.initCarousel();
     this.renderTemplates();
@@ -124,17 +70,29 @@ class TemplatesController {
   }
 
   private initCarousel(): void {
-    if (!this.carouselWrapper || !this.badgesContainer) return;
+    if (this.carouselWrapper && this.badgesContainer) {
+      this.carouselController = initCarouselScroll(this.carouselWrapper, {
+        carouselSelector: '[data-ref="templates-categories-badges"]',
+        leftBtnSelector: '[data-ref="btn-tags-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-tags-scroll-right"]',
+        step: 180,
+      });
+      this.cleanupDrag = bindDragToScroll(this.badgesContainer);
+      this.carouselController?.updateButtons();
+    }
 
-    this.carouselController = initCarouselScroll(this.carouselWrapper, {
-      carouselSelector: '[data-ref="templates-categories-badges"]',
-      leftBtnSelector: '[data-ref="btn-tags-scroll-left"]',
-      rightBtnSelector: '[data-ref="btn-tags-scroll-right"]',
-      step: 180,
-    });
-
-    this.cleanupDrag = bindDragToScroll(this.badgesContainer);
-    this.carouselController?.updateButtons();
+    this.exploreCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-carousel-wrapper"]');
+    const exploreCarouselEl = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-carousel"]');
+    if (this.exploreCarouselWrapper && exploreCarouselEl) {
+      this.exploreCarouselController = initCarouselScroll(this.exploreCarouselWrapper, {
+        carouselSelector: '[data-ref="templates-explore-carousel"]',
+        leftBtnSelector: '[data-ref="btn-explore-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-explore-scroll-right"]',
+        step: 240,
+      });
+      this.cleanupExploreDrag = bindDragToScroll(exploreCarouselEl);
+      this.exploreCarouselController?.updateButtons();
+    }
   }
 
   private renderCategoryBadges(): void {
@@ -144,13 +102,13 @@ class TemplatesController {
       const isActive = cat.id === this.activeCategory;
       const translated = t(cat.nameKey);
       const label = translated && translated !== cat.nameKey ? translated : cat.defaultName;
-      return `
-        <button type="button" class="component-badge component-badge--interactive${isActive ? ' is-active' : ''}" data-ref="badge-cat-${cat.id}" data-category="${cat.id}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${cat.iconName}"></use></svg>
-          <span>${label}</span>
-        </button>
-      `;
-    }).join('');
+      const iconSvg = getCategoryBadgeIconSvg(cat.iconCategory);
+      return `<button type="button" class="component-badge component-badge--interactive${isActive ? ' is-active' : ''}" data-ref="badge-cat-${cat.id}" data-category="${cat.id}" data-i18n-aria="${cat.nameKey}" aria-label="${label}">
+  ${iconSvg}
+  <span data-i18n="${cat.nameKey}">${label}</span>
+</button>`;
+    }).join('\n');
+    translateElement(this.badgesContainer);
   }
 
   private bindEvents(): void {
@@ -242,62 +200,18 @@ class TemplatesController {
     );
   }
 
-  private async setupApplyDesignerButton(): Promise<void> {
-    if (!this.btnApplyDesigner) return;
-
-    if (currentUser) {
-      try {
-        const res = await getApi(API_ROUTES.designerApplications.myStatus);
-        if (res.ok) {
-          const data = await res.json();
-          const app = data?.application;
-          if (app && app.status === 'pending') {
-            if (this.badgeApplyDesignerStatus) {
-              this.badgeApplyDesignerStatus.style.display = 'inline-block';
-              this.badgeApplyDesignerStatus.textContent = t('templates.metric_pending');
-            }
-            if (this.btnApplyDesignerText) {
-              this.btnApplyDesignerText.textContent = t('templates.apply_designer_pending');
-            }
-          } else if (app && app.status === 'rejected') {
-            if (this.btnApplyDesignerText) {
-              this.btnApplyDesignerText.textContent = t('templates.apply_designer_rejected');
-            }
-          }
-        }
-      } catch {}
-    }
-
-    this.btnApplyDesigner.addEventListener(
-      'click',
-      () => {
-        if (!currentUser) {
-          navigate('/login');
-          return;
-        }
-        navigate('/apply-designer');
-      },
-      { signal: this.abortController.signal }
-    );
-  }
-
   private renderTemplates(): void {
     if (!this.gridEl) return;
 
     let filtered = [...this.availableTemplates];
 
     if (this.activeCategory !== 'all') {
-      filtered = filtered.filter((item) => item.categoryKey === this.activeCategory || item.canvasType === this.activeCategory);
-    }
-
-    if (this.currentTypeFilter === 'favorites') {
-      filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
-    } else if (this.currentTypeFilter === 'board') {
-      filtered = filtered.filter((item) => item.categoryKey === 'board' || item.canvasType === 'board');
-    } else if (this.currentTypeFilter === 'doc') {
-      filtered = filtered.filter((item) => item.categoryKey === 'doc' || item.canvasType === 'doc');
-    } else if (this.currentTypeFilter === 'presentation') {
-      filtered = filtered.filter((item) => item.categoryKey === 'presentation' || item.canvasType === 'presentation');
+      filtered = filtered.filter((item) => {
+        const cat = (item.categoryKey || '').toLowerCase();
+        const type = (item.canvasType || '').toLowerCase();
+        const target = this.activeCategory.toLowerCase();
+        return cat === target || type === target;
+      });
     }
 
     if (this.searchQuery) {
@@ -309,16 +223,6 @@ class TemplatesController {
         const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
         return nameMatch || catMatch || tagMatch || dimMatch;
       });
-    }
-
-    if (this.currentSort === 'alpha-asc') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (this.currentSort === 'alpha-desc') {
-      filtered.sort((a, b) => b.name.localeCompare(a.name));
-    } else if (this.currentSort === 'size-desc') {
-      filtered.sort((a, b) => (b.width * b.height) - (a.width * a.height));
-    } else if (this.currentSort === 'size-asc') {
-      filtered.sort((a, b) => (a.width * a.height) - (b.width * b.height));
     }
 
     this.currentTemplates = filtered;
@@ -631,16 +535,18 @@ class TemplatesController {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
     }
-    this.typeDropdownController?.destroy();
-    this.typeDropdownController = null;
-    this.sortDropdownController?.destroy();
-    this.sortDropdownController = null;
     this.abortController.abort();
     this.carouselController?.destroy();
     this.carouselController = null;
     if (this.cleanupDrag) {
       this.cleanupDrag();
       this.cleanupDrag = null;
+    }
+    this.exploreCarouselController?.destroy();
+    this.exploreCarouselController = null;
+    if (this.cleanupExploreDrag) {
+      this.cleanupExploreDrag();
+      this.cleanupExploreDrag = null;
     }
   }
 }
@@ -654,11 +560,10 @@ export async function createTemplatesView(): Promise<HTMLElement> {
   }
 
   const container = await loadTemplate('/views/templates/templates.html');
-  translateElement(container);
-  renderIcons(container);
-
   activeTemplatesController = new TemplatesController(container);
   await activeTemplatesController.init();
+  translateElement(container);
+  renderIcons(container);
   (container as any).__controller = activeTemplatesController;
 
   return container;

@@ -1,10 +1,12 @@
-export type AppCategory = 'all' | 'internal' | 'media' | 'productivity' | 'utilities' | 'social';
+export type AppCategory = 'all' | 'internal' | 'productivity' | 'media' | 'photos' | 'utilities';
 
 export type AppStatus = 'active' | 'coming_soon' | 'beta';
 
 export interface AppCategoryItem {
   icon: string;
+  iconSvg?: string;
   id: AppCategory;
+  i18nKey?: string;
   name: string;
 }
 
@@ -21,11 +23,13 @@ export interface SpriteboardApp {
   id: string;
   isInternal: boolean;
   isPopular?: boolean;
+  isSponsored?: boolean;
   longDescription?: string;
   name: string;
   permissions?: string[];
   previewMockup?: string;
   status: AppStatus;
+  subCategory?: string;
   supportEmail?: string;
   tagline?: string;
 }

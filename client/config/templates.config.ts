@@ -36,16 +36,19 @@ export interface PresetItem {
 
 export interface TemplateCategory {
   defaultName: string;
-  iconName: string;
+  iconCategory: string;
   id: string;
   nameKey: string;
 }
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
-  { defaultName: 'For you', iconName: 'auto_awesome', id: 'all', nameKey: 'templates.all_categories' },
-  { defaultName: 'Whiteboards', iconName: 'dashboard', id: 'board', nameKey: 'templates.filter_board' },
-  { defaultName: 'Presentations', iconName: 'slideshow', id: 'presentation', nameKey: 'templates.filter_presentation' },
-  { defaultName: 'Documents', iconName: 'description', id: 'doc', nameKey: 'templates.filter_doc' },
+  { defaultName: 'Para ti', iconCategory: 'templates', id: 'all', nameKey: 'templates.filter_all' },
+  { defaultName: 'Presentaciones', iconCategory: 'presentation', id: 'presentation', nameKey: 'templates.filter_presentation' },
+  { defaultName: 'Redes sociales', iconCategory: 'social', id: 'social', nameKey: 'templates.filter_social' },
+  { defaultName: 'Documentos', iconCategory: 'doc', id: 'doc', nameKey: 'templates.filter_doc' },
+  { defaultName: 'Pizarrones', iconCategory: 'board', id: 'board', nameKey: 'templates.filter_board' },
+  { defaultName: 'Hojas de cálculo', iconCategory: 'sheet', id: 'sheet', nameKey: 'templates.filter_sheet' },
+  { defaultName: 'Videos', iconCategory: 'videos', id: 'videos', nameKey: 'templates.filter_videos' },
 ];
 
 export const ALL_PRESETS: PresetItem[] = [];

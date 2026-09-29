@@ -1,11 +1,48 @@
 import { AppCategory, AppCategoryItem, SpriteboardApp } from '../types/apps.types.js';
 
 export const APP_CATEGORIES: AppCategoryItem[] = [
-  { icon: 'apps', id: 'all', name: 'Todas' },
-  { icon: 'star', id: 'internal', name: 'De Spriteboard' },
-  { icon: 'smart_display', id: 'media', name: 'Multimedia' },
-  { icon: 'work', id: 'productivity', name: 'Productividad' },
-  { icon: 'build', id: 'utilities', name: 'Utilidades' },
+  {
+    icon: 'apps',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#6366f1"/><rect x="6" y="6" width="8" height="8" rx="2.5" fill="#ffffff"/><rect x="18" y="6" width="8" height="8" rx="2.5" fill="#ffffff"/><rect x="6" y="18" width="8" height="8" rx="2.5" fill="#ffffff"/><rect x="18" y="18" width="8" height="8" rx="2.5" fill="#ffffff"/></svg>`,
+    id: 'all',
+    i18nKey: 'your_apps.badge_all',
+    name: 'Todas',
+  },
+  {
+    icon: 'star',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#06b6d4"/><path d="M16 5L19.5 12.5L27 13.5L21.5 19L23 27L16 23L9 27L10.5 19L5 13.5L12.5 12.5L16 5Z" fill="#ffffff"/></svg>`,
+    id: 'internal',
+    i18nKey: 'your_apps.badge_internal',
+    name: 'De Spriteboard',
+  },
+  {
+    icon: 'work',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#10b981"/><path d="M22 10H10C8.895 10 8 10.895 8 12V22C8 23.105 8.895 24 10 24H22C23.105 24 24 23.105 24 22V12C24 10.895 23.105 10 22 10ZM13 8H19C19.552 8 20 8.448 20 9V10H12V9C12 8.448 12.448 8 13 8ZM22 22H10V14H22V22Z" fill="#ffffff"/></svg>`,
+    id: 'productivity',
+    i18nKey: 'your_apps.badge_productivity',
+    name: 'Productividad',
+  },
+  {
+    icon: 'smart_display',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#ef4444"/><polygon points="12,9 12,23 23,16" fill="#ffffff"/></svg>`,
+    id: 'media',
+    i18nKey: 'your_apps.badge_media',
+    name: 'Multimedia',
+  },
+  {
+    icon: 'photo_library',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#8b5cf6"/><path d="M7 9a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9Z" fill="#ffffff" fill-opacity="0.2"/><path d="M10 8h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Zm1.5 11l2.5-3.5 1.5 2 3-4 3.5 5.5h-10.5ZM19 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="#ffffff"/></svg>`,
+    id: 'photos',
+    i18nKey: 'your_apps.badge_photos',
+    name: 'Fotos',
+  },
+  {
+    icon: 'build',
+    iconSvg: `<svg class="component-badge__icon" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0ea5e9"/><path d="M22.7 19l-5.3-5.3c.7-1.4.5-3.2-.7-4.4-1.4-1.4-3.5-1.6-5.1-.7l3.1 3.1-2.1 2.1-3.1-3.1c-.9 1.6-.7 3.7.7 5.1 1.2 1.2 3 1.4 4.4.7l5.3 5.3c.4.4 1 .4 1.4 0l1.3-1.3c.4-.4.4-1.1 0-1.4z" fill="#ffffff"/></svg>`,
+    id: 'utilities',
+    i18nKey: 'your_apps.badge_utilities',
+    name: 'Utilidades',
+  },
 ];
 
 export const SPRITEBOARD_APPS: SpriteboardApp[] = [
@@ -18,7 +55,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     description: 'Genera códigos QR interactivos y personalizados para enlaces, textos y perfiles.',
     developer: 'Spriteboard Inc.',
     icon: 'qr_code',
-    iconSvg: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="14" fill="#0284c7"/><rect x="14" y="14" width="16" height="16" rx="4" fill="#ffffff"/><rect x="18" y="18" width="8" height="8" rx="2" fill="#0284c7"/><rect x="34" y="14" width="16" height="16" rx="4" fill="#ffffff"/><rect x="38" y="18" width="8" height="8" rx="2" fill="#0284c7"/><rect x="14" y="34" width="16" height="16" rx="4" fill="#ffffff"/><rect x="18" y="38" width="8" height="8" rx="2" fill="#0284c7"/><rect x="34" y="34" width="6" height="6" rx="1.5" fill="#ffffff"/><rect x="44" y="34" width="6" height="6" rx="1.5" fill="#ffffff"/><rect x="34" y="44" width="6" height="6" rx="1.5" fill="#ffffff"/><rect x="44" y="44" width="6" height="6" rx="1.5" fill="#ffffff"/></svg>`,
+    iconSvg: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#0284c7"/><rect x="10" y="10" width="12" height="12" rx="3" fill="#ffffff"/><rect x="13" y="13" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="26" y="10" width="12" height="12" rx="3" fill="#ffffff"/><rect x="29" y="13" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="10" y="26" width="12" height="12" rx="3" fill="#ffffff"/><rect x="13" y="29" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="26" y="26" width="5" height="5" rx="1" fill="#ffffff"/><rect x="33" y="26" width="5" height="5" rx="1" fill="#ffffff"/><rect x="26" y="33" width="5" height="5" rx="1" fill="#ffffff"/><rect x="33" y="33" width="5" height="5" rx="1" fill="#ffffff"/></svg>`,
     id: 'qr-code',
     isInternal: true,
     isPopular: true,
@@ -30,6 +67,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
       'Personalizar colores y resolución de exportación',
     ],
     status: 'active',
+    subCategory: 'utilities',
     supportEmail: 'support@spriteboard.com',
     tagline: 'Agrega un código QR interactivo y personalizado a tu diseño de Spriteboard en segundos.',
   },
@@ -42,7 +80,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     description: 'Busca, inserta y reproduce videos de YouTube directamente dentro de tu diseño.',
     developer: 'Google LLC',
     icon: 'smart_display',
-    iconSvg: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="14" fill="#ef4444"/><path d="M46 22C48 22.5 49.5 24 50 26C51 29.5 51 32 51 32C51 32 51 34.5 50 38C49.5 40 48 41.5 46 42C42.5 43 32 43 32 43C32 43 21.5 43 18 42C16 41.5 14.5 40 14 38C13 34.5 13 32 13 32C13 32 13 29.5 14 26C14.5 24 16 22.5 18 22C21.5 21 32 21 32 21C32 21 42.5 21 46 22Z" fill="#ffffff"/><polygon points="28,26 28,38 38,32" fill="#ef4444"/></svg>`,
+    iconSvg: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#ef4444"/><path d="M35 17C36.5 17.5 37.5 18.5 38 20C38.8 22.5 38.8 24 38.8 24C38.8 24 38.8 25.5 38 28C37.5 29.5 36.5 30.5 35 31C32.5 31.8 24 31.8 24 31.8C24 31.8 15.5 31.8 13 31C11.5 30.5 10.5 29.5 10 28C9.2 25.5 9.2 24 9.2 24C9.2 24 9.2 22.5 10 20C10.5 18.5 11.5 17.5 13 17C15.5 16.2 24 16.2 24 16.2C24 16.2 32.5 16.2 35 17Z" fill="#ffffff"/><polygon points="21,20 21,28 28,24" fill="#ef4444"/></svg>`,
     id: 'youtube',
     isInternal: false,
     isPopular: true,
@@ -54,6 +92,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
       'Reproducir contenido audiovisual durante presentaciones',
     ],
     status: 'active',
+    subCategory: 'media',
     supportEmail: 'developer-support@google.com',
     tagline: 'Agrega e incrusta videos de YouTube a tu diseño de Spriteboard en segundos.',
   },
@@ -66,7 +105,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     description: 'Importa tus fotos, documentos e ilustraciones desde Google Drive a tu espacio de trabajo.',
     developer: 'Google LLC',
     icon: 'add_to_drive',
-    iconSvg: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="14" fill="#0284c7"/><path d="M23 44L14 28L25 10H39L30 26L23 44Z" fill="#22c55e"/><path d="M50 44H23L30 32H57L50 44Z" fill="#eab308"/><path d="M39 10L57 40L50 52L32 22L39 10Z" fill="#3b82f6"/></svg>`,
+    iconSvg: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#0284c7"/><path d="M17 33L10 21L18 8H29L22 20L17 33Z" fill="#22c55e"/><path d="M38 33H17L22 24H43L38 33Z" fill="#eab308"/><path d="M29 8L43 30L38 39L24 17L29 8Z" fill="#3b82f6"/></svg>`,
     id: 'google-drive',
     isInternal: false,
     isPopular: true,
@@ -78,6 +117,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
       'Conexión OAuth cifrada y protegida por Google',
     ],
     status: 'active',
+    subCategory: 'productivity',
     supportEmail: 'developer-support@google.com',
     tagline: 'Importa tus fotos, documentos e ilustraciones desde Google Drive a Spriteboard en segundos.',
   },
@@ -85,12 +125,12 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     author: 'Google LLC',
     badge: 'ACTIVA',
     bannerColor: '#ea4335',
-    category: 'media',
-    categoryLabel: 'Multimedia',
-    description: 'Explora tu biblioteca de fotos y álbumes de Google Fotos para agregarlos en alta resolución a tus proyectos.',
+    category: 'photos',
+    categoryLabel: 'Fotos',
+    description: 'Explora tu biblioteca de fotos y álbumes de Google Fotos para agregarlos en alta resolución.',
     developer: 'Google LLC',
     icon: 'photo_library',
-    iconSvg: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>`,
+    iconSvg: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M24 10C24 10 24 18 24 18H16C16 13.58 19.58 10 24 10Z" fill="#ea4335"/><path d="M38 24C38 24 30 24 30 24V16C34.42 16 38 19.58 38 24Z" fill="#fbbc05"/><path d="M24 38C24 38 24 30 24 30H32C32 34.42 28.42 38 24 38Z" fill="#34a853"/><path d="M10 24C10 24 18 24 18 24V32C13.58 32 10 28.42 10 24Z" fill="#4285f4"/></svg>`,
     id: 'google-photos',
     isInternal: false,
     isPopular: true,
@@ -102,6 +142,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
       'Autenticación segura mediante Google Identity Services',
     ],
     status: 'active',
+    subCategory: 'photos',
     supportEmail: 'developer-support@google.com',
     tagline: 'Explora tu biblioteca de fotos y álbumes de Google Fotos para agregarlos en alta resolución.',
   },
@@ -110,11 +151,11 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     badge: 'ACTIVA',
     bannerColor: '#10b981',
     category: 'utilities',
-    categoryLabel: 'Visualización y Utilidades',
+    categoryLabel: 'Utilidades',
     description: 'Busca ubicaciones y genera mapas interactivos y satelitales personalizados para tus diseños.',
     developer: 'Google LLC',
     icon: 'location_on',
-    iconSvg: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="14" fill="#10b981"/><path d="M32 14C23.7 14 17 20.7 17 29C17 39.5 32 50 32 50C32 50 47 39.5 47 29C47 20.7 40.3 14 32 14ZM32 35C28.7 35 26 32.3 26 29C26 25.7 28.7 23 32 23C35.3 23 38 25.7 38 29C38 32.3 35.3 35 32 35Z" fill="#ffffff"/></svg>`,
+    iconSvg: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#10b981"/><path d="M24 10C17.4 10 12 15.4 12 22C12 30.5 24 38 24 38C24 38 36 30.5 36 22C36 15.4 30.6 10 24 10ZM24 26.5C21.5 26.5 19.5 24.5 19.5 22C19.5 19.5 21.5 17.5 24 17.5C26.5 17.5 28.5 19.5 28.5 22C28.5 24.5 26.5 26.5 24 26.5Z" fill="#ffffff"/></svg>`,
     id: 'google-maps',
     isInternal: false,
     isPopular: true,
@@ -126,6 +167,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
       'Personalizar temas visuales, zoom y marcadores en el mapa',
     ],
     status: 'active',
+    subCategory: 'utilities',
     supportEmail: 'developer-support@google.com',
     tagline: 'Agrega un mapa de Google a tu diseño de Spriteboard en segundos.',
   },
@@ -137,19 +179,20 @@ export function getAppById(id: string): SpriteboardApp | undefined {
 
 export function getAppsByCategory(category: AppCategory): SpriteboardApp[] {
   if (category === 'all') return SPRITEBOARD_APPS;
-  return SPRITEBOARD_APPS.filter((app) => app.category === category);
+  return SPRITEBOARD_APPS.filter((app) => app.category === category || app.subCategory === category);
 }
 
 export function searchApps(query: string, category: AppCategory = 'all'): SpriteboardApp[] {
   const cleanQ = query.trim().toLowerCase();
   let list = SPRITEBOARD_APPS;
   if (category !== 'all') {
-    list = list.filter((app) => app.category === category);
+    list = list.filter((app) => app.category === category || app.subCategory === category);
   }
   if (!cleanQ) return list;
   return list.filter((app) =>
     app.name.toLowerCase().includes(cleanQ) ||
     app.description.toLowerCase().includes(cleanQ) ||
-    app.author.toLowerCase().includes(cleanQ)
+    app.author.toLowerCase().includes(cleanQ) ||
+    (app.categoryLabel && app.categoryLabel.toLowerCase().includes(cleanQ))
   );
 }

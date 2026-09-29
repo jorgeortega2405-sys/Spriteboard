@@ -282,6 +282,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     if (itemTeams) itemTeams.style.display = 'none';
     if (notificationsContainer) notificationsContainer.style.display = 'none';
     if (btnNotifications) btnNotifications.style.display = 'none';
+    if (btnMoreApply) btnMoreApply.style.display = 'none';
     if (btnSettings) {
       btnSettings.style.display = 'inline-flex';
       btnSettings.classList.toggle('is-active', path.startsWith('/settings'));
@@ -292,6 +293,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     if (itemTeams) itemTeams.style.display = '';
     if (notificationsContainer) notificationsContainer.style.display = '';
     if (btnNotifications) btnNotifications.style.display = '';
+    if (btnMoreApply) btnMoreApply.style.display = '';
     if (btnSettings) {
       btnSettings.style.display = 'none';
       btnSettings.classList.remove('is-active');
@@ -509,6 +511,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     if (itemBrand) itemBrand.style.display = 'none';
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';
+    if (btnMoreApply) btnMoreApply.style.display = 'none';
   }
 
   const updateRailBrandBadge = () => {

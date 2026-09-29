@@ -14238,3 +14238,187 @@ html.dark-theme .canva-layer-card:hover {
   }
 }
 
+.templates-explore-section {
+  padding: 0 0 24px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.templates-explore-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.templates-explore-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.templates-explore-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.templates-explore-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.templates-explore-carousel {
+  display: grid;
+  grid-template-rows: repeat(2, 68px);
+  grid-auto-flow: column;
+  grid-auto-columns: 224px;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  padding: 4px 2px;
+  width: 100%;
+}
+
+.templates-explore-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.templates-explore-carousel.is-dragging {
+  scroll-behavior: auto;
+  cursor: grabbing;
+  user-select: none;
+}
+
+.templates-explore-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 14px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  height: 68px;
+}
+
+.templates-explore-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.templates-explore-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.templates-explore-card__preview {
+  flex-shrink: 0;
+  width: 68px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.templates-explore-card__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+}
+
+.templates-explore-card--peach {
+  background-color: #ffedd5;
+}
+
+.templates-explore-card--lavender {
+  background-color: #ede9fe;
+}
+
+.templates-explore-card--purple {
+  background-color: #f3e8ff;
+}
+
+.templates-explore-card--periwinkle {
+  background-color: #e0e7ff;
+}
+
+.templates-explore-card--pink {
+  background-color: #fce7f3;
+}
+
+.templates-explore-card--cream {
+  background-color: #fef9c3;
+}
+
+.templates-explore-card--cyan {
+  background-color: #e0f2fe;
+}
+
+html[data-theme="dark"] .templates-explore-card,
+html.dark-theme .templates-explore-card {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .templates-explore-card__label,
+html.dark-theme .templates-explore-card__label {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .templates-explore-card--peach,
+html.dark-theme .templates-explore-card--peach {
+  background-color: rgba(251, 146, 60, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--lavender,
+html.dark-theme .templates-explore-card--lavender {
+  background-color: rgba(167, 139, 250, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--purple,
+html.dark-theme .templates-explore-card--purple {
+  background-color: rgba(192, 132, 252, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--periwinkle,
+html.dark-theme .templates-explore-card--periwinkle {
+  background-color: rgba(129, 140, 248, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--pink,
+html.dark-theme .templates-explore-card--pink {
+  background-color: rgba(244, 114, 182, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--cream,
+html.dark-theme .templates-explore-card--cream {
+  background-color: rgba(250, 204, 21, 0.16);
+}
+
+html[data-theme="dark"] .templates-explore-card--cyan,
+html.dark-theme .templates-explore-card--cyan {
+  background-color: rgba(56, 189, 248, 0.16);
+}
+
+

@@ -97,9 +97,23 @@ export function initTheme(initialPrefs: { theme?: string; high_contrast?: boolea
   currentThemeSetting = savedTheme;
   applyThemeToDom(savedTheme);
 
-  if (initialPrefs) {
-    applyAccessibilityPreferences(initialPrefs);
-  }
+  let highContrast = initialPrefs?.high_contrast;
+  let reduceMotion = initialPrefs?.reduce_motion;
+  try {
+    if (highContrast === undefined) {
+      const stored = localStorage.getItem('sprite_high_contrast');
+      if (stored !== null) highContrast = stored === 'true';
+    }
+    if (reduceMotion === undefined) {
+      const stored = localStorage.getItem('sprite_reduce_motion');
+      if (stored !== null) reduceMotion = stored === 'true';
+    }
+  } catch {}
+
+  applyAccessibilityPreferences({
+    high_contrast: highContrast,
+    reduce_motion: reduceMotion,
+  });
 
   if (!systemMediaListenerAttached && typeof window !== 'undefined' && window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');

@@ -32,6 +32,7 @@
       </div>
     </div>
 
+    <!-- 2-Column Promo Cards (200px height, 200px left visual) -->
     <div class="canvas-section apps-collections-section" data-ref="apps-collections-section">
       <div class="canvas-section__header" data-ref="apps-collections-header">
         <div>
@@ -42,54 +43,105 @@
       <div class="apps-collections-grid" data-ref="apps-collections-grid">
         <div class="apps-collection-card apps-collection-card--purple" data-ref="card-collection-spriteboard" data-cat="internal">
           <div class="apps-collection-card__visual">
-            <div class="apps-collection-card__icon-badge">
-              <svg class="component-icon" style="width: 28px; height: 28px; color: #ffffff;" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
-            </div>
-            <div class="apps-collection-card__mini-preview">
-              <span class="apps-collection-card__tag">Spriteboard</span>
-            </div>
+            <svg class="apps-collection-card__visual-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="vis-purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4f46e5"/>
+                  <stop offset="50%" stop-color="#7c3aed"/>
+                  <stop offset="100%" stop-color="#9333ea"/>
+                </linearGradient>
+              </defs>
+              <rect width="200" height="200" fill="url(#vis-purple-grad)"/>
+              <circle cx="160" cy="40" r="60" fill="#ffffff" fill-opacity="0.08"/>
+              <circle cx="30" cy="170" r="50" fill="#c084fc" fill-opacity="0.15"/>
+              <g transform="translate(20, 20)">
+                <rect width="36" height="36" rx="10" fill="#00c4cc"/>
+                <path d="M24 13.5C24 13.5 22.5 12 18 12C14 12 13 14 13 16C13 19 23 18.5 23 22C23 24.5 21 26 18 26C13.5 26 12 24.5 12 24.5" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+              </g>
+              <rect x="64" y="27" width="76" height="22" rx="6" fill="#ffffff" fill-opacity="0.22"/>
+              <text x="102" y="42" fill="#ffffff" font-size="11" font-weight="bold" font-family="sans-serif" text-anchor="middle" letter-spacing="0.3">Spriteboard</text>
+              <g transform="translate(36, 72)">
+                <rect width="128" height="106" rx="14" fill="#ffffff"/>
+                <rect x="16" y="16" width="40" height="32" rx="8" fill="#06b6d4" fill-opacity="0.2"/>
+                <rect x="24" y="24" width="24" height="16" rx="4" fill="#06b6d4"/>
+                <rect x="72" y="16" width="40" height="32" rx="8" fill="#818cf8" fill-opacity="0.2"/>
+                <circle cx="92" cy="32" r="10" fill="#6366f1"/>
+                <rect x="16" y="58" width="40" height="32" rx="8" fill="#f472b6" fill-opacity="0.2"/>
+                <polygon points="36,66 44,78 28,78" fill="#ec4899"/>
+                <rect x="72" y="58" width="40" height="32" rx="8" fill="#00c4cc"/>
+                <path d="M92 68V80M86 74H98" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+              </g>
+            </svg>
           </div>
           <div class="apps-collection-card__body">
-            <h3 class="apps-collection-card__title">Creada por Spriteboard</h3>
-            <p class="apps-collection-card__desc">Apps diseñadas para impulsar tu productividad creativa, desde los datos hasta el diseño.</p>
+            <h3 class="apps-collection-card__title" data-i18n="your_apps.collection_spriteboard_title">Creada por Spriteboard</h3>
+            <p class="apps-collection-card__desc" data-i18n="your_apps.collection_spriteboard_desc">Apps diseñadas para impulsar tu productividad creativa, desde los datos hasta el diseño.</p>
             <div class="apps-collection-card__footer">
               <div class="apps-collection-card__icons">
-                <span class="apps-collection-card__app-icon" data-tooltip="Código QR">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code"></use></svg>
+                <span class="apps-collection-card__app-icon" data-ref="card-icon-qr" data-app-id="qr-code" data-tooltip="Código QR">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#0284c7"/><rect x="10" y="10" width="12" height="12" rx="3" fill="#ffffff"/><rect x="13" y="13" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="26" y="10" width="12" height="12" rx="3" fill="#ffffff"/><rect x="29" y="13" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="10" y="26" width="12" height="12" rx="3" fill="#ffffff"/><rect x="13" y="29" width="6" height="6" rx="1.5" fill="#0284c7"/><rect x="26" y="26" width="5" height="5" rx="1" fill="#ffffff"/><rect x="33" y="26" width="5" height="5" rx="1" fill="#ffffff"/><rect x="26" y="33" width="5" height="5" rx="1" fill="#ffffff"/><rect x="33" y="33" width="5" height="5" rx="1" fill="#ffffff"/></svg>
                 </span>
-                <span class="apps-collection-card__app-icon" data-tooltip="YouTube">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#smart_display"></use></svg>
-                </span>
-                <span class="apps-collection-card__more-badge">y más</span>
+                <span class="apps-collection-card__more-badge" data-ref="card-more-spriteboard" data-i18n="your_apps.and_more">y más</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="apps-collection-card apps-collection-card--emerald" data-ref="card-collection-google" data-cat="productivity">
+        <div class="apps-collection-card apps-collection-card--emerald" data-ref="card-collection-productivity" data-cat="productivity">
           <div class="apps-collection-card__visual">
-            <div class="apps-collection-card__icon-badge">
-              <svg class="component-icon" style="width: 28px; height: 28px; color: #ffffff;" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-            </div>
-            <div class="apps-collection-card__mini-preview">
-              <span class="apps-collection-card__tag">Google & Media</span>
-            </div>
+            <svg class="apps-collection-card__visual-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="vis-emerald-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#064e3b"/>
+                  <stop offset="50%" stop-color="#047857"/>
+                  <stop offset="100%" stop-color="#0f766e"/>
+                </linearGradient>
+              </defs>
+              <rect width="200" height="200" fill="url(#vis-emerald-grad)"/>
+              <circle cx="170" cy="30" r="50" fill="#34d399" fill-opacity="0.12"/>
+              <circle cx="30" cy="180" r="60" fill="#ffffff" fill-opacity="0.06"/>
+              <g transform="translate(24, 28)">
+                <rect width="118" height="144" rx="12" fill="#ffffff"/>
+                <rect x="16" y="16" width="60" height="7" rx="3.5" fill="#0f172a"/>
+                <rect x="16" y="34" width="16" height="16" rx="4" fill="#10b981"/>
+                <path d="M20 42L23 45L28 38" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="38" y="38" width="56" height="6" rx="3" fill="#64748b"/>
+                <rect x="16" y="58" width="16" height="16" rx="4" fill="#e2e8f0"/>
+                <rect x="38" y="63" width="64" height="6" rx="3" fill="#94a3b8"/>
+                <rect x="16" y="82" width="16" height="16" rx="4" fill="#e2e8f0"/>
+                <rect x="38" y="87" width="48" height="6" rx="3" fill="#cbd5e1"/>
+                <g transform="translate(56, 108)">
+                  <polygon points="0,0 0,14 4,11 8,17 11,15 7,9 13,9" fill="#0f172a"/>
+                  <rect x="14" y="2" width="46" height="14" rx="7" fill="#0f172a"/>
+                  <text x="37" y="12" fill="#ffffff" font-size="8" font-weight="bold" font-family="sans-serif" text-anchor="middle">Google</text>
+                </g>
+              </g>
+              <g transform="translate(112, 98)">
+                <rect width="64" height="68" rx="10" fill="#fef08a"/>
+                <circle cx="32" cy="28" r="14" fill="#84cc16" fill-opacity="0.3"/>
+                <path d="M32 38V24M32 24C32 24 35 18 42 20C42 27 36 26 32 24ZM32 28C32 28 28 22 22 25C22 31 28 30 32 28Z" fill="#65a30d" stroke="#4d7c0f" stroke-width="1.5" stroke-linecap="round"/>
+                <rect x="14" y="50" width="36" height="4" rx="2" fill="#ca8a04"/>
+              </g>
+            </svg>
           </div>
           <div class="apps-collection-card__body">
-            <h3 class="apps-collection-card__title">Productividad y Multimedia</h3>
-            <p class="apps-collection-card__desc">Vincula herramientas de trabajo en equipo, almacenamiento en la nube, fotos y mapas.</p>
+            <h3 class="apps-collection-card__title" data-i18n="your_apps.collection_productivity_title">Productividad y Multimedia</h3>
+            <p class="apps-collection-card__desc" data-i18n="your_apps.collection_productivity_desc">Vincula herramientas de almacenamiento en la nube, fotos, videos y mapas.</p>
             <div class="apps-collection-card__footer">
               <div class="apps-collection-card__icons">
-                <span class="apps-collection-card__app-icon" data-tooltip="Google Drive">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_to_drive"></use></svg>
+                <span class="apps-collection-card__app-icon" data-ref="card-icon-drive" data-app-id="google-drive" data-tooltip="Google Drive">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#0284c7"/><path d="M17 33L10 21L18 8H29L22 20L17 33Z" fill="#22c55e"/><path d="M38 33H17L22 24H43L38 33Z" fill="#eab308"/><path d="M29 8L43 30L38 39L24 17L29 8Z" fill="#3b82f6"/></svg>
                 </span>
-                <span class="apps-collection-card__app-icon" data-tooltip="Google Fotos">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
+                <span class="apps-collection-card__app-icon" data-ref="card-icon-photos" data-app-id="google-photos" data-tooltip="Google Fotos">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M24 10C24 10 24 18 24 18H16C16 13.58 19.58 10 24 10Z" fill="#ea4335"/><path d="M38 24C38 24 30 24 30 24V16C34.42 16 38 19.58 38 24Z" fill="#fbbc05"/><path d="M24 38C24 38 24 30 24 30H32C32 34.42 28.42 38 24 38Z" fill="#34a853"/><path d="M10 24C10 24 18 24 18 24V32C13.58 32 10 28.42 10 24Z" fill="#4285f4"/></svg>
                 </span>
-                <span class="apps-collection-card__app-icon" data-tooltip="Google Maps">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#location_on"></use></svg>
+                <span class="apps-collection-card__app-icon" data-ref="card-icon-maps" data-app-id="google-maps" data-tooltip="Google Maps">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#10b981"/><path d="M24 10C17.4 10 12 15.4 12 22C12 30.5 24 38 24 38C24 38 36 30.5 36 22C36 15.4 30.6 10 24 10ZM24 26.5C21.5 26.5 19.5 24.5 19.5 22C19.5 19.5 21.5 17.5 24 17.5C26.5 17.5 28.5 19.5 28.5 22C28.5 24.5 26.5 26.5 24 26.5Z" fill="#ffffff"/></svg>
                 </span>
-                <span class="apps-collection-card__more-badge">y más</span>
+                <span class="apps-collection-card__app-icon" data-ref="card-icon-youtube" data-app-id="youtube" data-tooltip="YouTube">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#ef4444"/><path d="M35 17C36.5 17.5 37.5 18.5 38 20C38.8 22.5 38.8 24 38.8 24C38.8 24 38.8 25.5 38 28C37.5 29.5 36.5 30.5 35 31C32.5 31.8 24 31.8 24 31.8C24 31.8 15.5 31.8 13 31C11.5 30.5 10.5 29.5 10 28C9.2 25.5 9.2 24 9.2 24C9.2 24 9.2 22.5 10 20C10.5 18.5 11.5 17.5 13 17C15.5 16.2 24 16.2 24 16.2C24 16.2 32.5 16.2 35 17Z" fill="#ffffff"/><polygon points="21,20 21,28 28,24" fill="#ef4444"/></svg>
+                </span>
+                <span class="apps-collection-card__more-badge" data-ref="card-more-productivity" data-i18n="your_apps.and_more">y más</span>
               </div>
             </div>
           </div>
@@ -97,6 +149,7 @@
       </div>
     </div>
 
+    <!-- NUEVAS Y DESTACADAS / TODAS LAS APPS -->
     <div class="canvas-section" data-ref="your-apps-section">
       <div class="canvas-section__header" data-ref="your-apps-section-header">
         <div>
@@ -105,7 +158,7 @@
         </div>
       </div>
 
-      <div class="your-apps-grid" data-ref="your-apps-grid"></div>
+      <div class="apps-compact-grid" data-ref="your-apps-grid"></div>
 
       <div class="mockup-empty-state is-hidden" data-ref="your-apps-empty" style="padding: 48px 20px; text-align: center;">
         <svg class="component-icon" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 12px;" aria-hidden="true"><use href="/icons.svg#search_off"></use></svg>
@@ -115,3 +168,4 @@
     </div>
   </div>
 </div>
+

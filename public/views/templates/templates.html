@@ -5,13 +5,7 @@
         <div class="view-header" data-ref="templates-floating-top">
           <div class="view-header__left" data-ref="templates-floating-left"></div>
           <div class="view-header__right" data-ref="templates-floating-right">
-            <div class="view-header__actions" data-ref="templates-default-actions">
-              <button type="button" class="component-button component-button--h40 component-button--outline view-header__btn" data-ref="btn-apply-designer" style="display: none;" data-tooltip="Postular como creador oficial de plantillas" aria-label="Aplicar a diseñador">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-                <span data-ref="btn-apply-designer-text" data-i18n="templates.apply_designer">Aplicar a diseñador</span>
-                <span class="component-badge" data-ref="badge-apply-designer-status" style="display: none; margin-left: 6px; padding: 2px 7px; font-size: 11px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-weight: 600;">En revisión</span>
-              </button>
-            </div>
+            <div class="view-header__actions" data-ref="templates-default-actions"></div>
           </div>
         </div>
         <div class="view-hero" data-ref="templates-hero">
@@ -43,86 +37,318 @@
         </div>
       </div>
 
-      <div class="canvas-section" data-ref="templates-section">
-        <div class="canvas-section__header" data-ref="templates-section-header">
-          <h2 class="canvas-section__title" data-ref="templates-section-title" data-i18n="templates.section_title">Explorar plantillas</h2>
-          <div class="canvas-section__controls home-section-controls" data-ref="templates-section-controls">
-            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-type">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-              </button>
-              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
-                  <div class="menu-panel__drag-zone" data-ref="drag-zone-filter-type" aria-hidden="true">
-                    <div class="menu-panel__drag-handle"></div>
-                  </div>
-                  <div class="menu-panel__list">
-                    <button type="button" class="menu-item is-active" data-ref="menu-filter-type-all" data-value="all">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.filter_all">Todas</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-filter-type-favorites" data-value="favorites">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.filter_favorites">Favoritas</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-filter-type-board" data-value="board">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.filter_board">Pizarrón</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-filter-type-doc" data-value="doc">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.filter_doc">Documentos</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-filter-type-presentation" data-value="presentation">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.filter_presentation">Presentaciones</span>
-                    </button>
-                  </div>
-                </div>
+    <div class="canvas-section" data-ref="templates-section">
+      <div class="templates-explore-section" data-ref="templates-explore-section">
+        <div class="templates-explore-header" data-ref="templates-explore-header">
+          <h2 class="templates-explore-title" data-ref="templates-explore-title" data-i18n="templates.explore_title">Explorar las plantillas</h2>
+          <div class="templates-explore-nav" data-ref="templates-explore-nav">
+            <button type="button" class="component-tag-nav-btn is-disabled" data-ref="btn-explore-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+            <button type="button" class="component-tag-nav-btn" data-ref="btn-explore-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-tags-carousel-wrapper templates-explore-carousel-wrapper" data-ref="templates-explore-carousel-wrapper">
+          <div class="templates-explore-carousel" data-ref="templates-explore-carousel">
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-presentation">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_presentation">Presentación</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="6" y="6" width="68" height="38" rx="4" fill="#fb923c" fill-opacity="0.3"/>
+                  <rect x="10" y="3" width="64" height="42" rx="4" fill="url(#grad-pres)" stroke="#ea580c" stroke-width="0.5"/>
+                  <rect x="18" y="16" width="34" height="4" rx="2" fill="#ffffff"/>
+                  <rect x="18" y="24" width="22" height="3" rx="1.5" fill="#fed7aa"/>
+                  <circle cx="60" cy="18" r="4" fill="#ffffff" fill-opacity="0.8"/>
+                  <defs>
+                    <linearGradient id="grad-pres" x1="10" y1="3" x2="74" y2="45" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#f97316"/>
+                      <stop offset="1" stop-color="#ea580c"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
             </div>
 
-            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-sort">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-              </button>
-              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-sort">
-                  <div class="menu-panel__drag-zone" data-ref="drag-zone-sort" aria-hidden="true">
-                    <div class="menu-panel__drag-handle"></div>
-                  </div>
-                  <div class="menu-panel__list">
-                    <button type="button" class="menu-item is-active" data-ref="menu-sort-default" data-value="default">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.sort_recommended">Recomendadas</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-sort-alpha-asc" data-value="alpha-asc">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.sort_alpha_asc">Orden alfabético (A-Z)</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-sort-alpha-desc" data-value="alpha-desc">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.sort_alpha_desc">Orden alfabético (Z-A)</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-sort-size-desc" data-value="size-desc">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.sort_size_desc">Mayor tamaño</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="menu-sort-size-asc" data-value="size-asc">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-                      <span class="menu-item__text" data-i18n="templates.sort_size_asc">Menor tamaño</span>
-                    </button>
-                  </div>
-                </div>
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-poster">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_poster">Póster</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <rect x="26" y="6" width="28" height="3" rx="1.5" fill="#3b82f6"/>
+                  <circle cx="34" cy="22" r="7" fill="#fde047" stroke="#eab308" stroke-width="0.75"/>
+                  <path d="M42 28 C42 22, 50 24, 48 30 C46 36, 38 34, 42 28 Z" fill="#facc15" stroke="#ca8a04" stroke-width="0.5"/>
+                  <rect x="26" y="38" width="20" height="2" rx="1" fill="#94a3b8"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-resume">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_resume">Currículum</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <rect x="26" y="6" width="16" height="3" rx="1.5" fill="#2563eb"/>
+                  <rect x="26" y="11" width="12" height="2" rx="1" fill="#94a3b8"/>
+                  <circle cx="50" cy="10" r="4.5" fill="#3b82f6"/>
+                  <line x1="26" y1="18" x2="54" y2="18" stroke="#e2e8f0" stroke-width="0.75"/>
+                  <rect x="26" y="22" width="28" height="2" rx="1" fill="#64748b"/>
+                  <rect x="26" y="26" width="24" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="26" y="30" width="28" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="26" y="36" width="20" height="2" rx="1" fill="#64748b"/>
+                  <rect x="26" y="40" width="26" height="2" rx="1" fill="#cbd5e1"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--periwinkle" data-ref="explore-card-email">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_email">Correo</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#3b82f6" stroke-width="0.75"/>
+                  <rect x="22" y="2" width="36" height="10" rx="3" fill="#1e3a8a"/>
+                  <rect x="26" y="6" width="16" height="2.5" rx="1" fill="#ffffff"/>
+                  <rect x="26" y="15" width="12" height="10" rx="2" fill="#f97316"/>
+                  <rect x="42" y="15" width="12" height="10" rx="2" fill="#06b6d4"/>
+                  <rect x="26" y="28" width="28" height="2" rx="1" fill="#64748b"/>
+                  <rect x="26" y="32" width="24" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="26" y="38" width="28" height="5" rx="2.5" fill="#3b82f6"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-invitation">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_invitation">Invitación</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#fdf4ff" stroke="#d946ef" stroke-width="0.75"/>
+                  <rect x="25" y="5" width="30" height="40" rx="2" fill="none" stroke="#f472b6" stroke-dasharray="2 2" stroke-width="0.75"/>
+                  <rect x="28" y="10" width="24" height="3" rx="1.5" fill="#db2777"/>
+                  <circle cx="40" cy="22" r="6" fill="#fbcfe8" stroke="#ec4899" stroke-width="0.5"/>
+                  <polygon points="40,18 42,21 45,21 43,23 44,26 40,24 36,26 37,23 35,21 38,21" fill="#db2777"/>
+                  <rect x="29" y="32" width="22" height="2" rx="1" fill="#a21caf"/>
+                  <rect x="32" y="36" width="16" height="2" rx="1" fill="#d946ef"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-mobile-video">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_mobile_video">Video para dispositivos...</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="26" y="2" width="28" height="46" rx="4" fill="#0f172a" stroke="#475569" stroke-width="0.75"/>
+                  <rect x="27" y="4" width="26" height="42" rx="3" fill="url(#grad-mob-vid)"/>
+                  <circle cx="40" cy="24" r="6" fill="#ffffff" fill-opacity="0.9"/>
+                  <polygon points="38,21 38,27 44,24" fill="#6366f1"/>
+                  <defs>
+                    <linearGradient id="grad-mob-vid" x1="27" y1="4" x2="53" y2="46" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#38bdf8"/>
+                      <stop offset="1" stop-color="#6366f1"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-fb-post">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_fb_post">Post para Facebook</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="14" y="6" width="52" height="38" rx="3" fill="#ffffff" stroke="#1877f2" stroke-width="0.75"/>
+                  <rect x="14" y="6" width="52" height="9" rx="3" fill="#1877f2"/>
+                  <circle cx="20" cy="10.5" r="3" fill="#ffffff"/>
+                  <text x="18.8" y="12.5" fill="#1877f2" font-size="5" font-weight="bold" font-family="sans-serif">f</text>
+                  <rect x="26" y="9" width="18" height="2" rx="1" fill="#ffffff"/>
+                  <rect x="18" y="19" width="44" height="16" rx="2" fill="#dbeafe"/>
+                  <rect x="18" y="38" width="24" height="2" rx="1" fill="#94a3b8"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-business-card">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_business_card">Tarjeta de presentación</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="12" y="8" width="56" height="34" rx="3" fill="#84cc16" stroke="#65a30d" stroke-width="0.75"/>
+                  <circle cx="22" cy="18" r="4" fill="#ffffff" fill-opacity="0.9"/>
+                  <rect x="30" y="16" width="26" height="3" rx="1.5" fill="#ffffff"/>
+                  <rect x="30" y="22" width="18" height="2" rx="1" fill="#ecfccb"/>
+                  <rect x="22" y="30" width="34" height="2" rx="1" fill="#f7fee7"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-photo-collage">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_photo_collage">Collage de fotos</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="20" y="4" width="40" height="42" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <rect x="23" y="7" width="16" height="36" rx="2" fill="#60a5fa"/>
+                  <rect x="41" y="7" width="16" height="17" rx="2" fill="#c084fc"/>
+                  <rect x="41" y="26" width="16" height="17" rx="2" fill="#34d399"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--pink" data-ref="explore-card-ig-post">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_ig_post">Post para Instagram</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="18" y="3" width="44" height="44" rx="4" fill="#ffffff" stroke="#f43f5e" stroke-width="0.75"/>
+                  <rect x="21" y="6" width="38" height="30" rx="2" fill="url(#grad-ig-post)"/>
+                  <circle cx="40" cy="21" r="7" fill="#ffffff" fill-opacity="0.85"/>
+                  <circle cx="26" cy="41" r="2.5" fill="#e11d48"/>
+                  <rect x="31" y="40" width="18" height="2" rx="1" fill="#94a3b8"/>
+                  <defs>
+                    <linearGradient id="grad-ig-post" x1="21" y1="6" x2="59" y2="36" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#f43f5e"/>
+                      <stop offset="0.5" stop-color="#e11d48"/>
+                      <stop offset="1" stop-color="#fb923c"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-ig-story">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_ig_story">Instagram Story</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="26" y="2" width="28" height="46" rx="4" fill="url(#grad-story)" stroke="#e11d48" stroke-width="0.75"/>
+                  <circle cx="32" cy="8" r="2.5" fill="#ffffff" stroke="#e11d48" stroke-width="0.5"/>
+                  <rect x="36" y="7" width="12" height="1.5" rx="0.75" fill="#ffffff"/>
+                  <circle cx="40" cy="24" r="8" fill="#ffffff" fill-opacity="0.3"/>
+                  <defs>
+                    <linearGradient id="grad-story" x1="26" y1="2" x2="54" y2="48" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#db2777"/>
+                      <stop offset="1" stop-color="#f59e0b"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-horizontal-video">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_horizontal_video">Video horizontal</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="10" y="6" width="60" height="38" rx="4" fill="url(#grad-h-vid)" stroke="#6366f1" stroke-width="0.75"/>
+                  <circle cx="40" cy="25" r="7" fill="#ffffff" fill-opacity="0.9"/>
+                  <polygon points="38,21.5 38,28.5 45,25" fill="#4f46e5"/>
+                  <defs>
+                    <linearGradient id="grad-h-vid" x1="10" y1="6" x2="70" y2="44" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#312e81"/>
+                      <stop offset="0.5" stop-color="#4f46e5"/>
+                      <stop offset="1" stop-color="#ec4899"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--periwinkle" data-ref="explore-card-interactive-design">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_interactive_design">Diseño interactivo</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="12" y="4" width="56" height="42" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <rect x="12" y="4" width="56" height="8" rx="4" fill="#ec4899"/>
+                  <rect x="16" y="16" width="22" height="14" rx="2" fill="#ede9fe" stroke="#c084fc" stroke-width="0.5"/>
+                  <rect x="42" y="16" width="22" height="14" rx="2" fill="#e0f2fe" stroke="#38bdf8" stroke-width="0.5"/>
+                  <rect x="16" y="34" width="48" height="6" rx="2" fill="#f1f5f9"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-logo">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_logo">Logo</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="16" y="8" width="44" height="38" rx="3" fill="#fef08a" transform="rotate(-4 16 8)"/>
+                  <rect x="20" y="4" width="40" height="42" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <circle cx="40" cy="25" r="12" fill="#eff6ff" stroke="#0284c7" stroke-width="1"/>
+                  <path d="M32 26 Q36 21, 40 26 T48 26" stroke="#0284c7" stroke-width="1.2" fill="none"/>
+                  <circle cx="40" cy="19" r="2" fill="#0284c7"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-flyer">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_flyer">Flyer</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.75"/>
+                  <rect x="22" y="2" width="36" height="10" rx="3" fill="#15803d"/>
+                  <rect x="26" y="6" width="28" height="2" rx="1" fill="#ffffff"/>
+                  <rect x="26" y="16" width="28" height="14" rx="2" fill="#dcfce7"/>
+                  <circle cx="40" cy="23" r="4" fill="#16a34a"/>
+                  <rect x="26" y="34" width="28" height="2" rx="1" fill="#166534"/>
+                  <rect x="30" y="38" width="20" height="4" rx="2" fill="#22c55e"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-brochure">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_brochure">Folleto</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="12" y="6" width="56" height="38" rx="2" fill="#ea580c" stroke="#c2410c" stroke-width="0.75"/>
+                  <line x1="30" y1="6" x2="30" y2="44" stroke="#fed7aa" stroke-dasharray="2 2" stroke-width="0.75"/>
+                  <line x1="50" y1="6" x2="50" y2="44" stroke="#fed7aa" stroke-dasharray="2 2" stroke-width="0.75"/>
+                  <rect x="15" y="10" width="12" height="2" rx="1" fill="#ffffff"/>
+                  <circle cx="40" cy="22" r="5" fill="#fed7aa"/>
+                  <rect x="34" y="32" width="12" height="2" rx="1" fill="#ffffff"/>
+                  <rect x="54" y="14" width="10" height="20" rx="1" fill="#c2410c"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-menu">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_menu">Menú</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
+                  <circle cx="40" cy="10" r="4" fill="#f87171"/>
+                  <rect x="28" y="18" width="24" height="2" rx="1" fill="#1e293b"/>
+                  <line x1="26" y1="24" x2="54" y2="24" stroke="#e2e8f0" stroke-width="0.5"/>
+                  <rect x="26" y="28" width="18" height="2" rx="1" fill="#64748b"/>
+                  <rect x="48" y="28" width="6" height="2" rx="1" fill="#ef4444"/>
+                  <rect x="26" y="33" width="16" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="48" y="33" width="6" height="2" rx="1" fill="#ef4444"/>
+                  <rect x="26" y="38" width="18" height="2" rx="1" fill="#64748b"/>
+                  <rect x="48" y="38" width="6" height="2" rx="1" fill="#ef4444"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--cyan" data-ref="explore-card-doc">
+              <span class="templates-explore-card__label" data-i18n="templates.explore_doc">Doc</span>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#0ea5e9" stroke-width="0.75"/>
+                  <rect x="26" y="6" width="20" height="3" rx="1.5" fill="#0284c7"/>
+                  <rect x="26" y="12" width="28" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="26" y="16" width="24" height="2" rx="1" fill="#94a3b8"/>
+                  <rect x="26" y="22" width="28" height="14" rx="2" fill="#f0f9ff" stroke="#bae6fd" stroke-width="0.5"/>
+                  <line x1="26" y1="29" x2="54" y2="29" stroke="#bae6fd" stroke-width="0.5"/>
+                  <line x1="40" y1="22" x2="40" y2="36" stroke="#bae6fd" stroke-width="0.5"/>
+                  <rect x="26" y="40" width="18" height="2" rx="1" fill="#cbd5e1"/>
+                </svg>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="canvas-grid templates-grid" data-ref="templates-grid"></div>
-        <div class="infinite-scroll-sentinel" data-ref="templates-sentinel" style="display: none;"></div>
       </div>
+
+      <div class="canvas-section__header" data-ref="templates-section-header">
+        <h2 class="canvas-section__title" data-ref="templates-section-title" data-i18n="templates.section_title">Explorar plantillas</h2>
+      </div>
+
+      <div class="canvas-grid templates-grid" data-ref="templates-grid"></div>
+      <div class="infinite-scroll-sentinel" data-ref="templates-sentinel" style="display: none;"></div>
     </div>
   </div>
 </div>
+
 

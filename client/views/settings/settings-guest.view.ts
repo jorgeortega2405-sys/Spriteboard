@@ -1,24 +1,21 @@
-import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../../utils/languages.util.js';
+import { render } from '../../app-router.js';
 import { escapeHtml } from '../../services/api.service.js';
-import { getCurrentLanguage, setLanguage, t } from '../../services/i18n.service.js';
+import { getCurrentLanguage, setLanguage, t, translateElement } from '../../services/i18n.service.js';
+import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
-import { navigate, render } from '../../app-router.js';
-import { setupDropdown } from '../../utils/dom.util.js';
+import { applyAccessibilityPreferences, getTheme, setTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
+import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../../utils/languages.util.js';
 
 export async function createGuestSettingsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/guest.html');
+  translateElement(container);
 
-  const langDropdown = container.querySelector<HTMLElement>(
-    '[data-ref="dropdown-wrapper-guest-language"]'
-  );
-  const langSelectedText = container.querySelector<HTMLElement>(
-    '[data-ref="guest-language-selected-text"]'
-  );
+  const langDropdown = container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-guest-language"]');
+  const langSelectedText = container.querySelector<HTMLElement>('[data-ref="guest-language-selected-text"]');
   const langListEl = container.querySelector<HTMLElement>('[data-ref="list-guest-languages"]');
-  const langSearchInput = container.querySelector<HTMLInputElement>(
-    '[data-ref="input-search-guest-language"]'
-  );
+  const langSearchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-guest-language"]');
   const langEmptyEl = container.querySelector<HTMLElement>('[data-ref="empty-guest-languages"]');
 
   const renderLanguagesList = (currentLang: string) => {
@@ -38,8 +35,7 @@ export async function createGuestSettingsView(): Promise<HTMLElement> {
     let matchesCount = 0;
     const items = langListEl.querySelectorAll<HTMLElement>('.menu-item');
     items.forEach((item) => {
-      const name =
-        item.querySelector('.menu-item__text')?.textContent?.toLowerCase() || '';
+      const name = item.querySelector('.menu-item__text')?.textContent?.toLowerCase() || '';
       const code = (item.getAttribute('data-lang') || '').toLowerCase();
       const match = !cleanQuery || name.includes(cleanQuery) || code.includes(cleanQuery);
       item.style.display = match ? 'flex' : 'none';
@@ -83,11 +79,87 @@ export async function createGuestSettingsView(): Promise<HTMLElement> {
     });
   }
 
-  const btnToLogin = container.querySelector<HTMLElement>('[data-ref="btn-guest-to-login"]');
-  btnToLogin?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/login');
+  const themeDropdown = container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-guest-theme"]');
+  const themeSelectedText = container.querySelector<HTMLElement>('[data-ref="guest-theme-selected-text"]');
+  const themeSelectedIcon = container.querySelector<HTMLElement>('[data-ref="guest-theme-selected-icon"]');
+
+  const getThemeLabel = (theme: string) => {
+    switch (theme) {
+      case 'light':
+        return t('settings.accessibility.theme_light') || 'Tema Claro';
+      case 'dark':
+        return t('settings.accessibility.theme_dark') || 'Tema Oscuro';
+      default:
+        return t('settings.accessibility.theme_system') || 'Sincronizar con el sistema';
+    }
+  };
+
+  const themeIcons: Record<string, string> = {
+    dark: 'dark_mode',
+    light: 'light_mode',
+    system: 'brightness_auto',
+  };
+
+  const updateThemeUi = (theme: string) => {
+    const validTheme = ['system', 'light', 'dark'].includes(theme) ? theme : 'system';
+    if (themeSelectedText) {
+      themeSelectedText.textContent = getThemeLabel(validTheme);
+    }
+    if (themeSelectedIcon && themeIcons[validTheme]) {
+      themeSelectedIcon.textContent = themeIcons[validTheme];
+    }
+    if (themeDropdown) {
+      const activeItem = themeDropdown.querySelector<HTMLElement>(
+        `[data-theme-value="${validTheme}"], [data-theme="${validTheme}"]`
+      );
+      if (activeItem) {
+        themeDropdown.querySelectorAll('.menu-item').forEach((i) => i.classList.remove('is-active'));
+        activeItem.classList.add('is-active');
+      }
+    }
+  };
+
+  updateThemeUi(getTheme());
+
+  if (themeDropdown) {
+    setupDropdown(themeDropdown, {
+      onSelect: async (theme: string) => {
+        updateThemeUi(theme);
+        await setTheme(theme, false);
+        showToast(t('toasts.theme_updated') || 'Preferencia de tema actualizada.', 'success');
+      },
+    });
+  }
+
+  const toggleReduceMotion = container.querySelector<HTMLInputElement>('[data-ref="toggle-guest-reduce-motion"]');
+  const toggleHighContrast = container.querySelector<HTMLInputElement>('[data-ref="toggle-guest-high-contrast"]');
+
+  try {
+    const savedReduceMotion = localStorage.getItem('sprite_reduce_motion') === 'true';
+    const savedHighContrast = localStorage.getItem('sprite_high_contrast') === 'true';
+    if (toggleReduceMotion) toggleReduceMotion.checked = savedReduceMotion;
+    if (toggleHighContrast) toggleHighContrast.checked = savedHighContrast;
+  } catch {}
+
+  toggleReduceMotion?.addEventListener('change', () => {
+    const isChecked = toggleReduceMotion.checked;
+    try {
+      localStorage.setItem('sprite_reduce_motion', String(isChecked));
+    } catch {}
+    applyAccessibilityPreferences({ reduce_motion: isChecked });
+    showToast(t('toasts.preferences_saved') || 'Preferencias guardadas.', 'success');
   });
+
+  toggleHighContrast?.addEventListener('change', () => {
+    const isChecked = toggleHighContrast.checked;
+    try {
+      localStorage.setItem('sprite_high_contrast', String(isChecked));
+    } catch {}
+    applyAccessibilityPreferences({ high_contrast: isChecked });
+    showToast(t('toasts.preferences_saved') || 'Preferencias guardadas.', 'success');
+  });
+
+  renderIcons(container);
 
   return container;
 }
