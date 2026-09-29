@@ -1,4 +1,4 @@
-export type SubscriptionTierId = 'free' | 'pro' | 'business';
+export type SubscriptionTierId = 'free' | 'pro' | 'business' | 'enterprise';
 
 export type BillingPeriod = 'monthly' | 'yearly';
 
@@ -21,6 +21,7 @@ export interface SubscriptionTier {
   icon: string;
   badge?: string;
   isPopular?: boolean;
+  isCustomPrice?: boolean;
   buttonText: string;
   features: SubscriptionFeature[];
   borderColor?: string;

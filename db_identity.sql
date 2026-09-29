@@ -882,5 +882,30 @@ CREATE TABLE IF NOT EXISTS designer_payout_transfers (
     FOREIGN KEY (designer_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS sales_inquiries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    user_id INT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    company_email VARCHAR(255) NOT NULL,
+    contact_reason VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255) NOT NULL,
+    company_size VARCHAR(50) NOT NULL,
+    country_or_region VARCHAR(100) NOT NULL,
+    role_level VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    phone_number VARCHAR(50) NOT NULL,
+    how_can_we_help TEXT NOT NULL,
+    status ENUM('new', 'contacted', 'qualified', 'closed') NOT NULL DEFAULT 'new',
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sales_inquiries_email (company_email),
+    INDEX idx_sales_inquiries_status (status),
+    INDEX idx_sales_inquiries_created (created_at DESC),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
