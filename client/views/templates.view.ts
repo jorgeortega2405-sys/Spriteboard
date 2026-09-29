@@ -1,10 +1,8 @@
 import { navigate } from '../app-router.js';
-import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { hasTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
-import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
@@ -27,7 +25,6 @@ class TemplatesController {
 
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private statusDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private badgesContainer: HTMLElement | null = null;
   private gridEl: HTMLElement | null = null;
@@ -48,13 +45,6 @@ class TemplatesController {
   private favoritedTemplateIds = new Set<string>();
 
   private isDesigner = false;
-  private designerTemplates: any[] = [];
-  private designerFilterStatus = 'all';
-  private designerSearchQuery = '';
-
-  private searchBoxEl: HTMLElement | null = null;
-  private designerSection: HTMLElement | null = null;
-  private designerGridEl: HTMLElement | null = null;
   private btnApplyDesigner: HTMLButtonElement | null = null;
   private btnApplyDesignerText: HTMLElement | null = null;
   private badgeApplyDesignerStatus: HTMLElement | null = null;
@@ -66,9 +56,6 @@ class TemplatesController {
 
   public async init(): Promise<void> {
     this.isDesigner = canPublishTemplates(currentUser);
-    this.searchBoxEl = this.container.querySelector<HTMLElement>('[data-ref="templates-search-box"]');
-    this.designerSection = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-section"]');
-    this.designerGridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-grid"]');
     this.btnApplyDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-designer"]');
     this.btnApplyDesignerText = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-designer-text"]');
     this.badgeApplyDesignerStatus = this.container.querySelector<HTMLElement>('[data-ref="badge-apply-designer-status"]');
@@ -130,24 +117,6 @@ class TemplatesController {
       });
     }
 
-    const statusDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="designer-dropdown-wrapper-status"]');
-    if (statusDropdownWrapper) {
-      this.statusDropdownController = setupDropdown(statusDropdownWrapper, {
-        matchWidth: false,
-        onSelect: (val: string) => {
-          const next = val || 'all';
-          if (this.designerFilterStatus === next) return;
-          this.designerFilterStatus = next;
-          const statusMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-status"]');
-          statusMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
-            item.classList.toggle('is-active', item.getAttribute('data-status') === this.designerFilterStatus);
-          });
-          this.renderDesignerTemplates();
-        },
-        placement: 'bottom-end',
-      });
-    }
-
     this.renderCategoryBadges();
     this.initCarousel();
     this.renderTemplates();
@@ -197,12 +166,7 @@ class TemplatesController {
         if (clearBtn) {
           clearBtn.style.display = this.searchQuery ? 'inline-flex' : 'none';
         }
-        if (this.activeCategory === 'my-templates') {
-          this.designerSearchQuery = this.searchQuery;
-          this.renderDesignerTemplates();
-        } else {
-          this.renderTemplates();
-        }
+        this.renderTemplates();
       },
       { signal }
     );
@@ -213,14 +177,9 @@ class TemplatesController {
         if (searchInput) {
           searchInput.value = '';
           this.searchQuery = '';
-          this.designerSearchQuery = '';
           clearBtn.style.display = 'none';
           searchInput.focus();
-          if (this.activeCategory === 'my-templates') {
-            this.renderDesignerTemplates();
-          } else {
-            this.renderTemplates();
-          }
+          this.renderTemplates();
         }
       },
       { signal }
@@ -242,30 +201,9 @@ class TemplatesController {
         const catId = target.getAttribute('data-category');
         if (!catId) return;
 
-        if (catId === 'my-templates') {
-          if (!currentUser) {
-            navigate('/login');
-            return;
-          }
-          if (!this.isDesigner) {
-            navigate('/apply-designer');
-            return;
-          }
-          if (this.activeCategory !== 'my-templates') {
-            this.activeCategory = 'my-templates';
-            this.updateBadgeActiveState('my-templates');
-            this.switchToMyTemplates();
-          }
-          return;
-        }
-
         if (catId !== this.activeCategory) {
-          const wasMyTemplates = this.activeCategory === 'my-templates';
           this.activeCategory = catId;
           this.updateBadgeActiveState(catId);
-          if (wasMyTemplates) {
-            this.switchToExplore();
-          }
           this.renderTemplates();
         }
       },
@@ -302,16 +240,6 @@ class TemplatesController {
       },
       { signal }
     );
-
-    if (this.isDesigner) {
-      this.designerGridEl?.addEventListener(
-        'click',
-        (e) => {
-          void this.handleDesignerGridClick(e);
-        },
-        { signal }
-      );
-    }
   }
 
   private async setupApplyDesignerButton(): Promise<void> {
@@ -698,272 +626,7 @@ class TemplatesController {
     });
   }
 
-  private switchToMyTemplates(): void {
-    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
-    if (searchInput) {
-      searchInput.placeholder = t('templates.search_my_placeholder') || 'Buscar en mis plantillas...';
-    }
-    if (this.templatesSection) {
-      this.templatesSection.style.display = 'none';
-    }
-    if (this.designerSection) {
-      this.designerSection.style.display = 'block';
-    }
-    this.carouselController?.updateButtons();
-    this.designerSearchQuery = this.searchQuery;
-    void this.loadDesignerData();
-  }
-
-  private switchToExplore(): void {
-    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
-    if (searchInput) {
-      searchInput.placeholder = t('templates.search_placeholder') || 'Busca en miles de plantillas';
-    }
-    if (this.templatesSection) {
-      this.templatesSection.style.display = 'block';
-    }
-    if (this.designerSection) {
-      this.designerSection.style.display = 'none';
-    }
-    this.carouselController?.updateButtons();
-  }
-
-  private async loadDesignerData(): Promise<void> {
-    if (this.designerGridEl) {
-      SkeletonService.renderGridCardSkeletons(this.designerGridEl, 4, 'template');
-    }
-    try {
-      const res = await getApi(`${API_ROUTES.templates.myTemplates}?limit=100`);
-      if (res.ok) {
-        const data = await res.json();
-        this.designerTemplates = Array.isArray(data.templates) ? data.templates : [];
-      }
-    } catch {}
-    this.renderDesignerTemplates();
-  }
-
-  private renderDesignerTemplates(): void {
-    if (!this.designerGridEl || !this.designerSection) return;
-
-    let filtered = [...this.designerTemplates];
-
-    if (this.designerFilterStatus !== 'all') {
-      filtered = filtered.filter((item) => item.status === this.designerFilterStatus);
-    }
-
-    if (this.designerSearchQuery) {
-      const q = this.designerSearchQuery;
-      filtered = filtered.filter((item) => {
-        const nameMatch = item.title ? item.title.toLowerCase().includes(q) : false;
-        const descMatch = item.description ? item.description.toLowerCase().includes(q) : false;
-        return nameMatch || descMatch;
-      });
-    }
-
-    if (filtered.length === 0) {
-      this.designerGridEl.innerHTML = '';
-      this.designerGridEl.style.display = 'none';
-      renderEmptyState({
-        container: this.designerSection,
-        dataRef: 'designer-empty-state',
-        desc: t('templates.empty_designer_desc') || 'Diseña en cualquier lienzo, abre el modal de compartir y selecciona "Publicar como plantilla" para compartir tus creaciones.',
-        graphicType: 'canvas',
-        title: t('templates.empty_designer_title') || 'Aún no has publicado plantillas',
-      });
-      return;
-    }
-
-    removeEmptyState(this.designerSection, 'designer-empty-state');
-    this.designerGridEl.style.display = 'grid';
-    this.designerGridEl.innerHTML = filtered.map((item) => this.buildDesignerCardHtml(item)).join('');
-    setupLazyImages(this.designerGridEl);
-    renderIcons(this.designerGridEl);
-  }
-
-  private buildDesignerCardHtml(tItem: any): string {
-    const status = tItem.status;
-    let badgeClass = 'component-badge--neutral';
-    let badgeText = t('templates.status_draft');
-    let badgeIcon = 'lock';
-
-    if (status === 'approved') {
-      badgeClass = 'component-badge--success';
-      badgeText = t('templates.status_approved');
-      badgeIcon = 'check_circle';
-    } else if (status === 'pending') {
-      badgeClass = 'component-badge--warning';
-      badgeText = t('templates.status_pending');
-      badgeIcon = 'schedule';
-    } else if (status === 'rejected') {
-      badgeClass = 'component-badge--danger';
-      badgeText = t('templates.status_rejected');
-      badgeIcon = 'cancel';
-    }
-
-    const isPres = tItem.canvas_type === 'presentation';
-    const isDoc = tItem.canvas_type === 'doc';
-    const typeIcon = isPres ? 'slideshow' : (isDoc ? 'description' : 'dashboard');
-    const typeLabel = isPres ? t('templates.filter_presentation') : (isDoc ? t('templates.filter_doc') : t('templates.filter_board'));
-    const usesCount = Number(tItem.uses_count || 0);
-    const usesRaw = t('templates.uses_count_label') || '{count} usos';
-    const usesText = usesRaw.replace('{count}', String(usesCount));
-
-    const isPremium = Boolean(tItem.is_premium);
-    const pricingBadgeClass = isPremium ? 'component-badge--warning' : 'component-badge--neutral';
-    const pricingBadgeText = isPremium ? (t('templates.tier_premium') || 'Premium') : (t('templates.tier_free') || 'Libre');
-    const pricingBadgeIcon = isPremium ? 'workspace_premium' : 'public';
-
-    const defaultThumb = isPres ? '/assets/templates/presentations/pitch.svg' : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg');
-    const thumbUrl = tItem.preview_thumbnail || defaultThumb;
-
-    return `
-      <div class="canvas-card template-card designer-card" data-ref="designer-card-${tItem.uuid}" data-template-uuid="${tItem.uuid}" data-template-id="${tItem.id}">
-        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="designer-card-thumb-${tItem.uuid}">
-          <img class="canvas-card__image image-lazy-fade" data-ref="designer-card-img-${tItem.uuid}" src="${thumbUrl}" alt="${escapeHtml(tItem.title)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
-          <div class="canvas-card__badge-overlay" style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px;">
-            <span class="component-badge ${badgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
-              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
-              <span>${badgeText}</span>
-            </span>
-            <span class="component-badge ${pricingBadgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
-              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${pricingBadgeIcon}"></use></svg>
-              <span>${pricingBadgeText}</span>
-            </span>
-          </div>
-          <div class="canvas-card__actions-wrapper" data-ref="designer-card-actions-${tItem.uuid}">
-            <div class="canvas-card__actions">
-              ${tItem.source_canvas_uuid ? `
-                <a class="canvas-card__action-btn" data-ref="btn-designer-open-canvas-${tItem.uuid}" href="/design/${tItem.source_canvas_uuid}" data-tooltip="${t('templates.btn_open_canvas')}" aria-label="${t('templates.btn_open_canvas')}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-                </a>
-              ` : ''}
-              ${status === 'approved' ? `
-                <button type="button" class="canvas-card__action-btn" data-ref="btn-toggle-private-${tItem.uuid}" data-action="toggle-visibility" data-tooltip="${t('templates.btn_make_private')}" aria-label="${t('templates.btn_make_private')}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-                </button>
-              ` : ''}
-              ${status === 'draft' ? `
-                <button type="button" class="canvas-card__action-btn" data-ref="btn-toggle-public-${tItem.uuid}" data-action="toggle-visibility" data-tooltip="${t('templates.btn_make_public')}" aria-label="${t('templates.btn_make_public')}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                </button>
-              ` : ''}
-              ${status === 'rejected' ? `
-                <button type="button" class="canvas-card__action-btn is-active" style="color: var(--color-danger, #ef4444);" data-ref="btn-view-rejection-${tItem.uuid}" data-action="view-rejection" data-reason="${escapeHtml(tItem.rejection_reason || '')}" data-tooltip="${t('templates.btn_view_rejection')}" aria-label="${t('templates.btn_view_rejection')}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
-                </button>
-              ` : ''}
-              <button type="button" class="canvas-card__action-btn" style="color: var(--color-danger, #ef4444);" data-ref="btn-delete-template-${tItem.uuid}" data-action="delete-template" data-tooltip="${t('templates.btn_delete')}" aria-label="${t('templates.btn_delete')}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="canvas-card__info" data-ref="designer-card-info-${tItem.uuid}" style="padding: 10px 12px;">
-          <span class="canvas-card__name" data-ref="designer-card-title-${tItem.uuid}" title="${escapeHtml(tItem.title)}" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${escapeHtml(tItem.title)}
-          </span>
-          <div class="canvas-card__meta" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
-            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${typeIcon}"></use></svg>
-            <span>${typeLabel}</span>
-            <span class="canvas-card__meta-dot">·</span>
-            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-            <span>${usesText}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private async handleDesignerGridClick(e: MouseEvent): Promise<void> {
-    const target = e.target as HTMLElement;
-
-    const actionBtn = target.closest<HTMLElement>('[data-action]');
-    if (!actionBtn) return;
-
-    const action = actionBtn.getAttribute('data-action');
-    const card = target.closest<HTMLElement>('[data-template-uuid]');
-    if (!card) return;
-
-    const templateUuid = card.getAttribute('data-template-uuid');
-    if (!templateUuid) return;
-
-    const item = this.designerTemplates.find((t) => t.uuid === templateUuid);
-    if (!item) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (action === 'view-rejection') {
-      const reason = actionBtn.getAttribute('data-reason') || item.rejection_reason || '';
-      openModal({
-        bodyHtml: `
-          <div class="banner banner--danger" data-ref="rejection-reason-box" style="margin-top: 12px; font-size: 13px; line-height: 1.5; padding: 14px 16px; border-radius: 8px;">
-            ${escapeHtml(reason || 'No se especificó un motivo detallado.')}
-          </div>
-        `,
-        confirmClass: 'component-button--black',
-        confirmText: t('modal.close') || 'Cerrar',
-        descriptionKey: 'templates.rejection_modal_desc',
-        showCancel: false,
-        size: 'sm',
-        titleKey: 'templates.rejection_modal_title',
-      });
-      return;
-    }
-
-    if (action === 'toggle-visibility') {
-      try {
-        const res = await postApi(API_ROUTES.templates.toggleVisibility(templateUuid));
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.template) {
-            const idx = this.designerTemplates.findIndex((t) => t.uuid === templateUuid);
-            if (idx !== -1) {
-              this.designerTemplates[idx] = data.template;
-            }
-            const isDraft = data.template.status === 'draft';
-            showToast(isDraft ? t('templates.visibility_updated_private') : t('templates.visibility_updated_public'), 'success');
-            this.renderDesignerTemplates();
-          }
-        } else {
-          showToast(t('toasts.generic_error') || 'Error al actualizar visibilidad', 'danger');
-        }
-      } catch {
-        showToast(t('toasts.generic_error') || 'Error al actualizar visibilidad', 'danger');
-      }
-      return;
-    }
-
-    if (action === 'delete-template') {
-      openModal({
-        confirmClass: 'component-button--danger',
-        confirmText: t('templates.btn_delete') || 'Eliminar plantilla',
-        descriptionKey: 'templates.delete_confirm_desc',
-        onConfirm: async () => {
-          try {
-            const res = await deleteApi(API_ROUTES.templates.deleteMyTemplate(templateUuid));
-            if (res.ok) {
-              this.designerTemplates = this.designerTemplates.filter((t) => t.uuid !== templateUuid);
-              showToast(t('templates.delete_success') || 'Plantilla eliminada exitosamente.', 'success');
-              this.renderDesignerTemplates();
-            } else {
-              showToast(t('toasts.generic_error') || 'Error al eliminar plantilla', 'danger');
-            }
-          } catch {
-            showToast(t('toasts.generic_error') || 'Error al eliminar plantilla', 'danger');
-          }
-        },
-        size: 'sm',
-        titleKey: 'templates.delete_confirm_title',
-      });
-      return;
-    }
-  }
-
   public destroy(): void {
-    if (this.designerSection) {
-      removeEmptyState(this.designerSection, 'designer-empty-state');
-    }
     if (this.scrollObserver) {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
@@ -972,8 +635,6 @@ class TemplatesController {
     this.typeDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
-    this.statusDropdownController?.destroy();
-    this.statusDropdownController = null;
     this.abortController.abort();
     this.carouselController?.destroy();
     this.carouselController = null;
