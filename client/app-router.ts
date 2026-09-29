@@ -261,14 +261,17 @@ export async function render(): Promise<void> {
         const { createLoginView } = await import('./views/auth.view.js');
         viewElements = [await createLoginView()];
       } else if (!canPublishTemplates(currentUser)) {
-        window.history.replaceState({}, '', '/apply-designer');
-        const { createDesignerApplyView } = await import('./views/designer-apply.view.js');
-        viewElements = [await createDesignerApplyView()];
+        window.history.replaceState({}, '', '/creators');
+        const { createCreatorsView } = await import('./views/creators.view.js');
+        viewElements = [await createCreatorsView()];
       } else {
         const { createDesignerView } = await import('./views/designer.view.js');
         viewElements = [await createDesignerView()];
       }
-    } else if (path === '/apply-designer' || path === '/designer/apply') {
+    } else if (path === '/creators') {
+      const { createCreatorsView } = await import('./views/creators.view.js');
+      viewElements = [await createCreatorsView()];
+    } else if (path === '/creators/apply' || path === '/apply-designer' || path === '/designer/apply') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');

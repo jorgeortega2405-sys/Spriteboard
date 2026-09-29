@@ -1,7 +1,7 @@
 import mysql, { RowDataPacket } from 'mysql2/promise';
-import { pool } from '../config/database.config.js';
+import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
-import { DesignerOnboardPayload, DesignerOnboardingStatusResponse, DesignerPayoutProfile } from '../types/designer.types.js';
+import { DesignerOnboardPayload, DesignerOnboardingStatusResponse, DesignerPayoutProfile, FeaturedCreator } from '../types/designer.types.js';
 import { logger } from './logger.service.js';
 import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 
@@ -224,3 +224,134 @@ export async function completeDesignerOnboarding(
     },
   };
 }
+
+export async function getFeaturedCreators(limit = 4): Promise<FeaturedCreator[]> {
+  try {
+    const candidateUserIds: number[] = [];
+    const templateStatsMap = new Map<number, { templates_count: number; total_uses: number }>();
+
+    try {
+      const [templateAggRows] = await canvasPool.query<RowDataPacket[]>(
+        `SELECT user_id, COUNT(id) AS templates_count, COALESCE(SUM(uses_count), 0) AS total_uses
+         FROM templates
+         WHERE status = 'approved' AND user_id IS NOT NULL AND user_id > 0
+         GROUP BY user_id
+         ORDER BY total_uses DESC, templates_count DESC
+         LIMIT ?`,
+        [limit]
+      );
+
+      for (const row of templateAggRows) {
+        const uid = Number(row.user_id);
+        if (uid > 0) {
+          candidateUserIds.push(uid);
+          templateStatsMap.set(uid, {
+            templates_count: Number(row.templates_count || 0),
+            total_uses: Number(row.total_uses || 0),
+          });
+        }
+      }
+    } catch (err) {
+      logger.db.warn('Error al consultar templates para creadores destacados', err);
+    }
+
+    const remaining = limit - candidateUserIds.length;
+    if (remaining > 0) {
+      let excludeClause = '';
+      const params: any[] = [];
+      if (candidateUserIds.length > 0) {
+        excludeClause = `AND id NOT IN (${candidateUserIds.map(() => '?').join(',')})`;
+        params.push(...candidateUserIds);
+      }
+      params.push(remaining);
+
+      const [extraUsers] = await pool.query<RowDataPacket[]>(
+        `SELECT id FROM users
+         WHERE (designer_onboarded = 1 OR designer_handle IS NOT NULL)
+         ${excludeClause}
+         ORDER BY id ASC
+         LIMIT ?`,
+        params
+      );
+
+      for (const u of extraUsers) {
+        const uid = Number(u.id);
+        if (!candidateUserIds.includes(uid)) {
+          candidateUserIds.push(uid);
+        }
+      }
+    }
+
+    if (candidateUserIds.length === 0) {
+      return [];
+    }
+
+    const [userRows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, username, designer_handle, avatar_url, bio, country
+       FROM users
+       WHERE id IN (${candidateUserIds.map(() => '?').join(',')})`,
+      candidateUserIds
+    );
+
+    const [followerRows] = await pool.query<RowDataPacket[]>(
+      `SELECT following_id, COUNT(*) AS followers_count
+       FROM user_follows
+       WHERE following_id IN (${candidateUserIds.map(() => '?').join(',')})
+       GROUP BY following_id`,
+      candidateUserIds
+    );
+
+    const followerMap = new Map<number, number>();
+    for (const f of followerRows) {
+      followerMap.set(Number(f.following_id), Number(f.followers_count || 0));
+    }
+
+    for (const uid of candidateUserIds) {
+      if (!templateStatsMap.has(uid)) {
+        try {
+          const [singleAgg] = await canvasPool.query<RowDataPacket[]>(
+            `SELECT COUNT(id) AS templates_count, COALESCE(SUM(uses_count), 0) AS total_uses
+             FROM templates
+             WHERE user_id = ? AND status = 'approved'`,
+            [uid]
+          );
+          templateStatsMap.set(uid, {
+            templates_count: Number(singleAgg[0]?.templates_count || 0),
+            total_uses: Number(singleAgg[0]?.total_uses || 0),
+          });
+        } catch {
+          templateStatsMap.set(uid, { templates_count: 0, total_uses: 0 });
+        }
+      }
+    }
+
+    const creators: FeaturedCreator[] = userRows.map((u) => {
+      const uid = Number(u.id);
+      const tStats = templateStatsMap.get(uid) || { templates_count: 0, total_uses: 0 };
+      const rawHandle = u.designer_handle ? String(u.designer_handle).trim().replace(/^@+/, '') : String(u.username);
+      return {
+        avatar_url: u.avatar_url || null,
+        bio: u.bio || null,
+        country: u.country || null,
+        designer_handle: `@${rawHandle}`,
+        followers_count: followerMap.get(uid) || 0,
+        id: uid,
+        templates_count: tStats.templates_count,
+        total_uses: tStats.total_uses,
+        username: String(u.username),
+      };
+    });
+
+    creators.sort((a, b) => {
+      if (b.total_uses !== a.total_uses) return b.total_uses - a.total_uses;
+      if (b.templates_count !== a.templates_count) return b.templates_count - a.templates_count;
+      return b.followers_count - a.followers_count;
+    });
+
+    return creators.slice(0, limit);
+  } catch (error) {
+    logger.app.error('Error al obtener creadores destacados', error);
+    return [];
+  }
+}
+

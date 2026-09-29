@@ -1,6 +1,9 @@
 import { navigate } from '../app-router.js';
+import { getTierRank, getUserTier } from '../config/plans.config.js';
+import { currentUser } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { showToast } from '../services/toast.service.js';
 
 type PlanTier = 'free' | 'pro' | 'business' | 'enterprise';
 
@@ -11,7 +14,28 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     activeUpgradeModal.close();
   }
 
+  const userTier = getUserTier(currentUser);
+  const userRank = getTierRank(userTier);
+
+  if (userTier === 'enterprise') {
+    showToast(t('upgrade_modal.enterprise_active') || 'Ya cuentas con el plan corporativo Empresas con todas las capacidades activas.', 'info');
+    return { close: () => {} };
+  }
+
+  const isProCurrent = userTier === 'pro';
+  const isProIncluded = userRank > 1;
+  const isProDisabled = userRank >= 1;
+
+  const isBusinessCurrent = userTier === 'business';
+  const isBusinessIncluded = userRank > 2;
+  const isBusinessDisabled = userRank >= 2;
+
   let selectedPlan: PlanTier = initialPlan === 'free' ? 'pro' : initialPlan;
+  if (isBusinessDisabled && isProDisabled) {
+    selectedPlan = 'business';
+  } else if (isProDisabled) {
+    selectedPlan = 'business';
+  }
 
   const proTitle = t('upgrade_modal.plan_pro_name') || 'Spriteboard Pro';
   const businessTitle = t('upgrade_modal.plan_business_name') || 'Spriteboard Negocios';
@@ -24,6 +48,9 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   };
 
   const getCtaLabel = (p: PlanTier): string => {
+    if (isBusinessDisabled && isProDisabled) {
+      return t('upgrade_modal.contact_sales') || 'Hablar con ventas';
+    }
     return `${t('upgrade_modal.cta_prefix') || 'Sube de categoría a'} ${getPlanName(p)}`;
   };
 
@@ -47,33 +74,73 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
             <div class="modal-split__left-top" data-ref="modal-split-left-top">
               <div class="modal-split__heading" data-ref="modal-split-heading">
                 <h2 class="modal-split__title">
-                  <span class="modal-split__title-prefix">${t('upgrade_modal.title_prefix') || 'Sube de categoría a'}</span>
-                  <span class="modal-split__title-plan" data-ref="plan-title-highlight">${getPlanName(selectedPlan)}</span>
+                  ${isBusinessDisabled && isProDisabled ? `
+                    <span class="modal-split__title-prefix">${enterpriseTitle}</span>
+                  ` : `
+                    <span class="modal-split__title-prefix">${t('upgrade_modal.title_prefix') || 'Sube de categoría a'}</span>
+                    <span class="modal-split__title-plan" data-ref="plan-title-highlight">${getPlanName(selectedPlan)}</span>
+                  `}
                 </h2>
-                <p class="modal-split__subtitle">${t('upgrade_modal.choose_plan') || 'Elige tu plan.'}</p>
+                <p class="modal-split__subtitle">${isBusinessDisabled && isProDisabled ? (t('upgrade_modal.enterprise_active') || 'Tienes cubiertos todos los planes individuales. Conoce soluciones corporativas.') : (t('upgrade_modal.choose_plan') || 'Elige tu plan.')}</p>
               </div>
 
               <div class="modal-split__plans" data-ref="modal-split-plans">
-                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'pro' ? ' is-selected' : ''}" data-ref="card-plan-pro" data-plan="pro">
-                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio" data-ref="radio-plan-pro">
-                    <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
+                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'pro' && !isProDisabled ? ' is-selected' : ''}${isProCurrent ? ' is-current-plan' : ''}${isProDisabled ? ' is-disabled' : ''}" data-ref="card-plan-pro" data-plan="pro">
+                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio${isProCurrent ? ' upgrade-plan-card__radio--check' : isProIncluded ? ' upgrade-plan-card__radio--disabled' : ''}" data-ref="radio-plan-pro">
+                    ${isProCurrent ? `
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    ` : isProIncluded ? `
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    ` : `
+                      <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
+                    `}
                   </div>
                   <div class="modal-split-plan-card__info upgrade-plan-card__info">
                     <div class="modal-split-plan-card__header-row upgrade-plan-card__header-row">
-                      <span class="modal-split-plan-card__name upgrade-plan-card__name">${proTitle}</span>
+                      <div class="upgrade-plan-card__badge-row">
+                        <span class="modal-split-plan-card__name upgrade-plan-card__name">${proTitle}</span>
+                        ${isProCurrent ? `
+                          <span class="upgrade-plan-card__badge upgrade-plan-card__badge--current">
+                            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                            <span>${t('upgrade_modal.current_plan') || 'Tu plan actual'}</span>
+                          </span>
+                        ` : isProIncluded ? `
+                          <span class="upgrade-plan-card__badge upgrade-plan-card__badge--included">
+                            <span>${t('upgrade_modal.included_in_plan') || 'Incluido en tu plan'}</span>
+                          </span>
+                        ` : ''}
+                      </div>
                       <span class="modal-split-plan-card__price upgrade-plan-card__price">${t('upgrade_modal.plan_pro_price') || '$9.99/mes'}</span>
                     </div>
                     <span class="modal-split-plan-card__desc upgrade-plan-card__desc">${t('upgrade_modal.plan_pro_desc') || 'Para profesionales y creadores exigentes.'}</span>
                   </div>
                 </div>
 
-                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'business' ? ' is-selected' : ''}" data-ref="card-plan-business" data-plan="business">
-                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio" data-ref="radio-plan-business">
-                    <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
+                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'business' && !isBusinessDisabled ? ' is-selected' : ''}${isBusinessCurrent ? ' is-current-plan' : ''}${isBusinessDisabled ? ' is-disabled' : ''}" data-ref="card-plan-business" data-plan="business">
+                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio${isBusinessCurrent ? ' upgrade-plan-card__radio--check' : isBusinessIncluded ? ' upgrade-plan-card__radio--disabled' : ''}" data-ref="radio-plan-business">
+                    ${isBusinessCurrent ? `
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    ` : isBusinessIncluded ? `
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    ` : `
+                      <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
+                    `}
                   </div>
                   <div class="modal-split-plan-card__info upgrade-plan-card__info">
                     <div class="modal-split-plan-card__header-row upgrade-plan-card__header-row">
-                      <span class="modal-split-plan-card__name upgrade-plan-card__name">${businessTitle}</span>
+                      <div class="upgrade-plan-card__badge-row">
+                        <span class="modal-split-plan-card__name upgrade-plan-card__name">${businessTitle}</span>
+                        ${isBusinessCurrent ? `
+                          <span class="upgrade-plan-card__badge upgrade-plan-card__badge--current">
+                            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                            <span>${t('upgrade_modal.current_plan') || 'Tu plan actual'}</span>
+                          </span>
+                        ` : isBusinessIncluded ? `
+                          <span class="upgrade-plan-card__badge upgrade-plan-card__badge--included">
+                            <span>${t('upgrade_modal.included_in_plan') || 'Incluido en tu plan'}</span>
+                          </span>
+                        ` : ''}
+                      </div>
                       <span class="modal-split-plan-card__price upgrade-plan-card__price">${t('upgrade_modal.plan_business_price') || '$19.99/mes'}</span>
                     </div>
                     <span class="modal-split-plan-card__desc upgrade-plan-card__desc">${t('upgrade_modal.plan_business_desc') || 'Máxima potencia, colaboración y equipos centralizados.'}</span>
@@ -179,8 +246,12 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const updateSelectedPlan = (plan: PlanTier) => {
     selectedPlan = plan;
     const normalized = plan;
-    cardPro?.classList.toggle('is-selected', normalized === 'pro');
-    cardBusiness?.classList.toggle('is-selected', normalized === 'business');
+    if (!isProDisabled) {
+      cardPro?.classList.toggle('is-selected', normalized === 'pro');
+    }
+    if (!isBusinessDisabled) {
+      cardBusiness?.classList.toggle('is-selected', normalized === 'business');
+    }
 
     if (highlightTitle) {
       highlightTitle.textContent = getPlanName(plan);
@@ -210,10 +281,12 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   window.addEventListener('resize', handleResize);
 
   cardPro?.addEventListener('click', () => {
+    if (isProDisabled) return;
     updateSelectedPlan('pro');
   });
 
   cardBusiness?.addEventListener('click', () => {
+    if (isBusinessDisabled) return;
     updateSelectedPlan('business');
   });
 
@@ -304,11 +377,21 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const goToUpgrade = (e: MouseEvent) => {
     e.preventDefault();
     closeModal();
+    if (isBusinessDisabled && isProDisabled) {
+      navigate('/contact/sales');
+    } else {
+      navigate('/upgrade');
+    }
+  };
+
+  const goToViewAll = (e: MouseEvent) => {
+    e.preventDefault();
+    closeModal();
     navigate('/upgrade');
   };
 
   ctaBtn?.addEventListener('click', goToUpgrade);
-  btnViewAll?.addEventListener('click', goToUpgrade);
+  btnViewAll?.addEventListener('click', goToViewAll);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {

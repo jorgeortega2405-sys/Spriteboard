@@ -12,6 +12,7 @@ import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { FOLDER_BACK_TAB_SVG, getFolderFrontIconSvg } from '../config/folder-graphics.config.js';
 import { renderHomeCategoryBadgesHtml } from '../config/home-category-badges.config.js';
+import { getUserTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
@@ -159,6 +160,25 @@ class HomeController {
       }
       if (this.btnCreateFolder) {
         this.btnCreateFolder.style.display = 'none';
+      }
+    } else {
+      const userTier = getUserTier(currentUser);
+      if (userTier === 'enterprise') {
+        if (this.btnHomeUpgrade) {
+          this.btnHomeUpgrade.style.display = 'none';
+        }
+      } else if (userTier === 'business') {
+        if (this.btnHomeUpgrade) {
+          const manageLabel = t('nav.manage_subscription') || 'Gestionar suscripción';
+          this.btnHomeUpgrade.setAttribute('data-tooltip', manageLabel);
+          this.btnHomeUpgrade.setAttribute('aria-label', manageLabel);
+        }
+      } else if (userTier === 'pro') {
+        if (this.btnHomeUpgrade) {
+          const upgradeBusinessLabel = t('nav.upgrade_to_business') || 'Mejorar a Negocios';
+          this.btnHomeUpgrade.setAttribute('data-tooltip', upgradeBusinessLabel);
+          this.btnHomeUpgrade.setAttribute('aria-label', upgradeBusinessLabel);
+        }
       }
     }
 
@@ -400,7 +420,14 @@ class HomeController {
     this.btnHomeUpgrade?.addEventListener(
       'click',
       () => {
-        openUpgradeModal('pro');
+        const userTier = getUserTier(currentUser);
+        if (userTier === 'business') {
+          navigate('/settings/billing');
+        } else if (userTier === 'pro') {
+          openUpgradeModal('business');
+        } else {
+          openUpgradeModal('pro');
+        }
       },
       { signal }
     );

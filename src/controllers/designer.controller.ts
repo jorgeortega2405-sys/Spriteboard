@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createStripeConnectAccountLink, getDesignerPoolSummary, requestDesignerPayoutTransfer, syncStripeAccountStatus } from '../services/creator-pool.service.js';
-import { checkDesignerHandleAvailability, completeDesignerOnboarding, getDesignerOnboardingStatus } from '../services/designer.service.js';
+import { checkDesignerHandleAvailability, completeDesignerOnboarding, getDesignerOnboardingStatus, getFeaturedCreators } from '../services/designer.service.js';
 import { logger } from '../services/logger.service.js';
 
 export async function getDesignerOnboardingStatusHandler(req: Request, res: Response): Promise<void> {
@@ -155,3 +155,15 @@ export async function requestDesignerPayoutHandler(req: Request, res: Response):
     res.status(500).json({ error: 'Error al procesar el retiro a tu cuenta bancaria.', success: false });
   }
 }
+
+export async function getFeaturedCreatorsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 4, 1), 20);
+    const creators = await getFeaturedCreators(limit);
+    res.json({ creators, success: true });
+  } catch (error: any) {
+    logger.app.error('Error al obtener creadores destacados', error);
+    res.status(500).json({ creators: [], error: 'Error al consultar creadores destacados.', success: false });
+  }
+}
+

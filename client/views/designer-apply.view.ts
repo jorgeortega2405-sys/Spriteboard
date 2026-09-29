@@ -218,9 +218,6 @@ export class DesignerApplyController {
   private bindEvents(): void {
     const { signal } = this.abortController;
 
-    const btnBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-templates"]');
-    btnBack?.addEventListener('click', () => navigate('/templates'), { signal });
-
     const btnGoTemplates = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-status-go-templates"]');
     btnGoTemplates?.addEventListener('click', () => navigate('/templates'), { signal });
 

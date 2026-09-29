@@ -8897,6 +8897,81 @@ body[data-theme="dark"] .upgrade-plan-card.is-selected {
   text-overflow: ellipsis;
 }
 
+.upgrade-plan-card.is-current-plan,
+.upgrade-plan-card.is-disabled {
+  cursor: default !important;
+}
+
+.upgrade-plan-card.is-current-plan:hover,
+.upgrade-plan-card.is-disabled:hover {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-color) !important;
+}
+
+.upgrade-plan-card.is-current-plan {
+  border-color: rgba(34, 197, 94, 0.45);
+  background-color: rgba(34, 197, 94, 0.05);
+}
+
+.upgrade-plan-card.is-disabled {
+  opacity: 0.65;
+}
+
+.upgrade-plan-card__badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upgrade-plan-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--sl-border-radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.upgrade-plan-card__badge--current {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.upgrade-plan-card__badge--current .component-icon {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
+.upgrade-plan-card__badge--included {
+  background-color: var(--hover-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.upgrade-plan-card__radio--check {
+  border-color: #22c55e !important;
+  background-color: #22c55e !important;
+  color: #ffffff !important;
+}
+
+.upgrade-plan-card__radio--check .component-icon {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
+.upgrade-plan-card__radio--disabled {
+  opacity: 0.4;
+  border-color: var(--border-color) !important;
+  background-color: transparent !important;
+}
+
 .modal-split__btn-cta,
 .upgrade-modal__btn-cta {
   display: flex;
@@ -11301,9 +11376,9 @@ html.dark-theme .component-button--upgrade-pill__icon {
 .home-floating-top .component-search-toolbar {
   position: absolute;
   top: calc(100% + 4px);
-  right: 16px;
-  left: auto;
-  transform: none;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   z-index: 120;
 }
 
@@ -11311,7 +11386,7 @@ html.dark-theme .component-button--upgrade-pill__icon {
 .home-floating-top .component-search-toolbar.is-hidden {
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px);
+  transform: translate(-50%, -8px);
   pointer-events: none;
 }
 
@@ -11319,7 +11394,7 @@ html.dark-theme .component-button--upgrade-pill__icon {
 .home-floating-top .component-search-toolbar.is-active {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   pointer-events: auto;
 }
 

@@ -46,6 +46,9 @@ export const API_ROUTES = {
     teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
     token: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/token`,
   },
+  creators: {
+    featured: '/api/creators/featured',
+  },
   folders: {
     base: '/api/folders',
     byId: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}`,

@@ -4,21 +4,6 @@
         
         <div class="view-backdrop" data-ref="apply-gradient-backdrop"></div>
 
-        <div class="view-header" data-ref="apply-header" style="max-width: 900px; margin: 0 auto; width: 100%; padding: 16px 20px 0; display: flex; align-items: center; justify-content: space-between;">
-          <div class="view-header__left" data-ref="apply-header-left">
-            <button type="button" class="component-button component-button--h36 component-button--outline view-header__btn" data-ref="btn-back-to-templates">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-              <span>Volver a Plantillas</span>
-            </button>
-          </div>
-          <div class="view-header__right" data-ref="apply-header-right">
-            <div class="designer-badge-tag" data-ref="apply-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; background: rgba(99, 102, 241, 0.12); color: #6366f1; font-size: 12px; font-weight: 700;">
-              <svg class="component-icon" style="font-size: 16px;" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-              <span>Programa de Creadores Spriteboard</span>
-            </div>
-          </div>
-        </div>
-
         <div class="designer-apply-container" data-ref="designer-apply-container">
 
           <div class="designer-status-card" data-ref="designer-status-card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 32px; margin-bottom: 28px; box-shadow: var(--shadow-sm);">
@@ -77,72 +62,76 @@
               <div class="designer-wizard__progress-fill" data-ref="wizard-progress-fill" style="width: 25%;"></div>
             </div>
 
-            <div class="designer-wizard__top" data-ref="wizard-top">
-              <button type="button" class="component-button component-button--h32 component-button--bordered" data-ref="btn-step-back" style="visibility: hidden;">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-                <span>Atrás</span>
-              </button>
-              <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator">Paso 1 de 4</span>
-            </div>
-
-            <div class="designer-wizard__content" data-ref="wizard-content">
-
-              <div class="designer-step is-active" data-ref="step-1">
-                <h2 class="designer-step__title">
-                  ¡Hola! Para empezar, dinos <span class="designer-step__title-accent">qué opción te describe mejor</span>
-                </h2>
-                <p class="designer-step__desc">
-                  Recibimos a creadores de todas las categorías, pero enfocamos la búsqueda y selección en lo que más necesite nuestra comunidad creativa.
-                </p>
-
-                <div class="designer-role-options" data-ref="role-options-container">
-                  <div class="designer-role-option is-selected" data-ref="role-option" data-role="designer">
-                    <div class="designer-role-option__radio">
-                      <div class="designer-role-option__dot"></div>
-                    </div>
-                    <div style="flex: 1;">
-                      <h3 class="designer-role-option__title">Diseñador/a de Plantillas</h3>
-                      <p class="designer-role-option__desc">Creo diseños atractivos, como ilustraciones, wireframes, esquemas y plantillas listas para usar en Spriteboard.</p>
-                    </div>
-                  </div>
-
-                  <div class="designer-role-option" data-ref="role-option" data-role="teacher">
-                    <div class="designer-role-option__radio">
-                      <div class="designer-role-option__dot"></div>
-                    </div>
-                    <div style="flex: 1;">
-                      <h3 class="designer-role-option__title">Docente / Educador</h3>
-                      <p class="designer-role-option__desc">Creo material educativo, pizarrones didácticos, guías de estudio y recursos interactivos de aprendizaje.</p>
-                    </div>
-                  </div>
-
-                  <div class="designer-role-option" data-ref="role-option" data-role="business">
-                    <div class="designer-role-option__radio">
-                      <div class="designer-role-option__dot"></div>
-                    </div>
-                    <div style="flex: 1;">
-                      <h3 class="designer-role-option__title">Empresas y Profesionales</h3>
-                      <p class="designer-role-option__desc">Soy especialista en mi área y me apasiona crear plantillas de gran impacto visual para flujos de trabajo profesionales y de negocios.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="designer-wizard__actions" data-ref="step-1-actions">
-                  <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-1" style="min-width: 140px;">
-                    <span>Continuar</span>
+            <div class="designer-wizard__body" data-ref="wizard-body">
+              
+              <!-- Columna Izquierda: Formulario y Pasos -->
+              <div class="designer-wizard__form-col" data-ref="wizard-form-col">
+                <div class="designer-wizard__top" data-ref="wizard-top">
+                  <button type="button" class="component-button component-button--h32 component-button--bordered" data-ref="btn-step-back" style="visibility: hidden;">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                    <span>Atrás</span>
                   </button>
+                  <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator">Paso 1 de 4</span>
                 </div>
-              </div>
 
-              <div class="designer-step" data-ref="step-2">
-                <div class="designer-split-layout">
-                  <div>
+                <div class="designer-wizard__content" data-ref="wizard-content">
+
+                  <!-- Step 1: Role Selection -->
+                  <div class="designer-step is-active" data-ref="step-1">
+                    <h2 class="designer-step__title">
+                      ¡Hola! Para empezar, dinos <span class="designer-step__title-accent">qué opción te describe mejor</span>
+                    </h2>
+                    <p class="designer-step__desc">
+                      Recibimos a creadores de todas las categorías, pero enfocamos la búsqueda y selección en lo que más necesite nuestra comunidad creativa.
+                    </p>
+
+                    <div class="designer-role-options" data-ref="role-options-container">
+                      <div class="designer-role-option is-selected" data-ref="role-option" data-role="designer">
+                        <div class="designer-role-option__radio">
+                          <div class="designer-role-option__dot"></div>
+                        </div>
+                        <div class="designer-role-option__info">
+                          <h3 class="designer-role-option__title">Diseñador/a</h3>
+                          <p class="designer-role-option__desc">Creo diseños atractivos, como ilustraciones y plantillas listas para usar.</p>
+                        </div>
+                      </div>
+
+                      <div class="designer-role-option" data-ref="role-option" data-role="teacher">
+                        <div class="designer-role-option__radio">
+                          <div class="designer-role-option__dot"></div>
+                        </div>
+                        <div class="designer-role-option__info">
+                          <h3 class="designer-role-option__title">Docente</h3>
+                          <p class="designer-role-option__desc">Soy docente o formador y creo recursos interactivos de aprendizaje.</p>
+                        </div>
+                      </div>
+
+                      <div class="designer-role-option" data-ref="role-option" data-role="business">
+                        <div class="designer-role-option__radio">
+                          <div class="designer-role-option__dot"></div>
+                        </div>
+                        <div class="designer-role-option__info">
+                          <h3 class="designer-role-option__title">Empresas</h3>
+                          <p class="designer-role-option__desc">Soy especialista en mi área y me apasiona crear plantillas de gran impacto visual para profesionales de negocios.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="designer-wizard__actions" data-ref="step-1-actions">
+                      <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-1">
+                        <span>Continuar</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Step 2: Guidelines -->
+                  <div class="designer-step" data-ref="step-2">
                     <h2 class="designer-step__title">Antes de enviar la solicitud</h2>
-                    <p class="designer-step__desc" style="margin-bottom: 16px;">
+                    <p class="designer-step__desc">
                       Como parte de la solicitud, tendrás la oportunidad de enviar enlaces a tu portafolio en línea o subir muestras de tu trabajo.
                     </p>
 
-                    <span style="font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 10px;">
+                    <span class="designer-step__subtitle">
                       Prepara tu portafolio:
                     </span>
 
@@ -170,45 +159,19 @@
                     </div>
 
                     <div class="designer-tip-callout">
-                      <svg class="component-icon" style="color: #6366f1; font-size: 16px; vertical-align: -2px; margin-right: 4px;" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-                      <strong>Evaluamos la calidad, no la cantidad:</strong> Elige trabajos que muestren tu creatividad, variedad y destreza técnica.
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+                      <span><strong>Evaluamos la calidad, no la cantidad:</strong> Elige trabajos que muestren tu creatividad, variedad y destreza técnica.</span>
                     </div>
 
-                    <div class="designer-wizard__actions" style="justify-content: flex-start; border-top: none; padding-top: 0; margin-top: 0;">
-                      <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-2" style="min-width: 140px;">
+                    <div class="designer-wizard__actions">
+                      <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-2">
                         <span>Continuar</span>
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <div class="designer-showcase-card">
-                      <div class="designer-showcase-mockup">
-                        <div style="height: 28px; background: var(--bg-hover, rgba(125,125,125,0.1)); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 10px; gap: 6px;">
-                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
-                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-                        </div>
-                        <div style="padding: 16px; background: var(--bg-card); display: flex; flex-direction: column; gap: 10px;">
-                          <div style="height: 60px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 13px;">
-                            Spriteboard Creator Hub
-                          </div>
-                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div style="height: 45px; border-radius: 6px; background: rgba(99,102,241,0.12); border: 1px dashed rgba(99,102,241,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #6366f1; font-weight: 600;">Plantillas</div>
-                            <div style="height: 45px; border-radius: 6px; background: rgba(168,85,247,0.12); border: 1px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #a855f7; font-weight: 600;">Lienzos</div>
-                          </div>
-                        </div>
-                      </div>
-                      <span class="component-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1; font-weight: 700; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 6px;">Creadores Oficiales</span>
-                      <p style="font-size: 12.5px; color: var(--text-secondary); margin: 0; line-height: 1.4;">Tus plantillas podrán ser exploradas y utilizadas por miles de usuarios en todo el mundo.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="designer-step" data-ref="step-3">
-                <div class="designer-split-layout">
-                  <div>
+                  <!-- Step 3: Specialties -->
+                  <div class="designer-step" data-ref="step-3">
                     <h2 class="designer-step__title">
                       Nos encanta ayudarte a explorar tu lado creativo. <span class="designer-step__title-accent">¿Qué te gusta crear?</span>
                     </h2>
@@ -255,24 +218,12 @@
                       </button>
                     </div>
 
-                    <div class="designer-wizard__actions" style="justify-content: flex-start; border-top: none; padding-top: 0; margin-top: 0;">
-                      <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-3" style="min-width: 140px;">
+                    <div class="designer-wizard__actions">
+                      <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-3">
                         <span>Continuar</span>
                       </button>
                     </div>
                   </div>
-
-                  <div>
-                    <div class="designer-showcase-card" style="height: 100%;">
-                      <div style="width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, #6366f1, #ec4899); display: flex; align-items: center; justify-content: center; color: #ffffff; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(99,102,241,0.4);">
-                        <svg class="component-icon" style="font-size: 32px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-                      </div>
-                      <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Diseña a tu manera</h3>
-                      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">Personaliza la experiencia y aporta recursos únicos a la galería de la comunidad.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <div class="designer-step" data-ref="step-4">
                 <h2 class="designer-step__title">
@@ -429,13 +380,20 @@
                 </form>
 
               </div>
-
             </div>
           </div>
 
-        </div>
+          <!-- Columna Derecha: Foto de persona sosteniendo laptop -->
+          <div class="designer-wizard__media-col" data-ref="wizard-media-col">
+            <img class="designer-wizard__photo" data-ref="wizard-photo" src="/assets/img/creators/apply-hero.jpg" alt="Creadora con laptop" loading="lazy" />
+          </div>
 
+        </div>
       </div>
+
     </div>
+
   </div>
+</div>
+</div>
 

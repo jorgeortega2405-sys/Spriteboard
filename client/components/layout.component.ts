@@ -240,7 +240,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isBrand = path === '/brand' || path === '/marca';
   const isShared = path === '/shared';
   const isTeams = path === '/teams';
-  const isMore = path === '/your-apps' || path === '/apply-designer' || path === '/designer/apply' || isDesigner;
+  const isMore = path === '/your-apps' || path === '/apply-designer' || path === '/designer/apply' || path === '/creators' || path === '/creators/apply' || isDesigner;
 
   const updateItem = (itemRef: string, btnRef: string, isActive: boolean) => {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
@@ -267,7 +267,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnMoreApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-more-apps"]');
   const btnMoreApply = sidebar.querySelector<HTMLElement>('[data-ref="btn-more-apply-designer"]');
   btnMoreApps?.classList.toggle('is-active', path === '/your-apps');
-  btnMoreApply?.classList.toggle('is-active', isDesigner || path === '/apply-designer' || path === '/designer/apply');
+  btnMoreApply?.classList.toggle('is-active', isDesigner || path === '/apply-designer' || path === '/designer/apply' || path === '/creators' || path === '/creators/apply');
 
   const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
   const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
@@ -481,7 +481,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
       if (canPublishTemplates(currentUser)) {
         navigate('/designer');
       } else {
-        navigate('/apply-designer');
+        navigate('/creators');
       }
     });
 

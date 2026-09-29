@@ -41,3 +41,16 @@ export interface DesignerMetrics {
   totalCount: number;
   totalUses: number;
 }
+
+export interface FeaturedCreator {
+  avatar_url: string | null;
+  bio: string | null;
+  country: string | null;
+  designer_handle: string;
+  followers_count: number;
+  id: number;
+  templates_count: number;
+  total_uses: number;
+  username: string;
+}
+

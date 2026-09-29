@@ -1,9 +1,10 @@
-import { checkDesignerHandleHandler, completeDesignerOnboardingHandler, createStripeConnectLinkHandler, getDesignerOnboardingStatusHandler, getDesignerPoolSummaryHandler, requestDesignerPayoutHandler, syncStripeStatusHandler } from '../controllers/designer.controller.js';
+import { checkDesignerHandleHandler, completeDesignerOnboardingHandler, createStripeConnectLinkHandler, getDesignerOnboardingStatusHandler, getDesignerPoolSummaryHandler, getFeaturedCreatorsHandler, requestDesignerPayoutHandler, syncStripeStatusHandler } from '../controllers/designer.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
 const router = Router();
 
+router.get('/creators/featured', getFeaturedCreatorsHandler);
 router.get('/designer/onboarding-status', requireAuth, getDesignerOnboardingStatusHandler);
 router.get('/designer/check-handle', requireAuth, checkDesignerHandleHandler);
 router.post('/designer/onboard', requireAuth, completeDesignerOnboardingHandler);
