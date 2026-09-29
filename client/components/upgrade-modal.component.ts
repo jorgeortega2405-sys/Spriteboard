@@ -2,7 +2,7 @@ import { navigate } from '../app-router.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 
-type PlanTier = 'free' | 'pro' | 'business';
+type PlanTier = 'free' | 'pro' | 'business' | 'enterprise';
 
 let activeUpgradeModal: { close: () => void } | null = null;
 
@@ -15,8 +15,10 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
 
   const proTitle = t('upgrade_modal.plan_pro_name') || 'Spriteboard Pro';
   const businessTitle = t('upgrade_modal.plan_business_name') || 'Spriteboard Negocios';
+  const enterpriseTitle = t('upgrade_modal.plan_enterprise_name') || 'Spriteboard Empresas';
 
   const getPlanName = (p: PlanTier): string => {
+    if (p === 'enterprise') return enterpriseTitle;
     if (p === 'business') return businessTitle;
     return proTitle;
   };
@@ -125,7 +127,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_sso') || 'Autenticación empresarial SSO'}</span>
+                      <span>${t('upgrade_modal.benefit_brand_kits') || 'Kits de marca y paletas'}</span>
                     </td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">—</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Incluido</td>

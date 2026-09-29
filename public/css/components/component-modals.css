@@ -11664,23 +11664,26 @@ html.dark-theme .home-categories-nav-btn:hover {
 
 .view-hero .component-badge,
 .home-hero .component-badge,
+.brand-hero .component-badge,
 .templates-hero .component-badge {
   background-color: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: #00000020;
 }
 
 html[data-theme="dark"] .view-hero .component-badge,
 html[data-theme="dark"] .home-hero .component-badge,
+html[data-theme="dark"] .brand-hero .component-badge,
 html[data-theme="dark"] .templates-hero .component-badge,
 html.dark-theme .view-hero .component-badge,
 html.dark-theme .home-hero .component-badge,
+html.dark-theme .brand-hero .component-badge,
 html.dark-theme .templates-hero .component-badge {
   background-color: rgba(24, 24, 27, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff20;
 }
 
 .section-floating-title {

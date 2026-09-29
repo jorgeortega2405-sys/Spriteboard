@@ -298,6 +298,9 @@ export async function render(): Promise<void> {
     } else if (path === '/upgrade') {
       const { createUpgradeView } = await import('./views/upgrade.view.js');
       viewElements = [await createUpgradeView()];
+    } else if (path === '/contact/sales' || path === '/sales') {
+      const { createSalesContactView } = await import('./views/sales-contact.view.js');
+      viewElements = [await createSalesContactView()];
     } else if (path.startsWith('/settings')) {
       const { createAccessibilityView, createBillingView, createGuestSettingsView, createPublicProfileSettingsView, createPurchasesView, createSecurityView, createYourAccountView } = await import('./views/settings.view.js');
       if (!currentUser) {

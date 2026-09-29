@@ -372,7 +372,7 @@
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
-  border: 1px solid var(--border-color);
+  border: 1px solid #00000020;
   background-color: transparent;
   color: var(--text-primary);
   cursor: pointer;
@@ -381,6 +381,13 @@
   box-sizing: border-box;
   text-decoration: none;
   line-height: 1.2;
+}
+
+html[data-theme="dark"] .component-badge,
+html[data-theme="dark"] .verify-badge,
+html.dark-theme .component-badge,
+html.dark-theme .verify-badge {
+  border-color: #ffffff20;
 }
 
 .component-badge:hover,
@@ -1636,11 +1643,16 @@ html.dark-theme .component-badge--active .component-icon {
   font-weight: 500;
   background-color: var(--bg-surface);
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border: 1px solid #00000020;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), color var(--sl-transition-fast), transform var(--sl-transition-fast);
   line-height: 1.2;
+}
+
+html[data-theme="dark"] .component-badge,
+html.dark-theme .component-badge {
+  border-color: #ffffff20;
 }
 
 .component-badge .material-symbols-rounded,

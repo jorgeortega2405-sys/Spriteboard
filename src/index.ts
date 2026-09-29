@@ -261,7 +261,7 @@ async function startServer() {
       }
     });
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
     });
 

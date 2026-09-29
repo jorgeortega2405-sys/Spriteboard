@@ -1,3 +1,4 @@
+import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -21,10 +22,11 @@ export async function openEnterpriseSsoModal(options: {
 
   const type = options.tenantType || 'business';
   const rawTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const hasAccess = ['business', 'negocios'].includes(rawTier);
+  const permissions = (currentUser as any)?.permissions || [];
+  const hasAccess = ['enterprise', 'empresas'].includes(rawTier) || permissions.includes('subscription:feature:enterprise_sso') || permissions.includes('tenants:manage') || permissions.includes('sso:manage');
 
   if (!hasAccess) {
-    openUpgradeModal('business');
+    navigate('/contact/sales');
     return;
   }
 

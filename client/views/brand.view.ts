@@ -10,7 +10,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { BrandAssetType, BrandColorType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, BrandKitTemplate, SetBrandFontDto } from '../types/brand.types.js';
-import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, setupDropdown, unregisterActiveDropdown, withButtonLoading } from '../utils/dom.util.js';
+import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, unregisterActiveDropdown, withButtonLoading } from '../utils/dom.util.js';
 
 const AVAILABLE_GOOGLE_FONTS = [
   'Inter', 'Roboto', 'Montserrat', 'Playfair Display', 'Outfit',
@@ -21,12 +21,19 @@ const AVAILABLE_GOOGLE_FONTS = [
 export class BrandController {
   private abortController: AbortController;
   private activeKit: BrandKitDetail | null = null;
-  private activeTab: 'logos' | 'colors' | 'fonts' | 'photos' | 'elements' | 'charts' | 'templates' | 'voice' = 'logos';
+  private activeKitDot: HTMLElement | null = null;
+  private activeKitName: HTMLElement | null = null;
+  private activeTab: 'all' | 'logos' | 'colors' | 'fonts' | 'photos' | 'elements' | 'charts' | 'templates' | 'voice' = 'all';
   private allKits: BrandKit[] = [];
   private badgesContainer: HTMLElement | null = null;
+  private bannerArtPalette: HTMLElement | null = null;
+  private bannerArtTag: HTMLElement | null = null;
   private bannerColorError: HTMLElement | null = null;
   private bannerKitError: HTMLElement | null = null;
+  private bannerOverview: HTMLElement | null = null;
   private bannerTemplateError: HTMLElement | null = null;
+  private btnBannerSecondary: HTMLElement | null = null;
+  private btnBannerUpgrade: HTMLElement | null = null;
   private btnCancelColor: HTMLElement | null = null;
   private btnCancelKit: HTMLElement | null = null;
   private btnCancelTemplate: HTMLElement | null = null;
@@ -95,12 +102,11 @@ export class BrandController {
   private modalKitBackdrop: HTMLElement | null = null;
   private modalTemplateBackdrop: HTMLElement | null = null;
   private palettesContainer: HTMLElement | null = null;
+  private previewOverviewColors: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private sectionCustomFonts: HTMLElement | null = null;
   private templateCanvasPicker: HTMLElement | null = null;
   private textareaBrandVoice: HTMLTextAreaElement | null = null;
-  private activeKitDot: HTMLElement | null = null;
-  private activeKitName: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -166,6 +172,13 @@ export class BrandController {
     this.btnOptionSetDefault = this.container.querySelector<HTMLElement>('[data-ref="btn-option-set-default"]');
     this.btnOptionDeleteKit = this.container.querySelector<HTMLElement>('[data-ref="btn-option-delete-kit"]');
     this.btnCreateKit = this.container.querySelector<HTMLElement>('[data-ref="btn-create-kit"]');
+
+    this.btnBannerUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-banner-upgrade"]');
+    this.btnBannerSecondary = this.container.querySelector<HTMLElement>('[data-ref="btn-banner-secondary"]');
+    this.bannerArtTag = this.container.querySelector<HTMLElement>('[data-ref="banner-art-tag"]');
+    this.bannerArtPalette = this.container.querySelector<HTMLElement>('[data-ref="banner-art-palette"]');
+    this.bannerOverview = this.container.querySelector<HTMLElement>('[data-ref="brand-overview-banner"]');
+    this.previewOverviewColors = this.container.querySelector<HTMLElement>('[data-ref="preview-overview-colors"]');
 
     this.carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="brand-tags-carousel-wrapper"]');
     this.badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="brand-categories-badges"]');
@@ -239,6 +252,8 @@ export class BrandController {
 
     this.btnLockedUpgrade?.addEventListener('click', () => openUpgradeModal('business'), { signal });
     this.btnLockedHome?.addEventListener('click', () => navigate('/'), { signal });
+    this.btnBannerUpgrade?.addEventListener('click', () => openUpgradeModal('business'), { signal });
+    this.btnBannerSecondary?.addEventListener('click', () => this.switchToTab('colors'), { signal });
 
     if (this.btnTriggerKitPicker && this.kitPickerDropdownBackdrop) {
       this.kitPickerDropdownController = setupDropdown(this.btnTriggerKitPicker.parentElement, {
@@ -324,18 +339,17 @@ export class BrandController {
       this.renderActiveTabContent();
     }, { signal });
 
+    this.container.querySelectorAll<HTMLElement>('[data-target-tab]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const targetTab = card.getAttribute('data-target-tab');
+        if (targetTab) this.switchToTab(targetTab);
+      }, { signal });
+    });
+
     this.container.querySelectorAll<HTMLElement>('.component-badge[data-tab]').forEach((tabBtn) => {
       tabBtn.addEventListener('click', () => {
-        const tab = tabBtn.getAttribute('data-tab') as any;
-        if (!tab || tab === this.activeTab) return;
-        this.activeTab = tab;
-        this.container.querySelectorAll('.component-badge[data-tab]').forEach((b) => b.classList.remove('is-active'));
-        tabBtn.classList.add('is-active');
-
-        this.container.querySelectorAll('.brand-pane').forEach((p) => p.classList.add('is-hidden'));
-        const activePane = this.container.querySelector<HTMLElement>(`[data-ref="pane-${tab}"]`);
-        activePane?.classList.remove('is-hidden');
-        this.renderActiveTabContent();
+        const tab = tabBtn.getAttribute('data-tab');
+        if (tab) this.switchToTab(tab);
       }, { signal });
     });
 
@@ -474,6 +488,18 @@ export class BrandController {
     });
   }
 
+  private switchToTab(tab: string): void {
+    if (!tab) return;
+    this.activeTab = tab as any;
+    this.container.querySelectorAll<HTMLElement>('.component-badge[data-tab]').forEach((b) => {
+      b.classList.toggle('is-active', b.getAttribute('data-tab') === tab);
+    });
+    this.container.querySelectorAll<HTMLElement>('.brand-pane').forEach((p) => p.classList.add('is-hidden'));
+    const activePane = this.container.querySelector<HTMLElement>(`[data-ref="pane-${tab}"]`);
+    activePane?.classList.remove('is-hidden');
+    this.renderActiveTabContent();
+  }
+
   private renderActiveTabContent(): void {
     if (!this.activeKit) return;
 
@@ -482,6 +508,9 @@ export class BrandController {
     const q = this.searchInput?.value.trim().toLowerCase() || '';
 
     switch (this.activeTab) {
+      case 'all':
+        this.renderAllTab();
+        break;
       case 'logos':
         this.renderLogosTab(q);
         break;
@@ -509,6 +538,51 @@ export class BrandController {
     }
   }
 
+  private renderAllTab(): void {
+    if (!this.activeKit) return;
+
+    const hasBrandSubscription = Boolean(currentUser && hasFeature('brand_kits', currentUser));
+    if (this.bannerOverview) {
+      this.bannerOverview.style.display = hasBrandSubscription ? 'none' : 'flex';
+    }
+
+    if (this.bannerArtTag) {
+      this.bannerArtTag.textContent = this.activeKit.name || 'Kit';
+    }
+
+    if (this.bannerArtPalette) {
+      const colors = this.activeKit.colors.length > 0
+        ? this.activeKit.colors.slice(0, 4).map((c) => c.hex)
+        : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'];
+      while (colors.length < 4) colors.push('#2563eb');
+      this.bannerArtPalette.innerHTML = colors.map((hex) => `<span class="brand-banner-hero__art-palette-dot" style="background-color: ${escapeHtml(hex)};"></span>`).join('');
+    }
+
+    if (this.previewOverviewColors) {
+      const colors = this.activeKit.colors.length > 0
+        ? this.activeKit.colors.slice(0, 5).map((c) => c.hex)
+        : ['#2563eb', '#3b82f6', '#60a5fa', '#10b981'];
+      this.previewOverviewColors.innerHTML = `
+        <div style="display: flex; gap: 4px; width: 80%; height: 28px; border-radius: 6px; overflow: hidden;">
+          ${colors.map((hex) => `<div style="flex: 1; background-color: ${escapeHtml(hex)};"></div>`).join('')}
+        </div>
+      `;
+    }
+
+    const setOverviewCounter = (ref: string, val: number) => {
+      const el = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+      if (el) el.textContent = String(val);
+    };
+
+    setOverviewCounter('overview-count-templates', this.activeKit.templates.length);
+    setOverviewCounter('overview-count-logos', this.activeKit.logos.length);
+    setOverviewCounter('overview-count-colors', this.activeKit.colors.length);
+    setOverviewCounter('overview-count-fonts', this.activeKit.fonts.length + (this.activeKit.custom_fonts?.length || 0));
+    setOverviewCounter('overview-count-photos', this.activeKit.photos.length);
+    setOverviewCounter('overview-count-elements', this.activeKit.elements.length);
+    setOverviewCounter('overview-count-charts', this.activeKit.charts.length);
+  }
+
   private updateTabCounters(): void {
     if (!this.activeKit) return;
     const setCounter = (ref: string, val: number) => {
@@ -531,14 +605,19 @@ export class BrandController {
       : this.activeKit.logos;
 
     if (filtered.length === 0) {
-      this.gridLogos.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay logotipos subidos en este kit.</span>
-        </div>
-      `;
+      if (this.dropzoneLogos) this.dropzoneLogos.style.display = 'none';
+      this.gridLogos.innerHTML = '';
+      renderEmptyState({
+        container: this.gridLogos,
+        desc: t('brand.empty_logos_desc') || 'No hay logotipos subidos en este kit de marca. Sube tu logotipo con el botón superior.',
+        graphicType: 'gallery',
+        title: t('brand.empty_logos_title') || 'Sin logotipos',
+      });
       return;
     }
 
+    removeEmptyState(this.gridLogos);
+    if (this.dropzoneLogos) this.dropzoneLogos.style.display = 'flex';
     this.gridLogos.innerHTML = filtered.map((logo) => `
       <div class="brand-card" data-ref="card-logo-${logo.uuid}">
         <div class="brand-card__preview brand-card__preview--checkerboard">
@@ -572,14 +651,17 @@ export class BrandController {
     }
 
     if (palettesMap.size === 0) {
-      this.palettesContainer.innerHTML = `
-        <div style="text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay colores configurados.</span>
-        </div>
-      `;
+      this.palettesContainer.innerHTML = '';
+      renderEmptyState({
+        container: this.palettesContainer,
+        desc: t('brand.empty_colors_desc') || 'Define los colores de tu marca para aplicarlos al instante a tus diseños.',
+        graphicType: 'canvas',
+        title: t('brand.empty_colors_title') || 'Sin colores ni paletas',
+      });
       return;
     }
 
+    removeEmptyState(this.palettesContainer);
     let html = '';
     for (const [pName, colors] of palettesMap.entries()) {
       html += `
@@ -893,14 +975,19 @@ export class BrandController {
       : this.activeKit.photos;
 
     if (filtered.length === 0) {
-      this.gridPhotos.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay fotografías guardadas en este kit.</span>
-        </div>
-      `;
+      if (this.dropzonePhotos) this.dropzonePhotos.style.display = 'none';
+      this.gridPhotos.innerHTML = '';
+      renderEmptyState({
+        container: this.gridPhotos,
+        desc: t('brand.empty_photos_desc') || 'No hay fotografías guardadas en este kit de marca. Sube fotos con el botón superior.',
+        graphicType: 'snapshots',
+        title: t('brand.empty_photos_title') || 'Sin fotografías',
+      });
       return;
     }
 
+    removeEmptyState(this.gridPhotos);
+    if (this.dropzonePhotos) this.dropzonePhotos.style.display = 'flex';
     this.gridPhotos.innerHTML = filtered.map((photo) => `
       <div class="brand-card" data-ref="card-photo-${photo.uuid}">
         <div class="brand-card__preview">
@@ -927,14 +1014,19 @@ export class BrandController {
       : this.activeKit.elements;
 
     if (filtered.length === 0) {
-      this.gridElements.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay elementos gráficos o iconos en este kit.</span>
-        </div>
-      `;
+      if (this.dropzoneElements) this.dropzoneElements.style.display = 'none';
+      this.gridElements.innerHTML = '';
+      renderEmptyState({
+        container: this.gridElements,
+        desc: t('brand.empty_elements_desc') || 'No hay iconos o ilustraciones vectoriales en este kit. Sube elementos con el botón superior.',
+        graphicType: 'canvas',
+        title: t('brand.empty_elements_title') || 'Sin elementos gráficos',
+      });
       return;
     }
 
+    removeEmptyState(this.gridElements);
+    if (this.dropzoneElements) this.dropzoneElements.style.display = 'flex';
     this.gridElements.innerHTML = filtered.map((el) => `
       <div class="brand-card" data-ref="card-element-${el.uuid}">
         <div class="brand-card__preview brand-card__preview--checkerboard">
@@ -961,14 +1053,17 @@ export class BrandController {
       : this.activeKit.charts;
 
     if (filtered.length === 0) {
-      this.gridCharts.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay estilos de gráfica configurados.</span>
-        </div>
-      `;
+      this.gridCharts.innerHTML = '';
+      renderEmptyState({
+        container: this.gridCharts,
+        desc: t('brand.empty_charts_desc') || 'Crea estilos de gráficas personalizados con los colores de tu marca.',
+        graphicType: 'reports',
+        title: t('brand.empty_charts_title') || 'Sin estilos de gráficas',
+      });
       return;
     }
 
+    removeEmptyState(this.gridCharts);
     this.gridCharts.innerHTML = filtered.map((chart) => {
       const palette = chart.palette || ['#6366f1', '#8b5cf6', '#ec4899', '#3b82f6'];
       return `
@@ -1019,14 +1114,17 @@ export class BrandController {
       : this.activeKit.templates;
 
     if (filtered.length === 0) {
-      this.gridTemplates.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-tertiary);">
-          <span style="font-size: 14px; font-weight: 500;">No hay plantillas oficiales vinculadas a este kit.</span>
-        </div>
-      `;
+      this.gridTemplates.innerHTML = '';
+      renderEmptyState({
+        container: this.gridTemplates,
+        desc: t('brand.empty_templates_desc') || 'Vincula lienzos existentes como plantillas oficiales de marca.',
+        graphicType: 'templates',
+        title: t('brand.empty_templates_title') || 'Sin plantillas de marca',
+      });
       return;
     }
 
+    removeEmptyState(this.gridTemplates);
     this.gridTemplates.innerHTML = filtered.map((tpl) => `
       <div class="brand-card" data-ref="card-template-${tpl.uuid}">
         <div class="brand-card__preview">

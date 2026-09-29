@@ -1,4 +1,4 @@
-export type SubscriptionTierId = 'free' | 'pro' | 'business';
+export type SubscriptionTierId = 'free' | 'pro' | 'business' | 'enterprise';
 
 export type PlanFeatureKey =
   | 'teams'
@@ -107,18 +107,46 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     features: [
       'teams',
       'live_collaborators_extended',
-      'enterprise_sso',
       'brand_kits',
     ],
     borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
     ringBg: 'rgba(139, 92, 246, 0.18)',
+  },
+  enterprise: {
+    id: 'enterprise',
+    name: 'Spriteboard Empresas',
+    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala',
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    limits: {
+      storageBytes: 5 * 1024 * 1024 * 1024 * 1024,
+      storageFormatted: '5 TB',
+      maxCanvasDimension: 16384,
+      maxLiveCollaborators: 200,
+      maxTeams: 999999,
+      maxTeamMembers: 999999,
+      maxLayers: 50,
+      trashRetentionDays: 90,
+      maxExportScale: 16,
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      maxBrandKits: 9999,
+    },
+    features: [
+      'teams',
+      'live_collaborators_extended',
+      'enterprise_sso',
+      'brand_kits',
+    ],
+    borderColor: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+    ringBg: 'rgba(99, 102, 241, 0.25)',
   },
 };
 
 export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: SubscriptionTierId; name: string }> = {
   teams: { minTier: 'business', name: 'Gestión de equipos' },
   live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
-  enterprise_sso: { minTier: 'business', name: 'Autenticación empresarial (SSO / SCIM)' },
+  enterprise_sso: { minTier: 'enterprise', name: 'Autenticación empresarial (SSO / SCIM)' },
   brand_kits: { minTier: 'business', name: 'Kits de marca' },
 };
 
@@ -126,6 +154,7 @@ export const TIER_RANK: Record<SubscriptionTierId, number> = {
   free: 0,
   pro: 1,
   business: 2,
+  enterprise: 3,
 };
 
 export const ROUTE_FEATURE_REQUIREMENTS: Record<string, { feature: PlanFeatureKey; requiredTier: SubscriptionTierId }> = {
@@ -136,9 +165,10 @@ export const ROUTE_FEATURE_REQUIREMENTS: Record<string, { feature: PlanFeatureKe
 
 export function normalizeTierKey(tier?: string): SubscriptionTierId {
   const norm = (tier || 'free').toLowerCase();
-  if (norm === 'negocios' || norm === 'enterprise') return 'business';
+  if (norm === 'negocios') return 'business';
+  if (norm === 'empresas') return 'enterprise';
   if (norm === 'plus' || norm === 'ultra') return 'pro';
-  if (['free', 'pro', 'business'].includes(norm)) {
+  if (['free', 'pro', 'business', 'enterprise'].includes(norm)) {
     return norm as SubscriptionTierId;
   }
   return 'free';

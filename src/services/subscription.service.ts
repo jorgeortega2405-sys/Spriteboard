@@ -10,11 +10,13 @@ export const TIER_LIMITS = {
   free: PLAN_TIER_CONFIGS.free.limits,
   pro: PLAN_TIER_CONFIGS.pro.limits,
   business: PLAN_TIER_CONFIGS.business.limits,
+  enterprise: PLAN_TIER_CONFIGS.enterprise.limits,
 };
 export const TIER_BORDER_COLORS = {
   free: PLAN_TIER_CONFIGS.free.borderColor,
   pro: PLAN_TIER_CONFIGS.pro.borderColor,
   business: PLAN_TIER_CONFIGS.business.borderColor,
+  enterprise: PLAN_TIER_CONFIGS.enterprise.borderColor,
 };
 
 export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
@@ -204,7 +206,7 @@ export class SubscriptionService {
       currency: 'USD',
       billingPeriod: 'monthly',
       icon: 'business_center',
-      badge: 'Para Empresas',
+      badge: 'Para Equipos',
       isPopular: false,
       buttonText: 'Obtén Spriteboard Negocios',
       borderColor: '#8b5cf6',
@@ -226,8 +228,53 @@ export class SubscriptionService {
           icon: 'groups_3',
         },
         {
-          title: 'Autenticación empresarial (SSO / SCIM)',
-          desc: 'Inicio de sesión corporativo centralizado SAML / OIDC e integraciones',
+          title: 'Kits de marca y paletas centralizadas',
+          desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+          icon: 'palette',
+        },
+      ],
+    },
+    {
+      id: 'enterprise',
+      name: 'Spriteboard Empresas',
+      tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala.',
+      storage: '5 TB de almacenamiento',
+      price: 0,
+      priceMonthly: 0,
+      priceYearly: 0,
+      currency: 'USD',
+      billingPeriod: 'monthly',
+      icon: 'corporate_fare',
+      badge: 'Para Empresas',
+      isPopular: false,
+      isCustomPrice: true,
+      buttonText: 'Hablar con ventas',
+      borderColor: '#6366f1',
+      ringBg: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+      features: [
+        {
+          title: '5 TB de almacenamiento masivo',
+          desc: 'Máxima capacidad para almacenamiento corporativo y proyectos a gran escala',
+          icon: 'cloud',
+        },
+        {
+          title: 'Colaboración masiva para organizaciones',
+          desc: 'Salas de lienzo masivas para toda tu empresa y departamentos',
+          icon: 'groups_3',
+        },
+        {
+          title: 'Gestión centralizada de equipos',
+          desc: 'Crea y administra múltiples equipos de trabajo, roles y lienzos compartidos',
+          icon: 'domain',
+        },
+        {
+          title: 'Kits de marca y paletas centralizadas',
+          desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+          icon: 'palette',
+        },
+        {
+          title: 'Autenticación empresarial (SSO y SAML)',
+          desc: 'Inicio de sesión centralizado corporativo SAML 2.0 y aprovisionamiento SCIM',
           icon: 'vpn_key',
         },
       ],

@@ -114,7 +114,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     currency: 'USD',
     billingPeriod: 'monthly',
     icon: 'business_center',
-    badge: 'Para Empresas',
+    badge: 'Para Equipos',
     isPopular: false,
     buttonText: 'Obtén Spriteboard Negocios',
     features: [
@@ -134,14 +134,58 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'groups_3',
       },
       {
-        title: 'Autenticación empresarial (SSO / SCIM)',
-        desc: 'Inicio de sesión corporativo centralizado SAML / OIDC e integraciones',
+        title: 'Kits de marca y paletas centralizadas',
+        desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+        icon: 'palette',
+      },
+    ],
+  };
+
+  const enterpriseTier = rawTiers.find((tier) => tier.id === 'enterprise' || tier.id === 'empresas') || {
+    id: 'enterprise',
+    name: 'Spriteboard Empresas',
+    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala.',
+    storage: '5 TB de almacenamiento',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    icon: 'corporate_fare',
+    badge: 'Para Empresas',
+    isPopular: false,
+    isCustomPrice: true,
+    buttonText: 'Hablar con ventas',
+    features: [
+      {
+        title: '5 TB de almacenamiento masivo',
+        desc: 'Máxima capacidad para almacenamiento corporativo y proyectos a gran escala',
+        icon: 'cloud',
+      },
+      {
+        title: 'Colaboración masiva para organizaciones',
+        desc: 'Salas de lienzo masivas para toda tu empresa y departamentos',
+        icon: 'groups_3',
+      },
+      {
+        title: 'Gestión centralizada de equipos',
+        desc: 'Crea y administra múltiples equipos de trabajo, roles y lienzos compartidos',
+        icon: 'domain',
+      },
+      {
+        title: 'Kits de marca y paletas centralizadas',
+        desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+        icon: 'palette',
+      },
+      {
+        title: 'Autenticación empresarial (SSO y SAML)',
+        desc: 'Inicio de sesión centralizado corporativo SAML 2.0 y aprovisionamiento SCIM',
         icon: 'vpn_key',
       },
     ],
   };
 
-  const tiers = [freeTier, proTier, businessTier];
+  const tiers = [freeTier, proTier, businessTier, enterpriseTier];
 
   const TIER_HIERARCHY: Record<string, number> = {
     free: 0,
@@ -149,6 +193,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     pro: 1,
     business: 2,
     negocios: 2,
+    enterprise: 3,
+    empresas: 3,
   };
 
   const renderCards = (): void => {
@@ -231,8 +277,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           <div class="component-card-price-label">${tier.isCustomPrice ? 'Presupuesto' : isFree ? 'Para siempre' : 'Desde'}</div>
           <div class="component-card-price-container">
             ${tier.isCustomPrice ? `
-              <span class="component-card-price" style="font-size: 26px;">A medida</span>
-              <span class="component-card-period">/ institucional</span>
+              <span class="component-card-price" style="font-size: 26px;">Contáctanos</span>
+              <span class="component-card-period">/ a medida</span>
             ` : `
               <span class="component-card-price">
                 USD $<span data-ref="plan-price-${tier.id}" data-monthly="${monthlyPrice}" data-yearly="${yearlyPrice}">${initialPrice}</span>
@@ -259,6 +305,15 @@ export async function createUpgradeView(): Promise<HTMLElement> {
               </span>
               <span class="component-button__hover-text">
                 Crear cuenta
+              </span>
+            </button>
+          ` : tier.id === 'enterprise' ? `
+            <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="contact-sales" data-tier="${tier.id}">
+              <span class="component-button__default-text">
+                ${escapeHtml(tier.buttonText || 'Hablar con ventas')}
+              </span>
+              <span class="component-button__hover-text">
+                Contactar
               </span>
             </button>
           ` : `
@@ -291,6 +346,11 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       if (subscribeBtn && !isCurrentPlan && !isDowngrade) {
         subscribeBtn.addEventListener('click', async (e) => {
           e.preventDefault();
+
+          if (tier.id === 'enterprise') {
+            navigate('/contact/sales');
+            return;
+          }
 
           if (tier.id === 'free') {
             if (!currentUser) {

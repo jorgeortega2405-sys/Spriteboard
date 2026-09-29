@@ -187,6 +187,8 @@ CREATE TABLE IF NOT EXISTS ai_chat_feedback (
 CREATE TABLE IF NOT EXISTS enterprise_tenants (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid VARCHAR(36) NOT NULL UNIQUE,
+    owner_id INT NULL,
+    tenant_type VARCHAR(50) NOT NULL DEFAULT 'business',
     name VARCHAR(255) NOT NULL,
     domain VARCHAR(255) NOT NULL UNIQUE,
     idp_entity_id VARCHAR(512) NULL,
@@ -197,9 +199,11 @@ CREATE TABLE IF NOT EXISTS enterprise_tenants (
     sso_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     enforce_sso BOOLEAN NOT NULL DEFAULT FALSE,
     default_role VARCHAR(50) NOT NULL DEFAULT 'USER',
+    target_team_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_tenant_domain (domain)
+    INDEX idx_tenant_domain (domain),
+    INDEX idx_tenant_owner (owner_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_federated_identities (

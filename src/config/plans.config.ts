@@ -118,7 +118,6 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     features: [
       'teams',
       'live_collaborators_extended',
-      'enterprise_sso',
       'brand_kits',
       'ai_bg_removal',
     ],
@@ -150,12 +149,50 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     ringBg: 'rgba(139, 92, 246, 0.18)',
     tagline: 'Máxima potencia, colaboración y equipos centralizados',
   },
+  enterprise: {
+    borderColor: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+    currency: 'USD',
+    features: [
+      'teams',
+      'live_collaborators_extended',
+      'enterprise_sso',
+      'brand_kits',
+      'ai_bg_removal',
+    ],
+    id: 'enterprise',
+    limits: {
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
+      allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'],
+      maxAiTokensFormatted: 'Ilimitado',
+      maxAiTokensPerCycle: 10000000,
+      maxBatchUploadCount: 100,
+      maxBrandKits: 9999,
+      maxCanvasDimension: 16384,
+      maxExportScale: 16,
+      maxImageSizeBytes: 500 * 1024 * 1024,
+      maxLayers: 50,
+      maxLiveCollaborators: 200,
+      maxTeamMembers: 999999,
+      maxTeams: 999999,
+      maxVideoDurationSeconds: 7200,
+      maxVideoSizeBytes: 5 * 1024 * 1024 * 1024,
+      storageBytes: 5 * 1024 * 1024 * 1024 * 1024,
+      storageFormatted: '5 TB',
+      trashRetentionDays: 90,
+    },
+    name: 'Spriteboard Empresas',
+    priceMonthly: 0,
+    priceYearly: 0,
+    ringBg: 'rgba(99, 102, 241, 0.25)',
+    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala',
+  },
 };
 
 export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: SubscriptionTierId; name: string }> = {
   teams: { minTier: 'business', name: 'Gestión de equipos' },
   live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
-  enterprise_sso: { minTier: 'business', name: 'Autenticación empresarial (SSO / SCIM)' },
+  enterprise_sso: { minTier: 'enterprise', name: 'Autenticación empresarial (SSO / SCIM)' },
   brand_kits: { minTier: 'business', name: 'Kits de marca' },
   ai_bg_removal: { minTier: 'pro', name: 'Eliminación de fondo con IA' },
 };
@@ -164,13 +201,15 @@ export const TIER_RANK: Record<SubscriptionTierId, number> = {
   free: 0,
   pro: 1,
   business: 2,
+  enterprise: 3,
 };
 
 export function normalizeTierKey(tier?: string): SubscriptionTierId {
   const norm = (tier || 'free').toLowerCase();
-  if (norm === 'negocios' || norm === 'enterprise') return 'business';
+  if (norm === 'negocios') return 'business';
+  if (norm === 'empresas') return 'enterprise';
   if (norm === 'plus' || norm === 'ultra') return 'pro';
-  if (['free', 'pro', 'business'].includes(norm)) {
+  if (['free', 'pro', 'business', 'enterprise'].includes(norm)) {
     return norm as SubscriptionTierId;
   }
   return 'free';

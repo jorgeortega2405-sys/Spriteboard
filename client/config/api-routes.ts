@@ -124,6 +124,9 @@ export const API_ROUTES = {
     publish: '/api/templates/publish',
     toggleVisibility: (id: number | string) => `/api/templates/my/${encodeURIComponent(String(id))}/visibility`,
   },
+  sales: {
+    inquiry: '/api/sales/inquiry',
+  },
   search: (q: string) => `/api/search?q=${encodeURIComponent(q)}`,
   uploads: {
     base: '/api/uploads',

@@ -15,7 +15,7 @@
             </button>
 
             <div class="dropdown-backdrop" data-ref="kit-picker-dropdown-backdrop">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto rail-floating-panel" data-ref="kit-picker-menu">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="kit-picker-menu">
                 <div class="menu-panel__list menu-panel__list--scrollable" data-ref="kit-picker-list" style="max-height: 280px;"></div>
                 <div class="menu-divider"></div>
                 <button type="button" class="menu-item" data-ref="btn-picker-create-kit">
@@ -38,7 +38,7 @@
           </div>
 
           <div class="dropdown-backdrop" data-ref="kit-options-backdrop">
-            <div class="menu-panel menu-panel--dropdown menu-panel--w-225 menu-panel--h-auto rail-floating-panel" data-ref="kit-options-menu">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-225 menu-panel--h-auto" data-ref="kit-options-menu">
               <button type="button" class="menu-item" data-ref="btn-option-edit-kit">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
                 <span class="menu-item__text" data-i18n="brand.edit_kit">Editar información</span>
@@ -79,7 +79,11 @@
             </button>
 
             <div class="component-tags-carousel" data-ref="brand-categories-badges">
-              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-logos" data-tab="logos">
+              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-all" data-tab="all">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+                <span data-i18n="brand.tab_all">Todos los recursos</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-logos" data-tab="logos">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
                 <span data-i18n="brand.tab_logos">Logotipos</span>
                 <span class="brand-nav-tab__count" data-ref="count-logos">0</span>
@@ -92,7 +96,7 @@
               <button type="button" class="component-badge component-badge--interactive" data-ref="tab-fonts" data-tab="fonts">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
                 <span data-i18n="brand.tab_fonts">Tipografías</span>
-                <span class="brand-nav-tab__count" data-ref="count-fonts">5</span>
+                <span class="brand-nav-tab__count" data-ref="count-fonts">0</span>
               </button>
               <button type="button" class="component-badge component-badge--interactive" data-ref="tab-photos" data-tab="photos">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
@@ -163,7 +167,126 @@
       </div>
 
       <div class="canvas-section brand-content-view" data-ref="brand-content-view">
-        <div class="brand-pane" data-ref="pane-logos">
+        <div class="brand-pane" data-ref="pane-all">
+          <div class="brand-banner-hero" data-ref="brand-overview-banner">
+            <div class="brand-banner-hero__content">
+              <h2 class="brand-banner-hero__title" data-i18n="brand.banner_title">Crea diseños fieles a tu marca</h2>
+              <p class="brand-banner-hero__desc" data-i18n="brand.banner_desc">Prepara tu Kit de Marca con tus recursos y tus pautas. Vas a crear diseños llamativos sin dejar de ser fiel a la marca.</p>
+              <div class="brand-banner-hero__actions">
+                <button type="button" class="component-button component-button--h36 brand-banner-hero__btn-primary" data-ref="btn-banner-upgrade">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                  <span data-i18n="brand.banner_btn_upgrade">Suscríbete a Negocios</span>
+                </button>
+                <button type="button" class="component-button component-button--h36 brand-banner-hero__btn-secondary" data-ref="btn-banner-secondary">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  <span data-i18n="brand.banner_btn_secondary">Empieza con tres colores gratis</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="brand-banner-hero__visual" aria-hidden="true">
+              <div class="brand-banner-hero__art-text">Aa<span class="brand-banner-hero__art-tag" data-ref="banner-art-tag">Kit</span></div>
+              <div class="brand-banner-hero__art-avatar">
+                <svg class="component-icon brand-banner-hero__art-avatar-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+              </div>
+              <div class="brand-banner-hero__art-palette" data-ref="banner-art-palette">
+                <span class="brand-banner-hero__art-palette-dot" style="background-color: #2563eb;"></span>
+                <span class="brand-banner-hero__art-palette-dot" style="background-color: #3b82f6;"></span>
+                <span class="brand-banner-hero__art-palette-dot" style="background-color: #60a5fa;"></span>
+                <span class="brand-banner-hero__art-palette-dot" style="background-color: #93c5fd;"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="brand-overview-grid" data-ref="brand-overview-grid">
+            <div class="brand-overview-card" data-ref="card-overview-templates" data-target-tab="templates">
+              <div class="brand-overview-card__preview">
+                <svg class="component-icon" style="font-size: 48px; color: #2563eb;" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_templates">Plantillas de la marca</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-templates">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-logos" data-target-tab="logos">
+              <div class="brand-overview-card__preview">
+                <svg class="component-icon" style="font-size: 48px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_logos">Logos</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-logos">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-colors" data-target-tab="colors">
+              <div class="brand-overview-card__preview" data-ref="preview-overview-colors">
+                <div style="display: flex; gap: 4px; width: 80%; height: 28px; border-radius: 6px; overflow: hidden;">
+                  <div style="flex: 1; background-color: #2563eb;"></div>
+                  <div style="flex: 1; background-color: #3b82f6;"></div>
+                  <div style="flex: 1; background-color: #60a5fa;"></div>
+                  <div style="flex: 1; background-color: #10b981;"></div>
+                </div>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_colors">Colores</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-colors">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-fonts" data-target-tab="fonts">
+              <div class="brand-overview-card__preview">
+                <span style="font-size: 38px; font-weight: 700; color: var(--text-primary); font-family: 'Inter', sans-serif;">Aa</span>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_fonts">Fuentes</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-fonts">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-voice" data-target-tab="voice">
+              <div class="brand-overview-card__preview">
+                <span style="font-size: 56px; font-family: Georgia, serif; line-height: 1; color: #1d4ed8;">“</span>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_voice">Voz de la marca</span>
+                <svg class="component-icon" style="font-size: 16px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-photos" data-target-tab="photos">
+              <div class="brand-overview-card__preview">
+                <svg class="component-icon" style="font-size: 48px; color: #0284c7;" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_photos">Fotos</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-photos">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-elements" data-target-tab="elements">
+              <div class="brand-overview-card__preview">
+                <svg class="component-icon" style="font-size: 48px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_elements">Elementos gráficos</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-elements">0</span>
+              </div>
+            </div>
+
+            <div class="brand-overview-card" data-ref="card-overview-charts" data-target-tab="charts">
+              <div class="brand-overview-card__preview">
+                <svg class="component-icon" style="font-size: 48px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+              </div>
+              <div class="brand-overview-card__footer">
+                <span class="brand-overview-card__title" data-i18n="brand.overview_charts">Gráficas</span>
+                <span class="brand-overview-card__badge" data-ref="overview-count-charts">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-logos">
           <div class="brand-section-header">
             <div>
               <h2 class="brand-section-title" data-i18n="brand.logos_title">Logotipos de la marca</h2>

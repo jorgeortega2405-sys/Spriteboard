@@ -83,7 +83,7 @@ services:
     container_name: spriteboard-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env
     environment:
@@ -193,7 +193,7 @@ services:
     container_name: spriteboard-websocket
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     env_file:
       - .env
     environment:

@@ -352,8 +352,8 @@ class TeamsController {
 
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     const hasTeams = this.allTeams.length > 0;
-
-    const canCreateTeams = userTier === 'business';
+    const userPermissions = (currentUser as any)?.permissions || [];
+    const canCreateTeams = ['business', 'negocios', 'enterprise', 'empresas'].includes(userTier) || userPermissions.includes('subscription:feature:teams');
     if (!canCreateTeams && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');

@@ -11,7 +11,7 @@ export const ALLOWED_EMAIL_DOMAINS = [
 
 export type ValidationResult = { valid: true } | { valid: false; error: string };
 
-export function validateEmail(email: unknown): ValidationResult {
+export function validateEmail(email: unknown, options?: { enforceAllowedDomains?: boolean }): ValidationResult {
   if (!email || typeof email !== 'string') {
     return { valid: false, error: t('validation.email_required') };
   }
@@ -27,7 +27,9 @@ export function validateEmail(email: unknown): ValidationResult {
     return { valid: false, error: t('validation.email_invalid') };
   }
 
-  const enforce = appConfig.enforceAllowedEmailDomains !== undefined ? appConfig.enforceAllowedEmailDomains : true;
+  const enforce = options?.enforceAllowedDomains !== undefined
+    ? options.enforceAllowedDomains
+    : (appConfig.enforceAllowedEmailDomains !== undefined ? appConfig.enforceAllowedEmailDomains : true);
   if (enforce) {
     const parts = trimmed.split('@');
     const domain = parts[1];
