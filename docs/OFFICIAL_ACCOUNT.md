@@ -1,6 +1,6 @@
-﻿# Cuenta Oficial de Spriteboard (Credenciales del Sistema)
+# Cuenta Oficial de Spriteboard (Credenciales del Sistema)
 
-Este archivo contiene la información de referencia de la cuenta oficial corporativa de **Spriteboard**, inicializada a través de `db_identity.sql`.
+Este archivo contiene la información de referencia de la cuenta oficial corporativa de **Spriteboard**, inicializada a través de `database/db_identity.sql`.
 
 > **Nota de Seguridad**: Este documento es de uso interno exclusivo para el administrador del proyecto y no debe ser expuesto ni consumido por el frontend.
 
@@ -33,4 +33,4 @@ Este archivo contiene la información de referencia de la cuenta oficial corpora
 
 ## Inicialización
 
-Las credenciales y datos anteriores se aplican automáticamente en cada inicio en limpio de la base de datos MySQL mediante `db_identity.sql`.
+Las credenciales y datos anteriores se aplican automáticamente en cada inicio en limpio de la base de datos MySQL mediante `database/db_identity.sql`.

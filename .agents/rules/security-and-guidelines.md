@@ -13,6 +13,6 @@ trigger: always_on
 - **Cero Anotaciones**: Prohibido JSDoc, PHPDoc, bloques decorativos y comentarios inline de código evidente.
 - **Arquitectura JS**: Controladores con ciclo de vida `init()`, `bindEvents()`, `destroy()` y `AbortController`.
 - **Control de Acceso (PBAC)**: Prohibido regirse por roles directamente o tiers de suscripción en código. Todo acceso se valida por permisos (`hasPermission`, `requirePermission`) y permisos activos de suscripción (`subscription:feature:*`, `hasSubscriptionFeature`, `requireFeature`).
-- **Base de Datos (Cero DDL Inline)**: Prohibido `CREATE TABLE` o `ALTER TABLE` en `database.config.ts` o servicios. Todo esquema e índice debe residir en `db_identity.sql` y `db_canvas.sql`.
+- **Base de Datos (Cero DDL Inline)**: Prohibido `CREATE TABLE` o `ALTER TABLE` en `database.config.ts` o servicios. Todo esquema e índice debe residir en los scripts de arranque en `database/` (`db_identity.sql`, `db_canvas.sql` y `db_cassandra.cql`).
 - **Referencia**: Consulta `docs/AI_INSTRUCTIONS.md` y `AGENTS.md`.
 

@@ -1,13 +1,11 @@
-import { config } from '../config/env.config.js';
-import { logger } from './logger.service.js';
 import crypto from 'crypto';
 
 const PREFIX = 'v1:enc:';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 
-function getEncryptionKey(): Buffer {
-  const rawKey = config.appEncryptionKey || config.sessionSecret;
+function getEncryptionKey(overrideKey?: string): Buffer {
+  const rawKey = overrideKey || process.env.APP_ENCRYPTION_KEY || process.env.SESSION_SECRET || 'spriteboard_encryption_default_key_2026';
   if (/^[0-9a-fA-F]{64}$/.test(rawKey)) {
     return Buffer.from(rawKey, 'hex');
   }
@@ -19,27 +17,22 @@ export function isEncrypted(value?: string | null): boolean {
   return value.startsWith(PREFIX);
 }
 
-export function encryptAtRest(plainText: string): string {
+export function encryptAtRest(plainText: string, secretKey?: string): string {
   if (!plainText || typeof plainText !== 'string') return plainText;
   if (isEncrypted(plainText)) return plainText;
 
-  try {
-    const key = getEncryptionKey();
-    const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const key = getEncryptionKey(secretKey);
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-    let encrypted = cipher.update(plainText, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const authTag = cipher.getAuthTag().toString('hex');
+  let encrypted = cipher.update(plainText, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag().toString('hex');
 
-    return `${PREFIX}${iv.toString('hex')}:${authTag}:${encrypted}`;
-  } catch (err) {
-    logger.security.error('Error al cifrar datos en reposo', err);
-    throw new Error('Error al procesar cifrado de seguridad.');
-  }
+  return `${PREFIX}${iv.toString('hex')}:${authTag}:${encrypted}`;
 }
 
-export function decryptAtRest(cipherText?: string | null): string {
+export function decryptAtRest(cipherText?: string | null, secretKey?: string): string {
   if (!cipherText || typeof cipherText !== 'string') return '';
   if (!isEncrypted(cipherText)) return cipherText;
 
@@ -50,7 +43,7 @@ export function decryptAtRest(cipherText?: string | null): string {
     const iv = Buffer.from(parts[2], 'hex');
     const authTag = Buffer.from(parts[3], 'hex');
     const encryptedHex = parts[4];
-    const key = getEncryptionKey();
+    const key = getEncryptionKey(secretKey);
 
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
@@ -58,8 +51,7 @@ export function decryptAtRest(cipherText?: string | null): string {
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
-  } catch (err) {
-    logger.security.error('Error al descifrar datos en reposo', err);
+  } catch {
     return cipherText;
   }
 }

@@ -4763,10 +4763,14 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       }
 
       const btnOpenDesktop = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-open-desktop"]');
+      const desktopDivider = avatarContainer.querySelector<HTMLElement>('[data-ref="desktop-divider"]');
       if (btnOpenDesktop) {
         const isAlreadyInDesktop = Boolean((window as any).spriteDesktop?.isDesktop);
         if (isAlreadyInDesktop) {
           btnOpenDesktop.style.display = 'none';
+          if (desktopDivider) {
+            desktopDivider.style.display = 'none';
+          }
         } else {
           btnOpenDesktop.addEventListener('click', (e) => {
             e.preventDefault();

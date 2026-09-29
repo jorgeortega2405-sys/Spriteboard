@@ -1,8 +1,10 @@
 import { loadTemplate } from '../services/template.service.js';
+import { loadStylesheet } from '../utils/dom.util.js';
 import { createErrorView } from './error.view.js';
 import { SheetController } from './sheet/sheet.controller.js';
 
 export async function createSheetView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
+  await loadStylesheet('/css/components/component-sheet.css');
   const container = await loadTemplate('/views/sheet/sheet.html');
   const controller = new SheetController(container, canvasUuid, initialRecord);
 

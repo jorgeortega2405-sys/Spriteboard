@@ -885,8 +885,8 @@ class HomeController {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'canvas');
     }
 
-    await Promise.all([this.loadFolders(), this.loadCanvases(false)]);
-    this.filterFolders();
+    await this.loadFolders();
+    await this.loadCanvases(false);
   }
 
   private async loadCanvases(showInitialSkeletons = true): Promise<void> {
@@ -1956,6 +1956,7 @@ class HomeController {
   private async loadFolders(): Promise<void> {
     if (!currentUser) {
       this.folders = [];
+      this.filterFolders();
       return;
     }
 
@@ -1968,6 +1969,7 @@ class HomeController {
     } catch {
       this.folders = [];
     }
+    this.filterFolders();
   }
 
   private createFolderCardElement(folder: FolderItem): HTMLElement {

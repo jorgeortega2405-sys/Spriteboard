@@ -987,5 +987,32 @@ export function removeEmptyState(container: HTMLElement, dataRef?: string): void
   }
 }
 
+const loadedStylesheets = new Set<string>();
+
+export function loadStylesheet(href: string): Promise<void> {
+  if (loadedStylesheets.has(href) || (typeof document !== 'undefined' && document.querySelector(`link[href="${href}"]`))) {
+    loadedStylesheets.add(href);
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    if (typeof document === 'undefined') {
+      resolve();
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => {
+      loadedStylesheets.add(href);
+      resolve();
+    };
+    link.onerror = () => {
+      resolve();
+    };
+    document.head.appendChild(link);
+  });
+}
+
 export { getEmptyIllustration };
 

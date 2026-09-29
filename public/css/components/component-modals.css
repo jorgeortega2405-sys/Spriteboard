@@ -9136,7 +9136,7 @@ body[data-theme="dark"] .upgrade-modal__btn-institution:hover {
 
 .modal-split__right,
 .upgrade-modal__right {
-  padding: 24px;
+  padding: 24px 24px 0 24px;
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
@@ -9172,13 +9172,21 @@ body[data-theme="dark"] .upgrade-modal__btn-institution:hover {
 .modal-split__active-indicator,
 .upgrade-modal__active-indicator {
   position: absolute;
+  top: 0;
+  bottom: 0;
   pointer-events: none;
   background-color: var(--theme-accent-subtle, rgba(99, 102, 241, 0.08));
-  border: 2px solid var(--theme-accent, #4f46e5);
-  border-radius: 10px;
+  border-top: 2px solid var(--theme-accent, #4f46e5);
+  border-left: 2px solid var(--theme-accent, #4f46e5);
+  border-right: 2px solid var(--theme-accent, #4f46e5);
+  border-bottom: none;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   box-sizing: border-box;
   z-index: 2;
-  transition: left var(--sl-transition-fast), width var(--sl-transition-fast), top var(--sl-transition-fast), height var(--sl-transition-fast);
+  transition: left var(--sl-transition-fast), width var(--sl-transition-fast), top var(--sl-transition-fast);
 }
 
 html[data-theme="dark"] .modal-split__active-indicator,

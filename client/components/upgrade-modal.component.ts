@@ -225,6 +225,8 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const activeIndicator = backdrop.querySelector<HTMLElement>('[data-ref="active-column-indicator"]');
   const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
 
+  let resizeObserver: ResizeObserver | null = null;
+
   const updateIndicatorPosition = (plan: PlanTier) => {
     if (!activeIndicator || !tableWrapper) return;
     const normalized = plan;
@@ -232,14 +234,30 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     const activeTh = backdrop.querySelector<HTMLElement>(`[data-ref="th-plan-${normalized}"]`);
     const table = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-comparison-table"]');
     if (!activeTh || !table) return;
-    const wrapperRect = tableWrapper.getBoundingClientRect();
-    const thRect = activeTh.getBoundingClientRect();
-    const tableRect = table.getBoundingClientRect();
-    if (thRect.width > 0) {
-      activeIndicator.style.left = `${thRect.left - wrapperRect.left}px`;
-      activeIndicator.style.width = `${thRect.width}px`;
-      activeIndicator.style.top = `${tableRect.top - wrapperRect.top}px`;
-      activeIndicator.style.height = `${tableRect.height}px`;
+
+    const thLeft = activeTh.offsetLeft;
+    const thWidth = activeTh.offsetWidth;
+    const tableLeft = table.offsetLeft;
+    const tableTop = table.offsetTop;
+    const tableHeight = table.offsetHeight;
+
+    if (thWidth > 0) {
+      activeIndicator.style.left = `${tableLeft + thLeft}px`;
+      activeIndicator.style.width = `${thWidth}px`;
+      activeIndicator.style.top = `${tableTop}px`;
+      activeIndicator.style.bottom = '0px';
+      activeIndicator.style.height = 'auto';
+    } else {
+      const wrapperRect = tableWrapper.getBoundingClientRect();
+      const thRect = activeTh.getBoundingClientRect();
+      const tableRect = table.getBoundingClientRect();
+      if (thRect.width > 0 && wrapperRect.width > 0) {
+        activeIndicator.style.left = `${thRect.left - wrapperRect.left}px`;
+        activeIndicator.style.width = `${thRect.width}px`;
+        activeIndicator.style.top = `${tableRect.top - wrapperRect.top}px`;
+        activeIndicator.style.bottom = '0px';
+        activeIndicator.style.height = 'auto';
+      }
     }
   };
 
@@ -269,10 +287,24 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     updateIndicatorPosition(plan);
   };
 
+  if (typeof ResizeObserver !== 'undefined' && tableWrapper) {
+    resizeObserver = new ResizeObserver(() => {
+      updateIndicatorPosition(selectedPlan);
+    });
+    resizeObserver.observe(tableWrapper);
+    const tableEl = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-comparison-table"]');
+    if (tableEl) {
+      resizeObserver.observe(tableEl);
+    }
+  }
+
   requestAnimationFrame(() => {
     backdrop.classList.add('is-visible');
     updateIndicatorPosition(selectedPlan);
   });
+  setTimeout(() => updateIndicatorPosition(selectedPlan), 50);
+  setTimeout(() => updateIndicatorPosition(selectedPlan), 150);
+  setTimeout(() => updateIndicatorPosition(selectedPlan), 300);
 
   const handleResize = () => {
     updateIndicatorPosition(selectedPlan);
@@ -411,6 +443,10 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
 
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('resize', handleResize);
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
     detachPointerListeners();
     dragZone?.removeEventListener('pointerdown', onPointerDown);
     dragZone?.removeEventListener('lostpointercapture', onPointerUp);

@@ -1,7 +1,9 @@
 import { loadTemplate } from '../services/template.service.js';
+import { loadStylesheet } from '../utils/dom.util.js';
 import { VideoController } from './video/video.controller.js';
 
 export async function createVideoView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
+  await loadStylesheet('/css/components/component-video.css');
   const container = await loadTemplate('/views/video/video.html');
 
   const controller = new VideoController(container, canvasUuid, initialRecord);

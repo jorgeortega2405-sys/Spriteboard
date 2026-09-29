@@ -12,8 +12,8 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db_identity.sql:/docker-entrypoint-initdb.d/01_db_identity.sql:ro
-      - ./db_canvas.sql:/docker-entrypoint-initdb.d/02_db_canvas.sql:ro
+      - ./database/db_identity.sql:/docker-entrypoint-initdb.d/01_db_identity.sql:ro
+      - ./database/db_canvas.sql:/docker-entrypoint-initdb.d/02_db_canvas.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootsecret"]
       interval: 5s
@@ -49,8 +49,8 @@ services:
       - HEAP_NEWSIZE=128M
     volumes:
       - cassandra_data:/var/lib/cassandra
-      - ./db_cassandra.cql:/init.cql:ro
-      - ./db_cassandra.cql:/docker-entrypoint-initdb.d/db_cassandra.cql:ro
+      - ./database/db_cassandra.cql:/init.cql:ro
+      - ./database/db_cassandra.cql:/docker-entrypoint-initdb.d/db_cassandra.cql:ro
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
       interval: 10s
@@ -154,6 +154,7 @@ services:
     volumes:
       - ./admin:/app
       - /app/node_modules
+      - ./packages/shared:/app/packages/shared:ro
       - ./logs:/app/main_logs:ro
       - ./public/uploads:/app/public/uploads:ro
     command: npm run dev

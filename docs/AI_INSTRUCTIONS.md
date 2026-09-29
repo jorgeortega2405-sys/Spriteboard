@@ -288,5 +288,5 @@ export { SettingsController };
 
 1. **Scripts SQL de Arranque como Única Fuente de la Verdad**:
    - **NUNCA** coloques sentencias DDL (`CREATE TABLE`, `ALTER TABLE`, `CREATE INDEX`, etc.) dentro de archivos TypeScript/JavaScript (`database.config.ts`, servicios o controladores).
-   - Toda creación de tablas, columnas, índices y datos iniciales de catálogo debe residir **estrictamente en los archivos SQL de arranque** (`db_identity.sql` y `db_canvas.sql`).
-   - La configuración de base de datos (`database.config.ts`) debe dedicarse única y exclusivamente a la inicialización y administración de los pools de conexión y comprobaciones de estado.
+   - Toda creación de tablas, columnas, índices y datos iniciales de catálogo debe residir **estrictamente en los archivos SQL/CQL de arranque en `database/`** (`database/db_identity.sql`, `database/db_canvas.sql` y `database/db_cassandra.cql`).
+   - La configuración de base de datos (`database.config.ts`, `cassandra.config.ts`) debe dedicarse única y exclusivamente a la inicialización y administración de los pools de conexión y comprobaciones de estado.

@@ -1,0 +1,16 @@
+{
+  "name": "@spriteboard/shared",
+  "version": "1.0.0",
+  "description": "Biblioteca compartida de tipos, utilidades y criptografía para Spriteboard y Admin",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2"
+  }
+}
