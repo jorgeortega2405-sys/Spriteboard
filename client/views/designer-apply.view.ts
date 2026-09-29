@@ -256,7 +256,7 @@ export class DesignerApplyController {
     const countryText = this.container.querySelector<HTMLElement>('[data-ref="country-selected-text"]');
 
     if (countryWrapper && countryTrigger && countryMenu) {
-      setupDropdown(countryWrapper, countryTrigger, countryMenu, { backdrop: countryBackdrop || undefined, signal });
+      setupDropdown(countryWrapper, { backdrop: countryBackdrop || undefined, menu: countryMenu, trigger: countryTrigger });
       countryMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;

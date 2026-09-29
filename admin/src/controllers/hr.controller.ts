@@ -18,7 +18,7 @@ export async function handleListEmployees(req: Request, res: Response): Promise<
 
     const user = (req as any).user;
     const userPermissions: string[] = user?.permissions || [];
-    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || user?.role === 'SUPER_ADMIN' || user?.role === 'PLATFORM_ADMIN';
+    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || userPermissions.includes('hr:manage');
 
     const result = await listEmployees({
       canViewSalary,
@@ -47,7 +47,7 @@ export async function handleGetEmployeeDetails(req: Request, res: Response): Pro
 
     const user = (req as any).user;
     const userPermissions: string[] = user?.permissions || [];
-    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || user?.role === 'SUPER_ADMIN' || user?.role === 'PLATFORM_ADMIN';
+    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || userPermissions.includes('hr:manage');
 
     const employee = await getEmployeeById(id, canViewSalary);
     if (!employee) {
@@ -286,7 +286,7 @@ export async function handleGetCareerHistory(req: Request, res: Response): Promi
 
     const user = (req as any).user;
     const userPermissions: string[] = user?.permissions || [];
-    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || user?.role === 'SUPER_ADMIN' || user?.role === 'PLATFORM_ADMIN';
+    const canViewSalary = userPermissions.includes('*') || userPermissions.includes('hr:salary_view') || userPermissions.includes('hr:manage');
 
     const employee = await getEmployeeById(id, canViewSalary);
     if (!employee) {

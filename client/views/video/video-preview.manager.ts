@@ -1,5 +1,5 @@
 import { VideoPlaybackEngine } from './engine/video-playback-engine.js';
-import { VideoClip, VideoProject, VideoTransform } from './video.types.js';
+import { VideoClip, VideoProject, VideoTextConfig, VideoTransform } from './video.types.js';
 
 export type VideoResizeHandle = 'e' | 'n' | 'ne' | 'nw' | 's' | 'se' | 'sw' | 'w';
 
@@ -707,11 +707,11 @@ export class VideoPreviewManager {
 
     let words = textCfg.words || [];
     if (words.length === 0) {
-      const split = rawText.split(/\s+/).filter(Boolean);
+      const split: string[] = rawText.split(/\s+/).filter(Boolean);
       const dur = Math.max(0.2, clip.duration || 2);
-      const totalChars = split.reduce((acc, w) => acc + w.length, 0) || 1;
+      const totalChars = split.reduce((acc: number, w: string) => acc + w.length, 0) || 1;
       let cur = 0;
-      words = split.map((w) => {
+      words = split.map((w: string) => {
         const wDur = (w.length / totalChars) * dur;
         const wStart = cur;
         cur += wDur;
@@ -719,7 +719,7 @@ export class VideoPreviewManager {
       });
     }
 
-    let activeIndex = words.findIndex((w) => localTime >= w.start && localTime < w.end);
+    let activeIndex = words.findIndex((w: { end: number; start: number; word: string }) => localTime >= w.start && localTime < w.end);
     if (activeIndex === -1) {
       if (localTime >= (words[words.length - 1]?.end ?? 0)) {
         activeIndex = words.length - 1;
@@ -729,8 +729,8 @@ export class VideoPreviewManager {
     }
 
     const spaceWidth = this._ctx.measureText(' ').width;
-    const wordWidths = words.map((w) => this._ctx!.measureText(w.word).width);
-    const totalWordsWidth = wordWidths.reduce((acc, w) => acc + w, 0) + Math.max(0, words.length - 1) * spaceWidth;
+    const wordWidths = words.map((w: { end: number; start: number; word: string }) => this._ctx!.measureText(w.word).width);
+    const totalWordsWidth = wordWidths.reduce((acc: number, w: number) => acc + w, 0) + Math.max(0, words.length - 1) * spaceWidth;
 
     let startX = posX - totalWordsWidth / 2;
     if (align === 'left') startX = posX;

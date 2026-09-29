@@ -1802,7 +1802,7 @@ export class VideoTimelineManager {
     const transText = this._container.querySelector<HTMLElement>('[data-ref="transition-type-selected-text"]');
 
     if (transWrapper && transTrigger && transMenu) {
-      setupDropdown(transWrapper, transTrigger, transMenu, { backdrop: transBackdropEl || undefined, signal });
+      setupDropdown(transWrapper, { backdrop: transBackdropEl || undefined, menu: transMenu, trigger: transTrigger });
       transMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;
@@ -1900,7 +1900,7 @@ export class VideoTimelineManager {
     const subSrcText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-source-selected-text"]');
 
     if (subSrcWrapper && subSrcTrigger && subSrcMenu) {
-      setupDropdown(subSrcWrapper, subSrcTrigger, subSrcMenu, { backdrop: subSrcBackdrop || undefined, signal });
+      setupDropdown(subSrcWrapper, { backdrop: subSrcBackdrop || undefined, menu: subSrcMenu, trigger: subSrcTrigger });
       subSrcMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;
@@ -1923,7 +1923,7 @@ export class VideoTimelineManager {
     const subLangText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-lang-selected-text"]');
 
     if (subLangWrapper && subLangTrigger && subLangMenu) {
-      setupDropdown(subLangWrapper, subLangTrigger, subLangMenu, { backdrop: subLangBackdrop || undefined, signal });
+      setupDropdown(subLangWrapper, { backdrop: subLangBackdrop || undefined, menu: subLangMenu, trigger: subLangTrigger });
       subLangMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;
@@ -1946,7 +1946,7 @@ export class VideoTimelineManager {
     const subStyleText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-style-selected-text"]');
 
     if (subStyleWrapper && subStyleTrigger && subStyleMenu) {
-      setupDropdown(subStyleWrapper, subStyleTrigger, subStyleMenu, { backdrop: subStyleBackdrop || undefined, signal });
+      setupDropdown(subStyleWrapper, { backdrop: subStyleBackdrop || undefined, menu: subStyleMenu, trigger: subStyleTrigger });
       subStyleMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;
@@ -2046,7 +2046,7 @@ export class VideoTimelineManager {
         const fontSize = 46;
 
         for (let i = 0; i < result.subtitles.length; i++) {
-          const item = result.subtitles[i];
+          const item = result.subtitles[i] as { end: number; start: number; text: string; words?: Array<{ end: number; start: number; word: string }> };
           const dur = Math.max(0.4, item.end - item.start);
 
           const words = (item.words && item.words.length > 0)

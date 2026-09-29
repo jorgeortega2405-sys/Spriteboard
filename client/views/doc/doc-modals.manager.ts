@@ -222,7 +222,7 @@ export class DocModalsManager {
       const themeText = modalEl.querySelector<HTMLElement>('[data-ref="modal-theme-selected-text"]');
 
       if (themeWrapper && themeTrigger && themeMenu) {
-        setupDropdown(themeWrapper, themeTrigger, themeMenu, { backdrop: themeBackdrop || undefined });
+        setupDropdown(themeWrapper, { backdrop: themeBackdrop || undefined, menu: themeMenu, trigger: themeTrigger });
         themeMenu.addEventListener('click', (e) => {
           const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
           if (!item) return;
@@ -242,7 +242,7 @@ export class DocModalsManager {
       const borderText = modalEl.querySelector<HTMLElement>('[data-ref="modal-border-selected-text"]');
 
       if (borderWrapper && borderTrigger && borderMenu) {
-        setupDropdown(borderWrapper, borderTrigger, borderMenu, { backdrop: borderBackdrop || undefined });
+        setupDropdown(borderWrapper, { backdrop: borderBackdrop || undefined, menu: borderMenu, trigger: borderTrigger });
         borderMenu.addEventListener('click', (e) => {
           const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
           if (!item) return;
@@ -553,7 +553,7 @@ export class DocModalsManager {
       const paperText = modalEl.querySelector<HTMLElement>('[data-ref="modal-paper-selected-text"]');
 
       if (paperWrapper && paperTrigger && paperMenu) {
-        setupDropdown(paperWrapper, paperTrigger, paperMenu, { backdrop: paperBackdrop || undefined });
+        setupDropdown(paperWrapper, { backdrop: paperBackdrop || undefined, menu: paperMenu, trigger: paperTrigger });
         paperMenu.addEventListener('click', (e) => {
           const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
           if (!item) return;
@@ -573,7 +573,7 @@ export class DocModalsManager {
       const marginsText = modalEl.querySelector<HTMLElement>('[data-ref="modal-margins-selected-text"]');
 
       if (marginsWrapper && marginsTrigger && marginsMenu) {
-        setupDropdown(marginsWrapper, marginsTrigger, marginsMenu, { backdrop: marginsBackdrop || undefined });
+        setupDropdown(marginsWrapper, { backdrop: marginsBackdrop || undefined, menu: marginsMenu, trigger: marginsTrigger });
         marginsMenu.addEventListener('click', (e) => {
           const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
           if (!item) return;

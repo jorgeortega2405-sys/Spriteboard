@@ -261,7 +261,7 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
   const typeText = card.querySelector<HTMLElement>('[data-ref="element-type-selected-text"]');
 
   if (typeWrapper && typeTrigger && typeMenu) {
-    setupDropdown(typeWrapper, typeTrigger, typeMenu, { backdrop: typeBackdrop || undefined });
+    setupDropdown(typeWrapper, { backdrop: typeBackdrop || undefined, menu: typeMenu, trigger: typeTrigger });
     typeMenu.addEventListener('click', (e) => {
       const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
       if (!item) return;
@@ -281,7 +281,7 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
   const catText = card.querySelector<HTMLElement>('[data-ref="element-category-selected-text"]');
 
   if (catWrapper && catTrigger && catMenu) {
-    setupDropdown(catWrapper, catTrigger, catMenu, { backdrop: catBackdrop || undefined });
+    setupDropdown(catWrapper, { backdrop: catBackdrop || undefined, menu: catMenu, trigger: catTrigger });
     catMenu.addEventListener('click', (e) => {
       const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
       if (!item) return;

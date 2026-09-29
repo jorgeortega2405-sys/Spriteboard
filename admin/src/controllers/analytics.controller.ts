@@ -84,8 +84,8 @@ export async function handleExecuteSqlQuery(req: Request, res: Response): Promis
     const result = await executeSafeSqlQuery(query);
     res.json(result);
   } catch (error: any) {
-    logger.app.warn('Fallo en ejecución de consulta SQL interactiva', { error: error.message });
-    res.status(400).json({ error: error.message || 'Error al ejecutar la consulta SQL.' });
+    logger.app.warn('Fallo en ejecución de consulta SQL interactiva', { error: error?.message });
+    res.status(400).json({ error: 'No fue posible procesar la consulta SQL especificada.' });
   }
 }
 

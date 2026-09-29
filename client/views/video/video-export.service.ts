@@ -35,7 +35,7 @@ export class VideoExportService {
     const qualityText = this._container.querySelector<HTMLElement>('[data-ref="export-quality-selected-text"]');
 
     if (qualityWrapper && qualityTrigger && qualityMenu) {
-      setupDropdown(qualityWrapper, qualityTrigger, qualityMenu, { backdrop: qualityBackdrop || undefined, signal });
+      setupDropdown(qualityWrapper, { backdrop: qualityBackdrop || undefined, menu: qualityMenu, trigger: qualityTrigger });
       qualityMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;
@@ -58,7 +58,7 @@ export class VideoExportService {
     const fpsText = this._container.querySelector<HTMLElement>('[data-ref="export-fps-selected-text"]');
 
     if (fpsWrapper && fpsTrigger && fpsMenu) {
-      setupDropdown(fpsWrapper, fpsTrigger, fpsMenu, { backdrop: fpsBackdrop || undefined, signal });
+      setupDropdown(fpsWrapper, { backdrop: fpsBackdrop || undefined, menu: fpsMenu, trigger: fpsTrigger });
       fpsMenu.addEventListener('click', (e) => {
         const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
         if (!item) return;

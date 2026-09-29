@@ -303,8 +303,8 @@ export async function createBillingView(): Promise<HTMLElement> {
     }
 
     if (btnStorageUpgrade) {
-      if (storage.tier === 'business') {
-        btnStorageUpgrade.textContent = t('settings.billing.tier_business_badge') || 'Plan Negocios (500 GB)';
+      if (storage.limitBytes >= 500 * 1024 * 1024 * 1024) {
+        btnStorageUpgrade.textContent = t('settings.billing.tier_business_badge') || `${storage.tierName} (${storage.limitFormatted})`;
         btnStorageUpgrade.onclick = (e) => {
           e.preventDefault();
           navigate('/upgrade');

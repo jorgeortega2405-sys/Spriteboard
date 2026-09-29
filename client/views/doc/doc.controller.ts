@@ -495,7 +495,7 @@ export class DocController implements ViewController {
     if (!this.isOwner && currentUser) {
       const myAvatar = currentUser.avatar_url || API_ROUTES.avatar(currentUser.username);
       const myTier = currentUser.subscription_tier || 'free';
-      const myRole = this.role === 'viewer' ? 'Lector' : 'Editor';
+      const myRole = this.publicRole === 'viewer' ? 'Lector' : 'Editor';
       stackItems.push({
         avatarUrl: myAvatar,
         isOwner: false,

@@ -832,7 +832,7 @@ export class BrandController {
       };
 
       if (wrapper && trigger && menu) {
-        setupDropdown(wrapper, trigger, menu, { backdrop: backdrop || undefined, signal: this.abortController.signal });
+        setupDropdown(wrapper, { backdrop: backdrop || undefined, menu, trigger });
         menu.addEventListener('click', (e) => {
           const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
           if (!item) return;
