@@ -106,8 +106,13 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
         <div class="modal-create-canvas__body" data-ref="modal-create-canvas-body">
           <div class="modal-create-canvas__body-top" data-ref="modal-body-top">
-            <div class="component-top-left" data-ref="modal-body-top-left">
-              <h2 class="component-top-title" data-ref="modal-body-title">Pizarrón Infinito</h2>
+            <div class="component-search component-search--w-full" data-ref="modal-create-canvas-search">
+              <div class="component-search__icon" data-ref="modal-search-icon">
+                <span class="material-symbols-rounded">search</span>
+              </div>
+              <div class="component-search__input-box" data-ref="modal-search-input-box">
+                <input class="component-search__input" data-ref="modal-search-input" type="text" placeholder="Buscar formatos y plantillas..." maxlength="100" autocomplete="off" />
+              </div>
             </div>
           </div>
 
@@ -447,8 +452,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
             </div>
 
             <div class="modal-canvas-panel" data-ref="panel-category-social" style="${activeCategory === 'social' ? '' : 'display: none;'}">
-              <div class="creation-category-section" data-ref="section-social-platforms">
-                <div class="component-tags-carousel" data-ref="social-platforms-carousel" style="margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; display: flex; gap: 8px;">
+              <div class="creation-category-section creation-category-section--platforms" data-ref="section-social-platforms">
+                <div class="component-tags-carousel social-platforms-carousel" data-ref="social-platforms-carousel">
                   <button type="button" class="component-badge component-badge--interactive is-active" data-ref="badge-platform-facebook" data-platform="facebook">
                     <span class="component-badge__text">Facebook</span>
                   </button>
@@ -554,23 +559,34 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     backdrop.classList.add('is-visible');
   });
 
-  const categoryTitles: Record<string, string> = {
-    board: 'Pizarrón Infinito',
-    'custom-size': 'Elegir tamaño',
-    doc: 'Documento Doc',
-    presentation: 'Presentación de Diapositivas',
-    sheet: 'Hoja de Cálculo',
-    social: 'Redes Sociales',
-    template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
-    upload: 'Subir archivos',
-    video: 'Video',
-  };
-
   const navItems = backdrop.querySelectorAll<HTMLElement>('[data-category]');
   const panels = backdrop.querySelectorAll<HTMLElement>('[data-ref^="panel-category-"]');
-  const bodyTitle = backdrop.querySelector<HTMLElement>('[data-ref="modal-body-title"]');
+  const searchInput = backdrop.querySelector<HTMLInputElement>('[data-ref="modal-search-input"]');
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
+
+  const filterCards = (query: string) => {
+    const q = query.trim().toLowerCase();
+    const activePanelEl = backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${activeCategory}"]`);
+    if (!activePanelEl) return;
+
+    const cards = activePanelEl.querySelectorAll<HTMLElement>('.creation-card');
+    cards.forEach((card) => {
+      if (!q) {
+        card.style.display = '';
+        return;
+      }
+      const title = card.querySelector('.creation-card__title')?.textContent?.toLowerCase() || '';
+      const meta = card.querySelector('.creation-card__meta')?.textContent?.toLowerCase() || '';
+      const badge = card.querySelector('.creation-card__badge')?.textContent?.toLowerCase() || '';
+      const matches = title.includes(q) || meta.includes(q) || badge.includes(q);
+      card.style.display = matches ? '' : 'none';
+    });
+  };
+
+  searchInput?.addEventListener('input', () => {
+    filterCards(searchInput.value);
+  });
 
   const switchCategory = (category: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' | 'video') => {
     activeCategory = category;
@@ -584,20 +600,17 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
     const activePanel = backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${category}"]`);
     if (activePanel) {
-      activePanel.style.display = 'flex';
+      activePanel.style.display = 'block';
     }
 
-    if (bodyTitle && categoryTitles[category]) {
-      bodyTitle.textContent = categoryTitles[category];
+    if (searchInput && searchInput.value) {
+      filterCards(searchInput.value);
     }
+
     if (errorBanner) {
       errorBanner.style.display = 'none';
     }
   };
-
-  if (bodyTitle && categoryTitles[activeCategory]) {
-    bodyTitle.textContent = categoryTitles[activeCategory];
-  }
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {

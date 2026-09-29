@@ -3385,7 +3385,7 @@ html.dark-theme .component-card-button--downgrade {
 .modal-create-canvas__body-top {
   height: 56px;
   min-height: 56px;
-  padding: 8px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
@@ -3393,10 +3393,14 @@ html.dark-theme .component-card-button--downgrade {
   flex-shrink: 0;
 }
 
+.modal-create-canvas__body-top .component-search {
+  width: 100%;
+}
+
 .modal-create-canvas__body-bottom {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 24px 28px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -3700,6 +3704,13 @@ html.dark-theme .component-card-button--downgrade {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.modal-canvas-panel[data-ref="panel-category-social"],
+.modal-canvas-panel--flush {
+  padding: 0;
 }
 
 .modal-canvas-panel__header {
@@ -3787,6 +3798,26 @@ html.dark-theme .component-card-button--downgrade {
 
 .creation-category-section:last-child {
   margin-bottom: 0;
+}
+
+.creation-category-section--platforms,
+[data-ref="section-social-platforms"] {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+[data-ref="panel-category-social"] > .creation-category-section:not([data-ref="section-social-platforms"]) {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.social-platforms-carousel {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .creation-category-section__title {

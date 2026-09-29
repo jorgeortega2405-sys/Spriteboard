@@ -439,6 +439,10 @@ body[data-theme="dark"] .login-logo-img {
   flex-shrink: 0;
 }
 
+.component-search--w-full {
+  width: 100%;
+}
+
 .component-search:hover {
   border-color: var(--border-color-hover);
 }
