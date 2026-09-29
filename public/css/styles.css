@@ -1036,17 +1036,18 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   padding: 4px 14px;
   background: transparent;
   border: none;
-  color: var(--accent-pink);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
-  transition: opacity var(--sl-transition-fast), background-color var(--sl-transition-fast);
+  transition: opacity var(--sl-transition-fast), background-color var(--sl-transition-fast), color var(--sl-transition-fast);
 }
 
 .drawer-link-btn:hover {
-  opacity: 0.85;
-  background-color: var(--accent-pink-subtle);
+  opacity: 1;
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .layout-drawer__footer {
@@ -1085,13 +1086,13 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .drawer-footer-item:hover .drawer-footer-item__icon {
-  color: var(--accent-pink);
+  color: var(--text-primary);
 }
 
 .drawer-footer-item.is-active {
-  background-color: var(--accent-pink-subtle);
-  border-color: var(--accent-pink-border);
-  color: var(--accent-pink);
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -1107,7 +1108,7 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .drawer-footer-item.is-active .drawer-footer-item__icon {
-  color: var(--accent-pink);
+  color: var(--text-primary);
   fill: currentColor;
 }
 

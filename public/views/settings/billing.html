@@ -126,59 +126,9 @@
                 </div>
               </div>
             </div>
-
-            <hr class="settings-divider" />
-
-            <!-- Desglose de consumo detallado -->
-            <div class="storage-breakdown" data-ref="storage-breakdown-grid">
-              <!-- Canvases -->
-              <div class="storage-breakdown-card" data-ref="card-storage-canvases">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-canvases-icon-box">
-                  <span class="material-symbols-rounded">dashboard</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-canvases-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_canvases_title">Lienzos activos</span>
-                  <span class="storage-breakdown-card__size" data-ref="storage-canvases-size">0 B</span>
-                  <span class="storage-breakdown-card__count" data-ref="storage-canvases-count">0 proyectos</span>
-                </div>
-              </div>
-
-              <!-- Snapshots -->
-              <div class="storage-breakdown-card" data-ref="card-storage-snapshots">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-snapshots-icon-box">
-                  <span class="material-symbols-rounded">history</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-snapshots-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_snapshots_title">Versiones y snapshots</span>
-                  <span class="storage-breakdown-card__size" data-ref="storage-snapshots-size">0 B</span>
-                  <span class="storage-breakdown-card__count" data-ref="storage-snapshots-count">0 versiones</span>
-                </div>
-              </div>
-
-              <!-- Trash -->
-              <div class="storage-breakdown-card" data-ref="card-storage-trash">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-trash-icon-box">
-                  <span class="material-symbols-rounded">delete</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-trash-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_trash_title">Papelera de reciclaje</span>
-                  <span class="storage-breakdown-card__size" data-ref="storage-trash-size">0 B</span>
-                  <span class="storage-breakdown-card__count" data-ref="storage-trash-count">0 elementos</span>
-                </div>
-              </div>
-
-              <!-- Uploads / Avatars -->
-              <div class="storage-breakdown-card" data-ref="card-storage-uploads">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-uploads-icon-box">
-                  <span class="material-symbols-rounded">perm_media</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-uploads-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_uploads_title">Archivos multimedia</span>
-                  <span class="storage-breakdown-card__size" data-ref="storage-uploads-size">0 B</span>
-                  <span class="storage-breakdown-card__count" data-ref="storage-uploads-count">Avatar y recursos</span>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- 3. Acordeón de Cuota de Inteligencia Artificial (IA) -->
       <div class="settings-group settings-group--accordion is-active" data-ref="group-ai-quota">
@@ -224,59 +174,6 @@
                 <div class="storage-meter__footer" data-ref="ai-quota-meter-footer">
                   <span class="storage-meter__remaining-text" data-ref="ai-quota-remaining-text">Calculando cuota disponible...</span>
                   <span class="storage-meter__cycle-text" data-ref="ai-quota-cycle-text" style="font-size: 12px; color: var(--text-muted);">Ventana de 12 horas</span>
-                </div>
-              </div>
-            </div>
-
-            <hr class="settings-divider" />
-
-            <!-- Desglose de consumo detallado de IA -->
-            <div class="storage-breakdown" data-ref="ai-quota-breakdown-grid">
-              <!-- Mindmaps -->
-              <div class="storage-breakdown-card" data-ref="card-ai-mindmaps">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-mindmaps-icon-box">
-                  <span class="material-symbols-rounded">account_tree</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-ai-mindmaps-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_mindmaps_title">Mapas mentales</span>
-                  <span class="storage-breakdown-card__size" data-ref="ai-mindmaps-tokens">0 tokens</span>
-                  <span class="storage-breakdown-card__count" data-ref="ai-mindmaps-count">0 generaciones</span>
-                </div>
-              </div>
-
-              <!-- Docs -->
-              <div class="storage-breakdown-card" data-ref="card-ai-docs">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-docs-icon-box">
-                  <span class="material-symbols-rounded">description</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-ai-docs-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_docs_title">Documentos IA</span>
-                  <span class="storage-breakdown-card__size" data-ref="ai-docs-tokens">0 tokens</span>
-                  <span class="storage-breakdown-card__count" data-ref="ai-docs-count">0 generaciones</span>
-                </div>
-              </div>
-
-              <!-- Boards -->
-              <div class="storage-breakdown-card" data-ref="card-ai-boards">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-boards-icon-box">
-                  <span class="material-symbols-rounded">gesture</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-ai-boards-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_boards_title">Lienzo y elementos</span>
-                  <span class="storage-breakdown-card__size" data-ref="ai-boards-tokens">0 tokens</span>
-                  <span class="storage-breakdown-card__count" data-ref="ai-boards-count">0 generaciones</span>
-                </div>
-              </div>
-
-              <!-- Presentations -->
-              <div class="storage-breakdown-card" data-ref="card-ai-presentations">
-                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-presentations-icon-box">
-                  <span class="material-symbols-rounded">slideshow</span>
-                </div>
-                <div class="storage-breakdown-card__body" data-ref="card-ai-presentations-body">
-                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_presentations_title">Presentaciones</span>
-                  <span class="storage-breakdown-card__size" data-ref="ai-presentations-tokens">0 tokens</span>
-                  <span class="storage-breakdown-card__count" data-ref="ai-presentations-count">0 generaciones</span>
                 </div>
               </div>
             </div>

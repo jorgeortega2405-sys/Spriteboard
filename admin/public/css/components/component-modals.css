@@ -511,15 +511,15 @@
 
 .menu-item.is-active,
 .component-menu-link.is-active {
-  background-color: var(--accent-pink-subtle);
-  color: var(--accent-pink);
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .menu-item.is-active .menu-item__icon,
 .menu-item.is-active .component-icon,
 .component-menu-link.is-active .component-icon {
-  color: var(--accent-pink);
+  color: var(--text-primary);
 }
 
 

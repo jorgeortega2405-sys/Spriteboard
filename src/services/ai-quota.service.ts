@@ -13,9 +13,15 @@ export interface UserAiQuotaState {
   percentage: number;
   remainingTokens: number;
   resetSecondsRemaining: number;
+  secondsRemaining: number;
   tier: string;
+  tierName: string;
   tokensLimit: number;
+  tokensLimitFormatted: string;
+  tokensRemaining: number;
+  tokensRemainingFormatted: string;
   tokensUsed: number;
+  tokensUsedFormatted: string;
 }
 
 export interface FeatureUsageBreakdown {
@@ -34,6 +40,41 @@ export class AiQuotaService {
     return `ai_quota:user:${userId}`;
   }
 
+  private static buildQuotaState(
+    userTier: string,
+    tierLimit: number,
+    tokensUsed: number,
+    cycleStartedAt: Date | null,
+    cycleResetAt: Date | null,
+    lastGen: string | null,
+    resetSecondsRemaining: number,
+    isIdle: boolean
+  ): UserAiQuotaState {
+    const isOverLimit = tokensUsed >= tierLimit;
+    const remainingTokens = Math.max(0, tierLimit - tokensUsed);
+    const percentage = Math.min(100, Math.round((tokensUsed / tierLimit) * 100));
+
+    return {
+      cycleResetAt: cycleResetAt ? cycleResetAt.toISOString() : null,
+      cycleStartedAt: cycleStartedAt ? cycleStartedAt.toISOString() : null,
+      isIdle,
+      isOverLimit,
+      lastGenerationAt: lastGen,
+      percentage,
+      remainingTokens,
+      resetSecondsRemaining,
+      secondsRemaining: resetSecondsRemaining,
+      tier: userTier,
+      tierName: userTier.toUpperCase(),
+      tokensLimit: tierLimit,
+      tokensLimitFormatted: tierLimit.toLocaleString(),
+      tokensRemaining: remainingTokens,
+      tokensRemainingFormatted: remainingTokens.toLocaleString(),
+      tokensUsed,
+      tokensUsedFormatted: tokensUsed.toLocaleString(),
+    };
+  }
+
   static async getUserQuota(userId: number, userTier = 'free'): Promise<UserAiQuotaState> {
     const limits = getTierLimits(userTier);
     const tierLimit = limits.maxAiTokensPerCycle || 50000;
@@ -47,21 +88,38 @@ export class AiQuotaService {
         if (parsed.cycleResetAt) {
           const resetTime = new Date(parsed.cycleResetAt).getTime();
           if (now < resetTime) {
-            parsed.resetSecondsRemaining = Math.max(0, Math.floor((resetTime - now) / 1000));
+            const secs = Math.max(0, Math.floor((resetTime - now) / 1000));
+            parsed.resetSecondsRemaining = secs;
+            parsed.secondsRemaining = secs;
             parsed.tokensLimit = tierLimit;
+            parsed.tokensLimitFormatted = tierLimit.toLocaleString();
+            parsed.tokensUsed = parsed.tokensUsed || 0;
+            parsed.tokensUsedFormatted = (parsed.tokensUsed || 0).toLocaleString();
             parsed.remainingTokens = Math.max(0, tierLimit - parsed.tokensUsed);
+            parsed.tokensRemaining = parsed.remainingTokens;
+            parsed.tokensRemainingFormatted = parsed.remainingTokens.toLocaleString();
             parsed.percentage = Math.min(100, Math.round((parsed.tokensUsed / tierLimit) * 100));
             parsed.isOverLimit = parsed.tokensUsed >= tierLimit;
             parsed.isIdle = false;
+            parsed.tier = userTier;
+            parsed.tierName = userTier.toUpperCase();
             return parsed;
           }
         } else {
           parsed.tokensLimit = tierLimit;
+          parsed.tokensLimitFormatted = tierLimit.toLocaleString();
+          parsed.tokensUsed = parsed.tokensUsed || 0;
+          parsed.tokensUsedFormatted = (parsed.tokensUsed || 0).toLocaleString();
           parsed.remainingTokens = Math.max(0, tierLimit - parsed.tokensUsed);
+          parsed.tokensRemaining = parsed.remainingTokens;
+          parsed.tokensRemainingFormatted = parsed.remainingTokens.toLocaleString();
           parsed.percentage = Math.min(100, Math.round((parsed.tokensUsed / tierLimit) * 100));
           parsed.isOverLimit = parsed.tokensUsed >= tierLimit;
           parsed.isIdle = true;
           parsed.resetSecondsRemaining = 0;
+          parsed.secondsRemaining = 0;
+          parsed.tier = userTier;
+          parsed.tierName = userTier.toUpperCase();
           return parsed;
         }
       }
@@ -82,19 +140,7 @@ export class AiQuotaService {
         [userId, tierLimit]
       );
 
-      const state: UserAiQuotaState = {
-        cycleResetAt: null,
-        cycleStartedAt: null,
-        isIdle: true,
-        isOverLimit: false,
-        lastGenerationAt: null,
-        percentage: 0,
-        remainingTokens: tierLimit,
-        resetSecondsRemaining: 0,
-        tier: userTier,
-        tokensLimit: tierLimit,
-        tokensUsed: 0,
-      };
+      const state = this.buildQuotaState(userTier, tierLimit, 0, null, null, null, 0, true);
 
       await this.saveCache(userId, state, 300);
       return state;
@@ -123,23 +169,17 @@ export class AiQuotaService {
 
     const isIdle = !cycleResetAt;
     const resetSecondsRemaining = cycleResetAt ? Math.max(0, Math.floor((cycleResetAt.getTime() - now.getTime()) / 1000)) : 0;
-    const isOverLimit = tokensUsed >= tierLimit;
-    const remainingTokens = Math.max(0, tierLimit - tokensUsed);
-    const percentage = Math.min(100, Math.round((tokensUsed / tierLimit) * 100));
 
-    const state: UserAiQuotaState = {
-      cycleResetAt: cycleResetAt ? cycleResetAt.toISOString() : null,
-      cycleStartedAt: cycleStartedAt ? cycleStartedAt.toISOString() : null,
-      isIdle,
-      isOverLimit,
-      lastGenerationAt: lastGen,
-      percentage,
-      remainingTokens,
-      resetSecondsRemaining,
-      tier: userTier,
-      tokensLimit: tierLimit,
+    const state = this.buildQuotaState(
+      userTier,
+      tierLimit,
       tokensUsed,
-    };
+      cycleStartedAt,
+      cycleResetAt,
+      lastGen,
+      resetSecondsRemaining,
+      isIdle
+    );
 
     const ttl = isIdle ? 300 : Math.max(60, resetSecondsRemaining);
     await this.saveCache(userId, state, ttl);
@@ -228,22 +268,17 @@ export class AiQuotaService {
     );
 
     const resetSecondsRemaining = Math.max(0, Math.floor((newCycleReset.getTime() - now.getTime()) / 1000));
-    const remainingTokens = Math.max(0, tierLimit - newTokensUsed);
-    const percentage = Math.min(100, Math.round((newTokensUsed / tierLimit) * 100));
 
-    const updatedState: UserAiQuotaState = {
-      cycleResetAt: newCycleReset.toISOString(),
-      cycleStartedAt: newCycleStarted.toISOString(),
-      isIdle: false,
-      isOverLimit: newTokensUsed >= tierLimit,
-      lastGenerationAt: now.toISOString(),
-      percentage,
-      remainingTokens,
+    const updatedState = this.buildQuotaState(
+      userTier,
+      tierLimit,
+      newTokensUsed,
+      newCycleStarted,
+      newCycleReset,
+      now.toISOString(),
       resetSecondsRemaining,
-      tier: userTier,
-      tokensLimit: tierLimit,
-      tokensUsed: newTokensUsed,
-    };
+      false
+    );
 
     await this.saveCache(userId, updatedState, Math.max(60, resetSecondsRemaining));
     logger.db.info(`AiQuotaService: Tokens consumidos por usuario ${userId}: +${safeTotal} tokens (Total ciclo: ${newTokensUsed}/${tierLimit})`);

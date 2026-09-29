@@ -318,37 +318,6 @@ export async function createBillingView(): Promise<HTMLElement> {
       }
     }
 
-    const canvasesSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-canvases-size"]');
-    const canvasesCountEl = container.querySelector<HTMLElement>('[data-ref="storage-canvases-count"]');
-    if (canvasesSizeEl) canvasesSizeEl.textContent = storage.breakdown.canvases.formatted;
-    if (canvasesCountEl) {
-      const count = storage.breakdown.canvases.count || 0;
-      canvasesCountEl.textContent = `${count} ${count === 1 ? 'proyecto' : 'proyectos'}`;
-    }
-
-    const snapshotsSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-snapshots-size"]');
-    const snapshotsCountEl = container.querySelector<HTMLElement>('[data-ref="storage-snapshots-count"]');
-    if (snapshotsSizeEl) snapshotsSizeEl.textContent = storage.breakdown.snapshots.formatted;
-    if (snapshotsCountEl) {
-      const count = storage.breakdown.snapshots.count || 0;
-      snapshotsCountEl.textContent = `${count} ${count === 1 ? 'versión' : 'versiones'}`;
-    }
-
-    const trashSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-trash-size"]');
-    const trashCountEl = container.querySelector<HTMLElement>('[data-ref="storage-trash-count"]');
-    if (trashSizeEl) trashSizeEl.textContent = storage.breakdown.trash.formatted;
-    if (trashCountEl) {
-      const count = storage.breakdown.trash.count || 0;
-      trashCountEl.textContent = `${count} ${count === 1 ? 'elemento' : 'elementos'}`;
-    }
-
-    const uploadsSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-uploads-size"]');
-    const uploadsCountEl = container.querySelector<HTMLElement>('[data-ref="storage-uploads-count"]');
-    if (uploadsSizeEl) uploadsSizeEl.textContent = storage.breakdown.uploads.formatted;
-    if (uploadsCountEl) {
-      const count = storage.breakdown.uploads.count || 0;
-      uploadsCountEl.textContent = `${count} ${count === 1 ? 'archivo' : 'archivos'}`;
-    }
   };
 
   let aiCountdownInterval: number | null = null;
@@ -385,14 +354,25 @@ export async function createBillingView(): Promise<HTMLElement> {
     const resetTimerText = container.querySelector<HTMLElement>('[data-ref="ai-quota-reset-timer-text"]');
     const cycleText = container.querySelector<HTMLElement>('[data-ref="ai-quota-cycle-text"]');
 
-    if (usedLabel) usedLabel.textContent = aiQuota.tokensUsedFormatted || '0';
-    if (limitLabel) limitLabel.textContent = `${aiQuota.tokensLimitFormatted || '0'} tokens`;
+    const tokensUsedVal = typeof aiQuota.tokensUsed === 'number' ? aiQuota.tokensUsed : 0;
+    const tokensLimitVal = typeof aiQuota.tokensLimit === 'number' && aiQuota.tokensLimit > 0 ? aiQuota.tokensLimit : 50000;
+    const tokensRemainingVal = typeof (aiQuota as any).remainingTokens === 'number'
+      ? (aiQuota as any).remainingTokens
+      : (typeof aiQuota.tokensRemaining === 'number' ? aiQuota.tokensRemaining : Math.max(0, tokensLimitVal - tokensUsedVal));
+    const usedFormatted = aiQuota.tokensUsedFormatted || tokensUsedVal.toLocaleString();
+    const rawLimitFormatted = aiQuota.tokensLimitFormatted || tokensLimitVal.toLocaleString();
+    const limitFormatted = rawLimitFormatted.includes('tokens') ? rawLimitFormatted : `${rawLimitFormatted} tokens`;
+    const remainingFormatted = aiQuota.tokensRemainingFormatted || tokensRemainingVal.toLocaleString();
+    const percentageVal = typeof aiQuota.percentage === 'number' ? aiQuota.percentage : Math.min(100, Math.round((tokensUsedVal / tokensLimitVal) * 100));
+
+    if (usedLabel) usedLabel.textContent = usedFormatted;
+    if (limitLabel) limitLabel.textContent = limitFormatted;
 
     if (percentBadge) {
-      percentBadge.textContent = `${aiQuota.percentage}% en uso`;
+      percentBadge.textContent = `${percentageVal}% en uso`;
       if (aiQuota.isOverLimit) {
         percentBadge.className = 'component-badge component-badge--sm component-badge--danger';
-      } else if (aiQuota.percentage >= 80) {
+      } else if (percentageVal >= 80) {
         percentBadge.className = 'component-badge component-badge--sm component-badge--warning';
       } else {
         percentBadge.className = 'component-badge component-badge--sm';
@@ -400,28 +380,28 @@ export async function createBillingView(): Promise<HTMLElement> {
     }
 
     if (meterFill) {
-      meterFill.style.width = `${Math.min(100, Math.max(aiQuota.percentage, aiQuota.tokensUsed > 0 ? 0.5 : 0))}%`;
+      meterFill.style.width = `${Math.min(100, Math.max(percentageVal, tokensUsedVal > 0 ? 0.5 : 0))}%`;
       meterFill.classList.remove('storage-meter__fill--warning', 'storage-meter__fill--danger');
       if (aiQuota.isOverLimit) {
         meterFill.classList.add('storage-meter__fill--danger');
-      } else if (aiQuota.percentage >= 80) {
+      } else if (percentageVal >= 80) {
         meterFill.classList.add('storage-meter__fill--warning');
       }
     }
 
     if (meterTrack) {
-      meterTrack.setAttribute('aria-valuenow', String(aiQuota.percentage));
+      meterTrack.setAttribute('aria-valuenow', String(percentageVal));
     }
 
     if (remainingText) {
       if (aiQuota.isOverLimit) {
         remainingText.textContent = t('settings.billing.ai_quota_over_limit') || 'Límite alcanzado en el ciclo actual. Se restablecerá al reiniciar.';
       } else {
-        remainingText.textContent = t('settings.billing.ai_quota_remaining', { amount: aiQuota.tokensRemainingFormatted }) || `Te quedan ${aiQuota.tokensRemainingFormatted} tokens en este ciclo`;
+        remainingText.textContent = t('settings.billing.ai_quota_remaining', { amount: remainingFormatted }) || `Te quedan ${remainingFormatted} tokens en este ciclo`;
       }
     }
 
-    let remainingSecs = Math.max(0, aiQuota.secondsRemaining || 0);
+    let remainingSecs = Math.max(0, aiQuota.secondsRemaining ?? (aiQuota as any).resetSecondsRemaining ?? 0);
 
     const updateTimerDisplay = () => {
       if (!resetTimerText) return;
@@ -478,38 +458,6 @@ export async function createBillingView(): Promise<HTMLElement> {
       } else {
         cycleText.textContent = t('settings.billing.ai_quota_window_note') || 'Ventana de 12 horas';
       }
-    }
-
-    const mindmapsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-mindmaps-tokens"]');
-    const mindmapsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-mindmaps-count"]');
-    if (mindmapsTokensEl) mindmapsTokensEl.textContent = `${breakdown?.mindmap.formatted || '0'} tokens`;
-    if (mindmapsCountEl) {
-      const count = breakdown?.mindmap.count || 0;
-      mindmapsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
-    }
-
-    const docsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-docs-tokens"]');
-    const docsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-docs-count"]');
-    if (docsTokensEl) docsTokensEl.textContent = `${breakdown?.doc.formatted || '0'} tokens`;
-    if (docsCountEl) {
-      const count = breakdown?.doc.count || 0;
-      docsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
-    }
-
-    const boardsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-boards-tokens"]');
-    const boardsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-boards-count"]');
-    if (boardsTokensEl) boardsTokensEl.textContent = `${breakdown?.board.formatted || '0'} tokens`;
-    if (boardsCountEl) {
-      const count = breakdown?.board.count || 0;
-      boardsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
-    }
-
-    const presentationsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-presentations-tokens"]');
-    const presentationsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-presentations-count"]');
-    if (presentationsTokensEl) presentationsTokensEl.textContent = `${breakdown?.presentation.formatted || '0'} tokens`;
-    if (presentationsCountEl) {
-      const count = breakdown?.presentation.count || 0;
-      presentationsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
     }
   };
 

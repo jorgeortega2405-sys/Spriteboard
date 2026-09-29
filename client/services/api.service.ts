@@ -421,7 +421,12 @@ export async function getAiQuotaApi(): Promise<{ success: boolean; aiQuota?: AiQ
   try {
     const res = await getApi(API_ROUTES.ai.quota);
     const data = await res.json();
-    return { success: res.ok, ...data };
+    return {
+      success: res.ok,
+      aiQuota: data.aiQuota || data.quota,
+      aiBreakdown: data.aiBreakdown || data.breakdown,
+      ...data,
+    };
   } catch {
     return { success: false, error: 'Error de conexión con el servidor.' };
   }

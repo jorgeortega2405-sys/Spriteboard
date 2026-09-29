@@ -390,14 +390,14 @@
 }
 
 .component-badge--interactive:hover {
-  background-color: var(--accent-pink-subtle) !important;
-  border-color: var(--accent-pink-border) !important;
-  color: var(--accent-pink) !important;
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 .component-badge--interactive:hover .component-badge__icon,
 .component-badge--interactive:hover .component-icon {
-  color: var(--accent-pink) !important;
+  color: var(--text-primary) !important;
   fill: currentColor !important;
 }
 
@@ -414,10 +414,10 @@
 
 .component-badge.is-active,
 .component-badge--active {
-  background-color: var(--accent-pink-subtle) !important;
-  color: var(--accent-pink) !important;
-  border: 1px solid var(--accent-pink) !important;
-  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color-hover, var(--border-color)) !important;
+  box-shadow: none !important;
   font-weight: 600;
 }
 
@@ -1668,10 +1668,10 @@ html.dark-theme .component-badge--active .component-icon {
 
 .component-badge.is-active,
 .component-badge.active {
-  background-color: var(--accent-pink-subtle) !important;
-  color: var(--accent-pink) !important;
-  border-color: var(--accent-pink-border, transparent) !important;
-  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color-hover, transparent) !important;
+  box-shadow: none !important;
   font-weight: 600;
 }
 
@@ -1679,24 +1679,24 @@ html.dark-theme .component-badge--active .component-icon {
 .component-badge.active .material-symbols-rounded,
 .component-badge.is-active .component-icon,
 .component-badge.active .component-icon {
-  color: var(--accent-pink) !important;
+  color: var(--text-primary) !important;
   fill: currentColor;
 }
 
 .component-badge.is-active:hover,
 .component-badge.active:hover {
-  background-color: var(--accent-pink-hover) !important;
+  background-color: var(--bg-hover) !important;
 }
 
 .component-tags-carousel .component-badge--interactive:hover {
-  background-color: var(--accent-pink-subtle) !important;
-  border-color: var(--accent-pink-border) !important;
-  color: var(--accent-pink) !important;
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 .component-tags-carousel .component-badge--interactive:hover .component-icon,
 .component-tags-carousel .component-badge--interactive:hover .material-symbols-rounded {
-  color: var(--accent-pink) !important;
+  color: var(--text-primary) !important;
   fill: currentColor !important;
 }
 
@@ -1704,10 +1704,10 @@ html[data-theme="dark"] .component-badge.is-active,
 html[data-theme="dark"] .component-badge.active,
 html.dark-theme .component-badge.is-active,
 html.dark-theme .component-badge.active {
-  background-color: var(--accent-pink-subtle) !important;
-  color: var(--accent-pink) !important;
-  border-color: var(--accent-pink-border, transparent) !important;
-  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color-hover, transparent) !important;
+  box-shadow: none !important;
 }
 
 html[data-theme="dark"] .component-badge.is-active .material-symbols-rounded,
@@ -1718,7 +1718,7 @@ html.dark-theme .component-badge.is-active .material-symbols-rounded,
 html.dark-theme .component-badge.active .material-symbols-rounded,
 html.dark-theme .component-badge.is-active .component-icon,
 html.dark-theme .component-badge.active .component-icon {
-  color: var(--accent-pink) !important;
+  color: var(--text-primary) !important;
   fill: currentColor;
 }
 
@@ -1726,7 +1726,7 @@ html[data-theme="dark"] .component-badge.is-active:hover,
 html[data-theme="dark"] .component-badge.active:hover,
 html.dark-theme .component-badge.is-active:hover,
 html.dark-theme .component-badge.active:hover {
-  background-color: var(--accent-pink-hover) !important;
+  background-color: var(--bg-hover) !important;
 }
 
 .component-badge--sm {

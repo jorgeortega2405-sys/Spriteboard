@@ -715,7 +715,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
     langListEl.innerHTML = AVAILABLE_LANGUAGES.map((l) => {
       const isActive = l.code.toLowerCase() === (currentLang || '').toLowerCase();
       return `<button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="option-lang-${l.code}" data-lang="${l.code}">
-        <span class="material-symbols-rounded menu-item__icon">language</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
         <span class="menu-item__text">${escapeHtml(l.name)}</span>
       </button>`;
     }).join('');

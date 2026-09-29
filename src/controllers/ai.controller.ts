@@ -489,6 +489,8 @@ export class AiController {
       const breakdown = await AiQuotaService.getBreakdown(currentUser.id);
 
       res.status(200).json({
+        aiBreakdown: breakdown,
+        aiQuota: quota,
         breakdown,
         quota,
         success: true,
