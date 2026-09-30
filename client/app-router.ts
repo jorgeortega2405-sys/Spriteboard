@@ -71,8 +71,16 @@ export function showEarlySkeleton(): void {
     path === '/reset-password'
   );
 
-  if (isAuthView) {
-    layoutContent.classList.add('is-auth-mode');
+  const isEmbedded = window.self !== window.top || window.location.search.includes('embedded=true') || window.location.search.includes('preview=true');
+
+  if (isEmbedded) {
+    layoutContent.classList.add('is-embedded-canvas');
+  } else {
+    layoutContent.classList.remove('is-embedded-canvas');
+  }
+
+  if (isAuthView || isEmbedded) {
+    if (isAuthView) layoutContent.classList.add('is-auth-mode');
   } else {
     layoutContent.classList.remove('is-auth-mode');
     mountSidebarSkeleton(layoutContent);
@@ -164,8 +172,16 @@ export async function render(): Promise<void> {
     path === '/reset-password'
   );
 
+  const isEmbedded = window.self !== window.top || window.location.search.includes('embedded=true') || window.location.search.includes('preview=true');
+
+  if (isEmbedded) {
+    layoutContent.classList.add('is-embedded-canvas');
+  } else {
+    layoutContent.classList.remove('is-embedded-canvas');
+  }
+
   let currentSidebar: HTMLElement | null = null;
-  if (!isAuthView) {
+  if (!isAuthView && !isEmbedded) {
     currentSidebar = await ensureSidebarMounted(layoutContent);
     currentSidebar.style.display = '';
     layoutContent.classList.remove('is-auth-mode');
@@ -179,7 +195,9 @@ export async function render(): Promise<void> {
     if (currentSidebar) {
       currentSidebar.style.display = 'none';
     }
-    layoutContent.classList.add('is-auth-mode');
+    if (isAuthView) {
+      layoutContent.classList.add('is-auth-mode');
+    }
   }
 
   if (window.innerWidth <= 768) {

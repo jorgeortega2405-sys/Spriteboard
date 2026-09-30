@@ -44,7 +44,7 @@ export interface CreateCanvasOptions {
   width?: number;
 }
 
-export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
+export async function createCanvasRecord(options: CreateCanvasOptions): Promise<string> {
   const isPresentation = options.canvasType === 'presentation';
   const isDoc = options.canvasType === 'doc';
   const isSheet = options.canvasType === 'sheet';
@@ -270,7 +270,6 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
 
   const unit: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
   const canvasType: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
-  const targetRoute = `/design/`;
 
   const canvasUuid = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -289,9 +288,6 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     uuid: canvasUuid,
     width,
   });
-
-  showToast(isGuest ? t('canvas.toast_created_guest') : t('canvas.toast_created'), 'success');
-  window.open(`${targetRoute}${canvasUuid}`, '_blank');
 
   if (currentUser) {
     void postApi(API_ROUTES.canvases.base, {
@@ -319,4 +315,14 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       }
     }).catch(() => {});
   }
+
+  return canvasUuid;
+}
+
+export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<string> {
+  const isGuest = !currentUser;
+  const canvasUuid = await createCanvasRecord(options);
+  showToast(isGuest ? t('canvas.toast_created_guest') : t('canvas.toast_created'), 'success');
+  window.open(`/design/${canvasUuid}`, '_blank');
+  return canvasUuid;
 }

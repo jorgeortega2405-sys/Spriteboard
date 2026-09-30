@@ -86,6 +86,19 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
+    id: 'ai-studio',
+    match: (path) => path === '/ia' || path === '/ai',
+    handler: async () => {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('../views/auth.view.js');
+        return [await createLoginView()];
+      }
+      const { createAiStudioView } = await import('../views/ai-studio.view.js');
+      return [await createAiStudioView()];
+    },
+  },
+  {
     id: 'brand',
     match: (path) => path === '/brand' || path === '/marca',
     handler: async (ctx) => {

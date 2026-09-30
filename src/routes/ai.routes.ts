@@ -47,6 +47,8 @@ aiRouter.post('/presentation', requireAuth, aiChatLimiter, AiController.generate
 aiRouter.post('/ai/presentation', requireAuth, aiChatLimiter, AiController.generatePresentation);
 aiRouter.post('/remove-background', requireAuth, requireFeature('ai_bg_removal'), uploadLimiter, singleImageUploadMiddleware, AiController.removeBackground);
 aiRouter.post('/ai/remove-background', requireAuth, requireFeature('ai_bg_removal'), uploadLimiter, singleImageUploadMiddleware, AiController.removeBackground);
+aiRouter.post('/studio-chat', requireAuth, aiChatLimiter, AiController.studioChat);
+aiRouter.post('/ai/studio-chat', requireAuth, aiChatLimiter, AiController.studioChat);
 aiRouter.get('/quota', requireAuth, AiController.getQuota);
 aiRouter.get('/ai/quota', requireAuth, AiController.getQuota);
 

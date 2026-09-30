@@ -171,6 +171,55 @@ html.dark-theme .layout-content {
   background-color: #09090b;
 }
 
+.layout-content.is-embedded-canvas {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  background-color: transparent !important;
+}
+
+.layout-content.is-embedded-canvas .layout-nav,
+.layout-content.is-embedded-canvas [data-ref="sidebar"],
+.layout-content.is-embedded-canvas [data-ref="sidebar-skeleton"],
+.layout-content.is-embedded-canvas .layout-header,
+.layout-content.is-embedded-canvas .general-content-top,
+.layout-content.is-embedded-canvas .component-top,
+.layout-content.is-embedded-canvas .view-header,
+.layout-content.is-embedded-canvas .design-vertical-toolbar-container,
+.layout-content.is-embedded-canvas .design-vertical-toolbar-wrapper,
+.layout-content.is-embedded-canvas .design-floating-toolbar,
+.layout-content.is-embedded-canvas .canvas-action-bar,
+.layout-content.is-embedded-canvas .board-selection-toolbar,
+.layout-content.is-embedded-canvas [data-ref*="file-menu-wrapper"],
+.layout-content.is-embedded-canvas [data-ref*="share-wrapper"],
+.layout-content.is-embedded-canvas [data-ref*="magic-ai"],
+.layout-content.is-embedded-canvas [data-ref*="collaborators-bar"],
+.layout-content.is-embedded-canvas [data-ref*="canvas-cloud-status"],
+.layout-content.is-embedded-canvas [data-ref*="canvas-metrics"],
+.layout-content.is-embedded-canvas [data-ref*="canvas-comments"] {
+  display: none !important;
+}
+
+.layout-content.is-embedded-canvas .view-wrapper,
+.layout-content.is-embedded-canvas .component-wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  border-radius: 0 !important;
+}
+
+.layout-content.is-embedded-canvas .component-bottom,
+.layout-content.is-embedded-canvas .component-bottom--canvas {
+  height: 100% !important;
+  max-height: 100% !important;
+  border-radius: 0 !important;
+}
+
 .layout-content:has(.layout-nav) {
   padding: 0 6px 0 0;
   gap: 0;

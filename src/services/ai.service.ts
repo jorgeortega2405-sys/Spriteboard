@@ -1683,6 +1683,154 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       title,
     };
   }
+
+  static async generateStudioChat(
+    prompt: string,
+    history: ChatMessage[] = [],
+    targetCanvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video',
+    contextData?: any
+  ): Promise<{
+    artifact?: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      data: any;
+      summary?: string;
+      title: string;
+    };
+    intent: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      subtype?: string;
+      title: string;
+    };
+    reply: string;
+    suggestedFormats?: Array<{
+      canvasType: string;
+      description: string;
+      icon: string;
+      label: string;
+    }>;
+    usage?: AiUsageMetadata;
+  }> {
+    const norm = prompt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    let detectedType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video' = targetCanvasType || 'board';
+    let detectedSubtype: string | undefined = undefined;
+
+    if (!targetCanvasType) {
+      if (/(presentacion|diapositiva|slide|pitch|deck|exposicion)/i.test(norm)) {
+        detectedType = 'presentation';
+      } else if (/(mapa conceptual|conceptual)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'conceptmap';
+      } else if (/(diagrama de flujo|flujograma|flowchart|proceso)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'flowchart';
+      } else if (/(kanban|tablero agil|sprint)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'kanban';
+      } else if (/(linea de tiempo|timeline|roadmap|cronograma)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'timeline';
+      } else if (/(organigrama|jerarquia|estructura de equipo)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'orgchart';
+      } else if (/(mapa mental|mindmap|pizarron|whiteboard|lluvia de ideas|brainstorm)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'mindmap';
+      } else if (/(documento|doc|articulo|ensayo|politica|reporte|informe|manual|contrato|propuesta|resumen)/i.test(norm)) {
+        detectedType = 'doc';
+      } else if (/(post|instagram|facebook|linkedin|tiktok|twitter|tweet|carrusel|redes|social)/i.test(norm)) {
+        detectedType = 'social';
+      } else if (/(hoja de calculo|calculo|tabla|excel|spreadsheet|presupuesto|metricas|balance)/i.test(norm)) {
+        detectedType = 'sheet';
+      } else if (/(video|youtube|shorts|reels)/i.test(norm)) {
+        detectedType = 'video';
+      }
+    }
+
+    const suggestedFormats = [
+      { canvasType: 'board', description: 'Mapa mental, conceptual o pizarra infinita', icon: 'dashboard', label: 'Pizarrón' },
+      { canvasType: 'presentation', description: 'Diapositivas y presentaciones 16:9', icon: 'slideshow', label: 'Presentación' },
+      { canvasType: 'doc', description: 'Documentos, reportes y artículos enriquecidos', icon: 'description', label: 'Documento' },
+      { canvasType: 'social', description: 'Formatos para Instagram, Facebook, LinkedIn y más', icon: 'share', label: 'Redes Sociales' },
+      { canvasType: 'sheet', description: 'Tablas de datos y hojas de cálculo con fórmulas', icon: 'table_chart', label: 'Hoja de cálculo' },
+    ];
+
+    let artifactData: any = null;
+    let artifactTitle = 'Diseño inteligente';
+    let artifactSummary = '';
+    let replyText = '';
+    let usageMeta: AiUsageMetadata | undefined = undefined;
+
+    if (detectedType === 'presentation') {
+      const presResult = await this.generatePresentation(prompt, 5, 'professional');
+      artifactData = presResult;
+      artifactTitle = presResult.title || 'Presentación';
+      artifactSummary = `${presResult.slides.length} diapositivas diseñadas con estructura visual profesional`;
+      usageMeta = presResult.usage;
+      replyText = `¡He creado una presentación completa de ${presResult.slides.length} diapositivas sobre "${artifactTitle}"! Puedes explorar cada diapositiva en la vista previa a la derecha y abrirla en el editor cuando desees.`;
+    } else if (detectedType === 'doc') {
+      const docResult = await this.generateDocContent(prompt, 'generate', 'professional', 'es');
+      artifactData = docResult;
+      artifactTitle = prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt;
+      artifactSummary = 'Documento formateado con secciones temáticas';
+      usageMeta = docResult.usage;
+      replyText = `He redactado y estructurado el documento "${artifactTitle}". Revisa la vista previa y ábrelo en el editor de documentos para personalizarlo.`;
+    } else if (detectedType === 'social') {
+      const isInstagram = /(instagram|ig)/i.test(norm);
+      const isLinkedIn = /(linkedin)/i.test(norm);
+      const platformName = isInstagram ? 'Instagram' : (isLinkedIn ? 'LinkedIn' : 'Redes Sociales');
+      artifactTitle = `Post para ${platformName}: ${prompt.slice(0, 40)}`;
+      artifactData = {
+        callToAction: '¡Haz clic en el enlace del perfil para más detalles!',
+        caption: `💡 ${prompt}\n\nDescubre cómo transformar tus ideas con herramientas modernas. Comparte este contenido si te pareció útil.`,
+        dimensions: { height: 1080, width: 1080 },
+        hashtags: ['#Spriteboard', '#Productividad', '#Innovación', '#Creatividad', '#Diseño'],
+        headline: prompt.slice(0, 60),
+        platform: platformName.toLowerCase(),
+      };
+      artifactSummary = `Diseño de publicación cuadrada (1080×1080 px) para ${platformName}`;
+      replyText = `He preparado el diseño y copy de la publicación para ${platformName}. Puedes ver el diseño previo a la derecha y llevarlo al editor.`;
+    } else if (detectedType === 'sheet') {
+      artifactTitle = `Planilla: ${prompt.slice(0, 40)}`;
+      artifactData = {
+        columns: ['Elemento / Concepto', 'Categoría', 'Responsable', 'Estado', 'Prioridad', 'Estimación ($)'],
+        rows: [
+          ['Fase 1: Investigación', 'Estrategia', 'Equipo de Producto', 'Completado', 'Alta', 1200],
+          ['Fase 2: Diseño Visual', 'Diseño', 'Equipo Creativo', 'En progreso', 'Alta', 2500],
+          ['Fase 3: Desarrollo', 'Ingeniería', 'Equipo Técnico', 'Pendiente', 'Media', 4800],
+          ['Fase 4: Lanzamiento', 'Marketing', 'Líder de Crecimiento', 'Pendiente', 'Alta', 1500],
+        ],
+        title: artifactTitle,
+      };
+      artifactSummary = 'Hoja de cálculo con 6 columnas y datos iniciales estructurados';
+      replyText = `He generado la hoja de cálculo estructurada para "${artifactTitle}". Puedes revisarla y continuar trabajando con ella en el lienzo de cálculo.`;
+    } else {
+      const diagType = (detectedSubtype as any) || 'mindmap';
+      const mapResult = await this.generateMindMap(prompt, 'full', undefined, diagType);
+      artifactData = mapResult;
+      artifactTitle = mapResult.title || 'Esquema visual';
+      artifactSummary = `${mapResult.nodes.length} conceptos y ramas interconectadas`;
+      usageMeta = mapResult.usage;
+      replyText = `¡He diseñado el ${diagType === 'conceptmap' ? 'mapa conceptual' : (diagType === 'flowchart' ? 'diagrama de flujo' : 'mapa mental')} de "${artifactTitle}"! Observa las conexiones en el visor interactivo de la derecha.`;
+    }
+
+    return {
+      artifact: {
+        canvasType: detectedType,
+        data: artifactData,
+        summary: artifactSummary,
+        title: artifactTitle,
+      },
+      intent: {
+        canvasType: detectedType,
+        subtype: detectedSubtype,
+        title: artifactTitle,
+      },
+      reply: replyText,
+      suggestedFormats,
+      usage: usageMeta,
+    };
+  }
 }
 
 export default AiService;

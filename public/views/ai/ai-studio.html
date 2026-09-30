@@ -1,0 +1,102 @@
+<div class="ai-studio-container" data-ref="ai-studio-container">
+  <header class="ai-studio-header" data-ref="ai-studio-header">
+    <div class="ai-studio-header__left" data-ref="ai-studio-header-left">
+      <div class="ai-studio-brand" data-ref="ai-studio-brand">
+        <span class="ai-studio-brand__sparkle" aria-hidden="true">✨</span>
+        <h1 class="ai-studio-brand__title">Spritebot Studio</h1>
+        <span class="component-badge component-badge--sm component-badge--primary" data-ref="badge-studio-status">IA</span>
+      </div>
+    </div>
+    <div class="ai-studio-header__right" data-ref="ai-studio-header-right">
+      <button type="button" class="component-button component-button--secondary component-button--sm" data-ref="btn-new-chat" aria-label="Nueva conversación">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        <span>Nuevo chat</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="ai-studio-workspace" data-ref="ai-studio-workspace">
+    <section class="ai-studio-chat-panel" data-ref="ai-studio-chat-panel">
+      <div class="ai-studio-hero" data-ref="ai-studio-hero">
+        <div class="ai-studio-hero__avatar" data-ref="ai-studio-hero-avatar">
+          <span class="ai-studio-hero__emoji" aria-hidden="true">✨</span>
+        </div>
+        <h2 class="ai-studio-hero__title">¿Qué deseas crear hoy?</h2>
+        <p class="ai-studio-hero__subtitle">Describe tu idea y Spritebot diseñará presentaciones, mapas conceptuales, documentos o posts listos para editar.</p>
+
+        <div class="ai-studio-starters" data-ref="ai-studio-starters">
+          <button type="button" class="ai-studio-starter-card" data-ref="starter-mindmap" data-prompt="Crea un mapa mental sobre energías renovables y sostenibilidad">
+            <span class="ai-studio-starter-card__icon" aria-hidden="true">🧠</span>
+            <div class="ai-studio-starter-card__content">
+              <h3 class="ai-studio-starter-card__title">Mapa Mental o Conceptual</h3>
+              <p class="ai-studio-starter-card__desc">Estructura ramas, ideas y conceptos conectados</p>
+            </div>
+          </button>
+
+          <button type="button" class="ai-studio-starter-card" data-ref="starter-presentation" data-prompt="Crea una presentación de 5 diapositivas para lanzar una startup de inteligencia artificial">
+            <span class="ai-studio-starter-card__icon" aria-hidden="true">📊</span>
+            <div class="ai-studio-starter-card__content">
+              <h3 class="ai-studio-starter-card__title">Presentación Ejecutiva</h3>
+              <p class="ai-studio-starter-card__desc">Diapositivas 16:9 con portada, métricas y contenido</p>
+            </div>
+          </button>
+
+          <button type="button" class="ai-studio-starter-card" data-ref="starter-doc" data-prompt="Redacta un documento con las políticas de trabajo remoto y mejores prácticas para el equipo">
+            <span class="ai-studio-starter-card__icon" aria-hidden="true">📄</span>
+            <div class="ai-studio-starter-card__content">
+              <h3 class="ai-studio-starter-card__title">Documento o Reporte</h3>
+              <p class="ai-studio-starter-card__desc">Artículos, especificaciones y contratos organizados</p>
+            </div>
+          </button>
+
+          <button type="button" class="ai-studio-starter-card" data-ref="starter-social" data-prompt="Diseña un post para Instagram promocionando una semana de descuentos en cursos digitales">
+            <span class="ai-studio-starter-card__icon" aria-hidden="true">📱</span>
+            <div class="ai-studio-starter-card__content">
+              <h3 class="ai-studio-starter-card__title">Publicación para Redes</h3>
+              <p class="ai-studio-starter-card__desc">Copies de impacto, hashtags y estructura visual</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="ai-studio-messages" data-ref="ai-studio-messages" style="display: none;"></div>
+
+      <div class="ai-studio-input-wrapper" data-ref="ai-studio-input-wrapper">
+        <form class="ai-studio-input-form" data-ref="ai-studio-input-form">
+          <div class="ai-studio-input-box" data-ref="ai-studio-input-box">
+            <textarea class="ai-studio-textarea" data-ref="ai-studio-textarea" placeholder="Escribe lo que deseas crear o pide cambios..." rows="1"></textarea>
+            <div class="ai-studio-input-box__actions" data-ref="ai-studio-input-box-actions">
+              <button type="submit" class="ai-studio-send-btn" data-ref="btn-studio-send" aria-label="Enviar mensaje">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <aside class="ai-studio-preview-panel" data-ref="ai-studio-preview-panel" style="display: none;">
+      <div class="ai-studio-preview-header" data-ref="ai-studio-preview-header">
+        <div class="ai-studio-preview-header__info" data-ref="ai-studio-preview-info">
+          <span class="ai-studio-preview-header__icon" data-ref="preview-format-icon" aria-hidden="true">✨</span>
+          <div class="ai-studio-preview-header__text" data-ref="ai-studio-preview-text">
+            <h3 class="ai-studio-preview-header__title" data-ref="preview-title">Vista previa en vivo</h3>
+            <span class="ai-studio-preview-header__format" data-ref="preview-format-badge">Lienzo</span>
+          </div>
+        </div>
+        <div class="ai-studio-preview-header__actions" data-ref="ai-studio-preview-actions">
+          <button type="button" class="component-button component-button--secondary component-button--sm" data-ref="btn-preview-copy" data-tooltip="Copiar contenido" aria-label="Copiar contenido">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            <span>Copiar</span>
+          </button>
+          <button type="button" class="component-button component-button--primary component-button--sm" data-ref="btn-open-in-canvas" aria-label="Abrir y editar en el lienzo">
+            <span aria-hidden="true">✨</span>
+            <span>Abrir en lienzo</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="ai-studio-preview-body" data-ref="ai-studio-preview-body"></div>
+    </aside>
+  </div>
+</div>

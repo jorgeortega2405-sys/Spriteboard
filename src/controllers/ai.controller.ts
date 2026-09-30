@@ -547,6 +547,95 @@ export class AiController {
       });
     }
   }
+
+  static async studioChat(req: Request, res: Response): Promise<void> {
+    try {
+      const { history, prompt, targetCanvasType } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({
+          error: 'El mensaje no puede estar vacío.',
+          success: false,
+        });
+        return;
+      }
+
+      if (prompt.length > 2500) {
+        res.status(400).json({
+          error: 'El mensaje excede el límite permitido de caracteres.',
+          success: false,
+        });
+        return;
+      }
+
+      let validHistory: ChatMessage[] = [];
+      if (Array.isArray(history)) {
+        validHistory = history
+          .filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              typeof item.text === 'string' &&
+              (item.role === 'user' || item.role === 'model')
+          )
+          .slice(-10);
+      }
+
+      const currentUser = getCurrentUser(req);
+      if (currentUser) {
+        const quotaCheck = await AiQuotaService.checkQuotaAvailable(currentUser.id, currentUser.subscription_tier || 'free');
+        if (!quotaCheck.allowed) {
+          res.status(429).json({
+            code: 'QUOTA_EXCEEDED',
+            error: quotaCheck.reason,
+            quota: quotaCheck.quota,
+            success: false,
+          });
+          return;
+        }
+      }
+
+      const result = await AiService.generateStudioChat(
+        prompt.trim(),
+        validHistory,
+        targetCanvasType
+      );
+
+      let updatedQuota = null;
+      if (currentUser && result.usage) {
+        let featureType: 'board' | 'doc' | 'mindmap' | 'presentation' = 'mindmap';
+        if (result.intent.canvasType === 'presentation') featureType = 'presentation';
+        else if (result.intent.canvasType === 'doc') featureType = 'doc';
+        else if (result.intent.canvasType === 'board') featureType = result.intent.subtype === 'mindmap' ? 'mindmap' : 'board';
+
+        updatedQuota = await AiQuotaService.recordConsumption(
+          currentUser.id,
+          currentUser.subscription_tier || 'free',
+          featureType,
+          result.usage.promptTokens,
+          result.usage.completionTokens,
+          result.usage.totalTokens,
+          result.usage.model
+        );
+      }
+
+      res.status(200).json({
+        artifact: result.artifact,
+        intent: result.intent,
+        quota: updatedQuota,
+        reply: result.reply,
+        suggestedFormats: result.suggestedFormats,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al procesar consulta en Spritebot Studio', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar tu solicitud.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default AiController;
