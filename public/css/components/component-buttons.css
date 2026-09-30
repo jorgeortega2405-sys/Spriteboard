@@ -493,6 +493,22 @@ html.dark-theme .component-badge--active .component-icon {
   fill: currentColor !important;
 }
 
+.component-badge .component-badge__icon--colored,
+.component-badge.is-active .component-badge__icon--colored,
+.component-badge--active .component-badge__icon--colored,
+.component-badge--interactive:hover .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge.is-active .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge--active .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge--interactive:hover .component-badge__icon--colored,
+html.dark-theme .component-badge .component-badge__icon--colored,
+html.dark-theme .component-badge.is-active .component-badge__icon--colored,
+html.dark-theme .component-badge--active .component-badge__icon--colored,
+html.dark-theme .component-badge--interactive:hover .component-badge__icon--colored {
+  color: unset !important;
+  fill: none !important;
+}
+
 .component-badge__text {
   display: inline-block;
   white-space: nowrap;

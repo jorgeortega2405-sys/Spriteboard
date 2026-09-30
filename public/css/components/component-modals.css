@@ -3894,6 +3894,13 @@ html.dark-theme .component-card-button--downgrade {
   box-sizing: border-box;
 }
 
+.creation-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .creation-card__svg-wrapper svg {
   width: 100%;
   height: 100%;
