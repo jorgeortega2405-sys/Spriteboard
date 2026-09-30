@@ -2,7 +2,7 @@ import { navigate } from '../app-router.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
-import { getCategoryBadgeIconSvg } from '../graphics/canvas-graphics.js';
+import { getCanvasTypeIconSvg, getCategoryBadgeIconSvg } from '../graphics/canvas-graphics.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -164,6 +164,39 @@ class TemplatesController {
           this.updateBadgeActiveState(catId);
           this.renderTemplates();
         }
+      },
+      { signal }
+    );
+
+    const exploreCarouselEl = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-carousel"]');
+    exploreCarouselEl?.addEventListener(
+      'click',
+      (e) => {
+        const card = (e.target as HTMLElement).closest<HTMLElement>('.templates-explore-card');
+        if (!card) return;
+        const category = card.getAttribute('data-category');
+        const query = card.getAttribute('data-explore-query') || '';
+
+        if (category && category !== 'all') {
+          this.activeCategory = category;
+          this.updateBadgeActiveState(category);
+        } else {
+          this.activeCategory = 'all';
+          this.updateBadgeActiveState('all');
+        }
+
+        if (searchInput) {
+          searchInput.value = query;
+          this.searchQuery = query.toLowerCase();
+          if (clearBtn) {
+            clearBtn.style.display = this.searchQuery ? 'inline-flex' : 'none';
+          }
+        }
+
+        this.renderTemplates();
+
+        const sectionEl = this.container.querySelector<HTMLElement>('[data-ref="templates-section-header"]');
+        sectionEl?.scrollIntoView({ behavior: 'smooth' });
       },
       { signal }
     );
@@ -340,6 +373,38 @@ class TemplatesController {
     this.scrollObserver.observe(this.sentinelEl);
   }
 
+  private getTemplateCanvasTypeInfo(item: PresetItem): { canvasType: string; label: string } {
+    const type = (item.canvasType || item.categoryKey || '').toLowerCase();
+    switch (type) {
+      case 'presentation':
+      case 'presentaciones':
+        return { canvasType: 'presentation', label: t('templates.filter_presentation') || 'Presentación' };
+      case 'doc':
+      case 'documentos':
+        return { canvasType: 'doc', label: t('templates.filter_doc') || 'Documento Doc' };
+      case 'board':
+      case 'pizarrones':
+        return { canvasType: 'board', label: t('templates.filter_board') || 'Pizarrón' };
+      case 'sheet':
+      case 'hojas de cálculo':
+        return { canvasType: 'sheet', label: t('templates.filter_sheet') || 'Hoja de cálculo' };
+      case 'video':
+      case 'videos':
+        return { canvasType: 'video', label: t('templates.filter_videos') || 'Video' };
+      case 'social':
+      case 'redes sociales':
+        return { canvasType: 'social', label: t('templates.filter_social') || 'Redes sociales' };
+      case 'marketing':
+      case 'impresión':
+        return { canvasType: 'social', label: 'Marketing e Impresión' };
+      default:
+        if (item.width === 1920 && item.height === 1080) {
+          return { canvasType: 'presentation', label: t('templates.filter_presentation') || 'Presentación' };
+        }
+        return { canvasType: 'social', label: item.categoryName || 'Diseño' };
+    }
+  }
+
   private buildCardHtml(item: PresetItem): string {
     const isFavorite = this.favoritedTemplateIds.has(item.id);
     const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
@@ -367,12 +432,26 @@ class TemplatesController {
         `
       : '';
 
+    const { canvasType, label: typeLabel } = this.getTemplateCanvasTypeInfo(item);
+    const typeIconSvg = getCanvasTypeIconSvg(canvasType);
+    const dimensionsText = item.width && item.height ? `${item.width} × ${item.height} px` : '';
+
     return `
       <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
         <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
           ${previewContent}
           ${premiumBadgeHtml}
           ${actionsHtml}
+        </div>
+        <div class="canvas-card__info" data-ref="template-card-info-${item.id}">
+          <span class="canvas-card__name" data-ref="template-card-title-${item.id}" title="${escapeHtml(item.name)}">
+            ${escapeHtml(item.name)}
+          </span>
+          <div class="canvas-card__meta" data-ref="template-card-meta-${item.id}">
+            ${typeIconSvg}
+            <span>${typeLabel}</span>
+            ${dimensionsText ? `<span class="canvas-card__meta-dot">·</span><span>${dimensionsText}</span>` : ''}
+          </div>
         </div>
       </div>
     `;

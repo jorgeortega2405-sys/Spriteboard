@@ -53,8 +53,11 @@
 
         <div class="component-tags-carousel-wrapper templates-explore-carousel-wrapper" data-ref="templates-explore-carousel-wrapper">
           <div class="templates-explore-carousel" data-ref="templates-explore-carousel">
-            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-presentation">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_presentation">Presentación</span>
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-presentation" data-category="presentation" data-explore-query="presentacion">
+              <div class="templates-explore-card__info" data-ref="info-explore-presentation">
+                <span class="templates-explore-card__label" data-ref="label-explore-presentation" data-i18n="templates.explore_presentation">Presentación</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-presentation" data-i18n="templates.canvas_type_presentation">Presentación</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="6" y="6" width="68" height="38" rx="4" fill="#fb923c" fill-opacity="0.3"/>
@@ -72,8 +75,49 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-poster">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_poster">Póster</span>
+            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-board" data-category="board" data-explore-query="pizarron">
+              <div class="templates-explore-card__info" data-ref="info-explore-board">
+                <span class="templates-explore-card__label" data-ref="label-explore-board" data-i18n="templates.explore_board">Pizarrón</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-board" data-i18n="templates.canvas_type_board">Pizarrón</span>
+              </div>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="10" y="4" width="60" height="42" rx="4" fill="#ffffff" stroke="#10b981" stroke-width="0.75"/>
+                  <circle cx="20" cy="14" r="1" fill="#cbd5e1"/><circle cx="30" cy="14" r="1" fill="#cbd5e1"/><circle cx="40" cy="14" r="1" fill="#cbd5e1"/><circle cx="50" cy="14" r="1" fill="#cbd5e1"/><circle cx="60" cy="14" r="1" fill="#cbd5e1"/>
+                  <circle cx="20" cy="24" r="1" fill="#cbd5e1"/><circle cx="30" cy="24" r="1" fill="#cbd5e1"/><circle cx="40" cy="24" r="1" fill="#cbd5e1"/><circle cx="50" cy="24" r="1" fill="#cbd5e1"/><circle cx="60" cy="24" r="1" fill="#cbd5e1"/>
+                  <circle cx="20" cy="34" r="1" fill="#cbd5e1"/><circle cx="30" cy="34" r="1" fill="#cbd5e1"/><circle cx="40" cy="34" r="1" fill="#cbd5e1"/><circle cx="50" cy="34" r="1" fill="#cbd5e1"/><circle cx="60" cy="34" r="1" fill="#cbd5e1"/>
+                  <rect x="18" y="16" width="16" height="16" rx="2" fill="#fef08a" stroke="#facc15" stroke-width="0.5"/>
+                  <rect x="46" y="22" width="18" height="16" rx="2" fill="#bae6fd" stroke="#38bdf8" stroke-width="0.5"/>
+                  <path d="M34 24 C40 24, 40 30, 46 30" stroke="#6366f1" stroke-width="0.75" stroke-dasharray="2 2"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--cyan" data-ref="explore-card-sheet" data-category="sheet" data-explore-query="calculo">
+              <div class="templates-explore-card__info" data-ref="info-explore-sheet">
+                <span class="templates-explore-card__label" data-ref="label-explore-sheet" data-i18n="templates.explore_sheet">Hoja de cálculo</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-sheet" data-i18n="templates.canvas_type_sheet">Hoja de cálculo</span>
+              </div>
+              <div class="templates-explore-card__preview">
+                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="10" y="4" width="60" height="42" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="0.75"/>
+                  <rect x="10" y="4" width="60" height="8" rx="3" fill="#0284c7"/>
+                  <line x1="10" y1="20" x2="70" y2="20" stroke="#cbd5e1" stroke-width="0.5"/>
+                  <line x1="10" y1="28" x2="70" y2="28" stroke="#cbd5e1" stroke-width="0.5"/>
+                  <line x1="10" y1="36" x2="70" y2="36" stroke="#cbd5e1" stroke-width="0.5"/>
+                  <line x1="28" y1="12" x2="28" y2="46" stroke="#cbd5e1" stroke-width="0.5"/>
+                  <line x1="48" y1="12" x2="48" y2="46" stroke="#cbd5e1" stroke-width="0.5"/>
+                  <rect x="30" y="22" width="16" height="4" rx="1" fill="#38bdf8"/>
+                  <rect x="50" y="30" width="16" height="4" rx="1" fill="#a7f3d0"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-poster" data-category="social" data-explore-query="poster">
+              <div class="templates-explore-card__info" data-ref="info-explore-poster">
+                <span class="templates-explore-card__label" data-ref="label-explore-poster" data-i18n="templates.explore_poster">Póster</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-poster" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
@@ -85,8 +129,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-resume">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_resume">Currículum</span>
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-resume" data-category="doc" data-explore-query="curriculum">
+              <div class="templates-explore-card__info" data-ref="info-explore-resume">
+                <span class="templates-explore-card__label" data-ref="label-explore-resume" data-i18n="templates.explore_resume">Currículum</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-resume" data-i18n="templates.canvas_type_doc">Documento Doc</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
@@ -103,8 +150,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--periwinkle" data-ref="explore-card-email">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_email">Correo</span>
+            <div class="templates-explore-card templates-explore-card--periwinkle" data-ref="explore-card-email" data-category="social" data-explore-query="correo">
+              <div class="templates-explore-card__info" data-ref="info-explore-email">
+                <span class="templates-explore-card__label" data-ref="label-explore-email" data-i18n="templates.explore_email">Correo</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-email" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#3b82f6" stroke-width="0.75"/>
@@ -119,8 +169,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-invitation">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_invitation">Invitación</span>
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-invitation" data-category="social" data-explore-query="invitacion">
+              <div class="templates-explore-card__info" data-ref="info-explore-invitation">
+                <span class="templates-explore-card__label" data-ref="label-explore-invitation" data-i18n="templates.explore_invitation">Invitación</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-invitation" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#fdf4ff" stroke="#d946ef" stroke-width="0.75"/>
@@ -134,8 +187,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-mobile-video">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_mobile_video">Video para dispositivos...</span>
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-mobile-video" data-category="video" data-explore-query="video">
+              <div class="templates-explore-card__info" data-ref="info-explore-mobile-video">
+                <span class="templates-explore-card__label" data-ref="label-explore-mobile-video" data-i18n="templates.explore_mobile_video">Video para dispositivos...</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-mobile-video" data-i18n="templates.canvas_type_video">Video</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="26" y="2" width="28" height="46" rx="4" fill="#0f172a" stroke="#475569" stroke-width="0.75"/>
@@ -152,8 +208,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-fb-post">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_fb_post">Post para Facebook</span>
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-fb-post" data-category="social" data-explore-query="facebook">
+              <div class="templates-explore-card__info" data-ref="info-explore-fb-post">
+                <span class="templates-explore-card__label" data-ref="label-explore-fb-post" data-i18n="templates.explore_fb_post">Post para Facebook</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-fb-post" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="14" y="6" width="52" height="38" rx="3" fill="#ffffff" stroke="#1877f2" stroke-width="0.75"/>
@@ -167,8 +226,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-business-card">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_business_card">Tarjeta de presentación</span>
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-business-card" data-category="social" data-explore-query="tarjeta">
+              <div class="templates-explore-card__info" data-ref="info-explore-business-card">
+                <span class="templates-explore-card__label" data-ref="label-explore-business-card" data-i18n="templates.explore_business_card">Tarjeta de presentación</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-business-card" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="12" y="8" width="56" height="34" rx="3" fill="#84cc16" stroke="#65a30d" stroke-width="0.75"/>
@@ -180,8 +242,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-photo-collage">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_photo_collage">Collage de fotos</span>
+            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-photo-collage" data-category="social" data-explore-query="collage">
+              <div class="templates-explore-card__info" data-ref="info-explore-photo-collage">
+                <span class="templates-explore-card__label" data-ref="label-explore-photo-collage" data-i18n="templates.explore_photo_collage">Collage de fotos</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-photo-collage" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="20" y="4" width="40" height="42" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
@@ -192,8 +257,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--pink" data-ref="explore-card-ig-post">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_ig_post">Post para Instagram</span>
+            <div class="templates-explore-card templates-explore-card--pink" data-ref="explore-card-ig-post" data-category="social" data-explore-query="instagram">
+              <div class="templates-explore-card__info" data-ref="info-explore-ig-post">
+                <span class="templates-explore-card__label" data-ref="label-explore-ig-post" data-i18n="templates.explore_ig_post">Post para Instagram</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-ig-post" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="18" y="3" width="44" height="44" rx="4" fill="#ffffff" stroke="#f43f5e" stroke-width="0.75"/>
@@ -212,8 +280,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-ig-story">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_ig_story">Instagram Story</span>
+            <div class="templates-explore-card templates-explore-card--peach" data-ref="explore-card-ig-story" data-category="social" data-explore-query="story">
+              <div class="templates-explore-card__info" data-ref="info-explore-ig-story">
+                <span class="templates-explore-card__label" data-ref="label-explore-ig-story" data-i18n="templates.explore_ig_story">Instagram Story</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-ig-story" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="26" y="2" width="28" height="46" rx="4" fill="url(#grad-story)" stroke="#e11d48" stroke-width="0.75"/>
@@ -230,8 +301,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-horizontal-video">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_horizontal_video">Video horizontal</span>
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-horizontal-video" data-category="video" data-explore-query="video">
+              <div class="templates-explore-card__info" data-ref="info-explore-horizontal-video">
+                <span class="templates-explore-card__label" data-ref="label-explore-horizontal-video" data-i18n="templates.explore_horizontal_video">Video horizontal</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-horizontal-video" data-i18n="templates.canvas_type_video">Video</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="10" y="6" width="60" height="38" rx="4" fill="url(#grad-h-vid)" stroke="#6366f1" stroke-width="0.75"/>
@@ -248,21 +322,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--periwinkle" data-ref="explore-card-interactive-design">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_interactive_design">Diseño interactivo</span>
-              <div class="templates-explore-card__preview">
-                <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="12" y="4" width="56" height="42" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
-                  <rect x="12" y="4" width="56" height="8" rx="4" fill="#ec4899"/>
-                  <rect x="16" y="16" width="22" height="14" rx="2" fill="#ede9fe" stroke="#c084fc" stroke-width="0.5"/>
-                  <rect x="42" y="16" width="22" height="14" rx="2" fill="#e0f2fe" stroke="#38bdf8" stroke-width="0.5"/>
-                  <rect x="16" y="34" width="48" height="6" rx="2" fill="#f1f5f9"/>
-                </svg>
+            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-logo" data-category="social" data-explore-query="logo">
+              <div class="templates-explore-card__info" data-ref="info-explore-logo">
+                <span class="templates-explore-card__label" data-ref="label-explore-logo" data-i18n="templates.explore_logo">Logo</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-logo" data-i18n="templates.canvas_type_social">Redes sociales</span>
               </div>
-            </div>
-
-            <div class="templates-explore-card templates-explore-card--cream" data-ref="explore-card-logo">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_logo">Logo</span>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="16" y="8" width="44" height="38" rx="3" fill="#fef08a" transform="rotate(-4 16 8)"/>
@@ -274,8 +338,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-flyer">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_flyer">Flyer</span>
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-flyer" data-category="social" data-explore-query="flyer">
+              <div class="templates-explore-card__info" data-ref="info-explore-flyer">
+                <span class="templates-explore-card__label" data-ref="label-explore-flyer" data-i18n="templates.explore_flyer">Flyer</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-flyer" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.75"/>
@@ -289,8 +356,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-brochure">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_brochure">Folleto</span>
+            <div class="templates-explore-card templates-explore-card--lavender" data-ref="explore-card-brochure" data-category="social" data-explore-query="folleto">
+              <div class="templates-explore-card__info" data-ref="info-explore-brochure">
+                <span class="templates-explore-card__label" data-ref="label-explore-brochure" data-i18n="templates.explore_brochure">Folleto</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-brochure" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="12" y="6" width="56" height="38" rx="2" fill="#ea580c" stroke="#c2410c" stroke-width="0.75"/>
@@ -304,8 +374,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-menu">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_menu">Menú</span>
+            <div class="templates-explore-card templates-explore-card--purple" data-ref="explore-card-menu" data-category="social" data-explore-query="menu">
+              <div class="templates-explore-card__info" data-ref="info-explore-menu">
+                <span class="templates-explore-card__label" data-ref="label-explore-menu" data-i18n="templates.explore_menu">Menú</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-menu" data-i18n="templates.canvas_type_social">Redes sociales</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.75"/>
@@ -322,8 +395,11 @@
               </div>
             </div>
 
-            <div class="templates-explore-card templates-explore-card--cyan" data-ref="explore-card-doc">
-              <span class="templates-explore-card__label" data-i18n="templates.explore_doc">Doc</span>
+            <div class="templates-explore-card templates-explore-card--cyan" data-ref="explore-card-doc" data-category="doc" data-explore-query="doc">
+              <div class="templates-explore-card__info" data-ref="info-explore-doc">
+                <span class="templates-explore-card__label" data-ref="label-explore-doc" data-i18n="templates.explore_doc">Doc</span>
+                <span class="templates-explore-card__type" data-ref="type-explore-doc" data-i18n="templates.canvas_type_doc">Documento Doc</span>
+              </div>
               <div class="templates-explore-card__preview">
                 <svg class="templates-explore-card__svg" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="22" y="2" width="36" height="46" rx="3" fill="#ffffff" stroke="#0ea5e9" stroke-width="0.75"/>

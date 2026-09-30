@@ -2,11 +2,13 @@ import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { hasTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
+import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { CanvasType } from '../types/canvas.types.js';
 import { setupLazyImages } from '../utils/dom.util.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
@@ -370,6 +372,15 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
               </div>
             </div>
           </div>
+          <div class="canvas-card__info" data-ref="similar-info-${item.id}">
+            <span class="canvas-card__name" data-ref="similar-title-${item.id}" title="${escapeHtml(item.name)}">
+              ${escapeHtml(item.name)}
+            </span>
+            <div class="canvas-card__meta" data-ref="similar-meta-${item.id}">
+              ${getCanvasTypeIconSvg(item.canvasType || item.categoryKey)}
+              <span>${getCategoryLabel(item)}</span>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
@@ -381,7 +392,8 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   const handleUseCurrentTemplate = async () => {
     try {
       modalInstance.close();
-      const canvasType = currentPreset.canvasType || (currentPreset.categoryKey === 'presentation' ? 'presentation' : (currentPreset.categoryKey === 'doc' ? 'doc' : 'board'));
+      const rawCat = (currentPreset.categoryKey || '').toLowerCase();
+      const canvasType: CanvasType = currentPreset.canvasType || (rawCat === 'presentation' ? 'presentation' : (rawCat === 'doc' ? 'doc' : (rawCat === 'sheet' ? 'sheet' : (rawCat === 'videos' || rawCat === 'video' ? 'video' : (rawCat === 'social' ? 'social' : 'board')))));
 
       let initialProject = currentPreset.canvasData || null;
       if (!initialProject && currentPreset.templateUuid) {

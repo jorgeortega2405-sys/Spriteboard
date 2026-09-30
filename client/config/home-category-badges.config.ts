@@ -56,13 +56,6 @@ export const HOME_CATEGORY_BADGES: HomeCategoryBadgeItem[] = [
     label: 'Videos',
   },
   {
-    category: 'photos',
-    dataRef: 'cat-badge-photos',
-    i18nKey: 'home.badge_photos',
-    iconSvg: createIconSvg('photo_library'),
-    label: 'Fotos',
-  },
-  {
     category: 'custom',
     dataRef: 'cat-badge-custom',
     i18nKey: 'home.badge_custom',

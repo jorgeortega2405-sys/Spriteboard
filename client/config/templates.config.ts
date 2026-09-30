@@ -12,7 +12,7 @@ export interface PresetItem {
   authorUsername?: string;
   boardTemplateId?: string;
   canvasData?: any;
-  canvasType?: 'board' | 'doc' | 'presentation';
+  canvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
   categoryKey: string;
   categoryName: string;
   description?: string;
