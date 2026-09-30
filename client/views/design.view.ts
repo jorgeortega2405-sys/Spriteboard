@@ -6,7 +6,7 @@ import { detectCanvasType } from '../utils/canvas-type.util.js';
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
 
-  if (!canvasRecord || !canvasRecord.data || canvasRecord.id) {
+  if (!canvasRecord || !canvasRecord.data) {
     try {
       const res = await getApi(API_ROUTES.canvases.byId(canvasUuid));
       if (res.ok) {

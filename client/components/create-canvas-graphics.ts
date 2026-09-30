@@ -574,70 +574,46 @@ export interface CanvasIconDef {
 
 export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
   board: {
-    coloredGlyph: '<path fill="#00C48C" d="M4.288 6.285C3 7.92 3 10.313 3 15.1v1.8c0 4.787 0 7.18 1.288 8.815a6 6 0 0 0 .997.997C6.92 28 9.313 28 14.1 28h3.8c4.787 0 7.18 0 8.815-1.288.37-.292.705-.627.997-.997C29 24.08 29 21.687 29 16.9v-1.8c0-4.787 0-7.18-1.288-8.815a6 6 0 0 0-.997-.997C25.08 4 22.687 4 17.9 4h-3.8C9.313 4 6.92 4 5.285 5.288a6 6 0 0 0-.997.997Z"/><path fill="#ffffff" d="M21.996 13.437c.006.829.676 1.5 1.504 1.5a1.49 1.49 0 0 0 1.495-1.5c-.024-2.14-.156-3.84-.874-4.558s-2.44-.85-4.59-.874a1.49 1.49 0 0 0-1.5 1.495c0 .828.672 1.498 1.5 1.504a49.94 49.94 0 0 1 1.878.04c.143.031.29.083.377.17.087.088.139.235.17.378.023.468.035 1.133.04 1.845ZM10.004 18.5A1.507 1.507 0 0 0 8.5 17a1.49 1.49 0 0 0-1.495 1.5c.024 2.158.155 3.903.874 4.621.717.718 2.418.85 4.558.874a1.49 1.49 0 0 0 1.5-1.495c0-.828-.671-1.498-1.5-1.504a46.623 46.623 0 0 1-1.845-.04c-.143-.031-.29-.083-.378-.17-.087-.087-.138-.233-.17-.376a49.106 49.106 0 0 1-.04-1.91Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-pizarron-infinito" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#29CD9E"/><stop offset="1" stop-color="#00C48C"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-pizarron-infinito)"/><path d="M18 8.5h3a2.5 2.5 0 0 1 2.5 2.5v3M14 23.5h-3A2.5 2.5 0 0 1 8.5 21v-3" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="12.75" y="12.75" width="6.5" height="6.5" rx="1.75" fill="#FFFFFF"/>',
     fill: '#00C48C',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M4.288 6.285C3 7.92 3 10.313 3 15.1v1.8c0 4.787 0 7.18 1.288 8.815a6 6 0 0 0 .997.997C6.92 28 9.313 28 14.1 28h3.8c4.787 0 7.18 0 8.815-1.288.37-.292.705-.627.997-.997C29 24.08 29 21.687 29 16.9v-1.8c0-4.787 0-7.18-1.288-8.815a6 6 0 0 0-.997-.997C25.08 4 22.687 4 17.9 4h-3.8C9.313 4 6.92 4 5.285 5.288a6 6 0 0 0-.997.997Z"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   sheet: {
-    coloredGlyph: '<path fill="#138EFF" d="M3 15.1c0-4.787 0-7.18 1.288-8.815a6 6 0 0 1 .997-.997C6.92 4 9.313 4 14.1 4h3.8c4.787 0 7.18 0 8.815 1.288a6 6 0 0 1 .997.997C29 7.92 29 10.313 29 15.1v1.8c0 4.787 0 7.18-1.288 8.815-.292.37-.627.705-.997.997C25.08 28 22.687 28 17.9 28h-3.8c-4.787 0-7.18 0-8.815-1.288a6 6 0 0 1-.997-.997C3 24.08 3 21.687 3 16.9v-1.8Z"/><path fill="#ffffff" d="M7.004 12.333c.018-1.609.116-2.525.64-3.19a3 3 0 0 1 .499-.499C8.895 8.051 9.968 8.004 12 8v4.333H7.004ZM7 13.833v4.334h5v-4.334H7Zm.004 5.834c.018 1.609.116 2.525.64 3.19.146.186.313.353.499.499.752.593 1.825.64 3.857.644v-4.333H7.004ZM13.5 24h5.95c2.393 0 3.59 0 4.407-.644.186-.146.353-.314.499-.499.524-.665.622-1.581.64-3.19H13.5V24ZM25 18.167v-4.334H13.5v4.334H25Zm-.004-5.834c-.018-1.609-.116-2.525-.64-3.19a3 3 0 0 0-.499-.499C23.105 8.051 22.032 8.004 20 8v4.333h4.996ZM18.5 8h-5v4.333h5V8Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-hoja-de-calculo" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#39A0FF"/><stop offset="1" stop-color="#138EFF"/></linearGradient><clipPath id="cp-hoja"><rect x="7.9" y="7.9" width="16.2" height="16.2" rx="3.1"/></clipPath></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-hoja-de-calculo)"/><g clip-path="url(#cp-hoja)"><rect x="7" y="7" width="18" height="6.5" fill="#FFFFFF" fill-opacity=".38"/><path d="M7 13.5h18M7 19h18M13.5 7v18" stroke="#FFFFFF" stroke-width="1.8"/></g><rect x="7.9" y="7.9" width="16.2" height="16.2" rx="3.1" stroke="#FFFFFF" stroke-width="1.8"/>',
     fill: '#138EFF',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M3 15.1c0-4.787 0-7.18 1.288-8.815a6 6 0 0 1 .997-.997C6.92 4 9.313 4 14.1 4h3.8c4.787 0 7.18 0 8.815 1.288a6 6 0 0 1 .997.997C29 7.92 29 10.313 29 15.1v1.8c0 4.787 0 7.18-1.288 8.815-.292.37-.627.705-.997.997C25.08 28 22.687 28 17.9 28h-3.8c-4.787 0-7.18 0-8.815-1.288a6 6 0 0 1-.997-.997C3 24.08 3 21.687 3 16.9v-1.8Z"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   presentation: {
-    coloredGlyph: '<path fill="#FF6105" d="M29 13c0 3.738 0 5.608-.804 7A6.002 6.002 0 0 1 26 22.196c-1.21.699-2.78.79-5.623.802l3.192 5.233a.5.5 0 0 1-.426.76L19.507 29a.5.5 0 0 1-.433-.247l-2.643-4.512a.5.5 0 0 0-.862 0l-2.644 4.512a.5.5 0 0 1-.432.247l-3.608-.008a.5.5 0 0 1-.426-.759l3.17-5.234c-2.847-.012-4.418-.103-5.629-.802A6 6 0 0 1 3.804 20C3 18.608 3 16.738 3 13s0-5.608.804-7A6 6 0 0 1 6 3.804C7.392 3 9.262 3 13 3h6c3.738 0 5.608 0 7 .804A6.001 6.001 0 0 1 28.196 6C29 7.392 29 9.262 29 13Z"/><path fill="#ffffff" d="M22.508 11.516a5 5 0 0 0-5-5v5h5ZM16 8h-.031a5 5 0 1 0 5 5H16V8Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-presentacion" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF7A2D"/><stop offset="1" stop-color="#FF6105"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-presentacion)"/><rect x="7" y="7" width="18" height="13" rx="3" fill="#FFFFFF"/><circle cx="16" cy="13.5" r="3.6" stroke="#FF6105" stroke-width="1.6"/><path d="M16 13.5V9.9A3.6 3.6 0 0 1 19.6 13.5Z" fill="#FF6105"/><path d="M16 20v3.5M12.5 24.5h7" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>',
     fill: '#FF6105',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M29 13c0 3.738 0 5.608-.804 7A6.002 6.002 0 0 1 26 22.196c-1.21.699-2.78.79-5.623.802l3.192 5.233a.5.5 0 0 1-.426.76L19.507 29a.5.5 0 0 1-.433-.247l-2.643-4.512a.5.5 0 0 0-.862 0l-2.644 4.512a.5.5 0 0 1-.432.247l-3.608-.008a.5.5 0 0 1-.426-.759l3.17-5.234c-2.847-.012-4.418-.103-5.629-.802A6 6 0 0 1 3.804 20C3 18.608 3 16.738 3 13s0-5.608.804-7A6 6 0 0 1 6 3.804C7.392 3 9.262 3 13 3h6c3.738 0 5.608 0 7 .804A6.001 6.001 0 0 1 28.196 6C29 7.392 29 9.262 29 13Z"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   social: {
-    coloredGlyph: '<path fill="#FF3B4B" d="M29 13.752c0 4.213 0 6.32-1.011 7.833a6 6 0 0 1-1.656 1.656c-1.351.903-3.176 1-6.552 1.01l-2.055 3.508c-.773 1.319-2.68 1.319-3.452 0L12.22 24.25c-3.376-.01-5.2-.107-6.552-1.01a6.001 6.001 0 0 1-1.656-1.656C3 20.072 3 17.965 3 13.752s0-6.32 1.011-7.833a6 6 0 0 1 1.656-1.656C7.18 3.252 9.287 3.252 13.5 3.252h5c4.213 0 6.32 0 7.833 1.011.656.438 1.218 1 1.656 1.656C29 7.432 29 9.539 29 13.752Z"/><path fill="#ffffff" d="M21.702 14.459c.207-.31.38-.655.483-1 .07-.276.138-.586.104-.897a3.311 3.311 0 0 0-3.31-3.31c-1.311 0-2.45.793-2.966 1.896h-.035a3.298 3.298 0 0 0-2.965-1.896c-.897 0-1.69.345-2.276.931a3.487 3.487 0 0 0-.966 1.828c-.034.172-.069.344-.069.551 0 .31.07.621.173.931.103.38.276.724.517 1.035l.035.034v.035c.068.103.172.241.31.414.62.827 1.965 2.31 4.586 4.24h1.414c3.38-2.482 4.655-4.24 4.965-4.792Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-redes-sociales" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF5A68"/><stop offset="1" stop-color="#FF3B4B"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-redes-sociales)"/><path d="M11 7h10a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5h-2.4L16 25.2 13.4 22H11a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5Z" fill="#FFFFFF"/><path d="M16 18c-3.8-2.6-4.5-4.4-4.5-5.6 0-1.4 1.1-2.4 2.4-2.4.9 0 1.7.5 2.1 1.3.4-.8 1.2-1.3 2.1-1.3 1.3 0 2.4 1 2.4 2.4 0 1.2-.7 3-4.5 5.6Z" fill="#FF3B4B"/>',
     fill: '#FF3B4B',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M29 13.752c0 4.213 0 6.32-1.011 7.833a6 6 0 0 1-1.656 1.656c-1.351.903-3.176 1-6.552 1.01l-2.055 3.508c-.773 1.319-2.68 1.319-3.452 0L12.22 24.25c-3.376-.01-5.2-.107-6.552-1.01a6.001 6.001 0 0 1-1.656-1.656C3 20.072 3 17.965 3 13.752s0-6.32 1.011-7.833a6 6 0 0 1 1.656-1.656C7.18 3.252 9.287 3.252 13.5 3.252h5c4.213 0 6.32 0 7.833 1.011.656.438 1.218 1 1.656 1.656C29 7.432 29 9.539 29 13.752Z"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   doc: {
-    coloredGlyph: '<path fill="#13A3B5" d="M16 3c4.691 0 7.037 0 8.653 1.24a6 6 0 0 1 1.107 1.107C27 6.963 27 9.31 27 14v4c0 4.691 0 7.037-1.24 8.653-.32.416-.691.788-1.107 1.107C23.037 29 20.69 29 16 29c-4.691 0-7.037 0-8.653-1.24a6 6 0 0 1-1.107-1.107C5 25.037 5 22.69 5 18v-4c0-4.691 0-7.037 1.24-8.653A6 6 0 0 1 7.347 4.24C8.963 3 11.31 3 16 3Z"/><path fill="#ffffff" d="M21.63 25H10.465c-1.307 0-1.793-1.274-1.12-2.316l1.493-2.355c.635-1.042 2.277-1.042 2.912 0l.71 1.12 2.315-3.667c.634-1.043 2.277-1.043 2.912 0l3.062 4.902c.672 1.042.149 2.316-1.12 2.316ZM23 8.5A1.5 1.5 0 0 0 21.5 7h-11a1.5 1.5 0 1 0 0 3h11A1.5 1.5 0 0 0 23 8.5Zm-1.5 3a1.5 1.5 0 0 1 0 3h-11a1.5 1.5 0 0 1 0-3h11Zm-9.5 6a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-documento" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#39B2C1"/><stop offset="1" stop-color="#13A3B5"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-documento)"/><rect x="8" y="6" width="16" height="20" rx="3.5" fill="#FFFFFF"/><rect x="11.5" y="9.5" width="9" height="2" rx="1" fill="#13A3B5"/><rect x="11.5" y="13" width="6" height="1.6" rx=".8" fill="#13A3B5" fill-opacity=".55"/><circle cx="19.3" cy="17" r="1.3" fill="#13A3B5"/><path d="M11.5 22.5l3.1-3.8 2.2 2.4 1.6-1.8 3.1 3.2Z" fill="#13A3B5" stroke="#13A3B5" stroke-width="1" stroke-linejoin="round"/>',
     fill: '#13A3B5',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M16 3c4.691 0 7.037 0 8.653 1.24a6 6 0 0 1 1.107 1.107C27 6.963 27 9.31 27 14v4c0 4.691 0 7.037-1.24 8.653-.32.416-.691.788-1.107 1.107C23.037 29 20.69 29 16 29c-4.691 0-7.037 0-8.653-1.24a6 6 0 0 1-1.107-1.107C5 25.037 5 22.69 5 18v-4c0-4.691 0-7.037 1.24-8.653A6 6 0 0 1 7.347 4.24C8.963 3 11.31 3 16 3Z"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   template: {
-    coloredGlyph: '<path fill="#7C3AED" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path fill="#ffffff" d="M8 6.5a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm0 10a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5H8Zm10 0a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5h-6Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-plantillas" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#915AF0"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-plantillas)"/><rect x="8" y="8" width="16" height="5" rx="1.75" fill="#FFFFFF"/><rect x="8" y="15.5" width="7" height="8.5" rx="1.75" fill="#FFFFFF"/><rect x="17" y="15.5" width="7" height="3.5" rx="1.75" fill="#FFFFFF" fill-opacity=".72"/><rect x="17" y="20.5" width="7" height="3.5" rx="1.75" fill="#FFFFFF" fill-opacity=".72"/>',
     fill: '#7C3AED',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/>',
-  },
-  photos: {
-    coloredGlyph: '<path fill="#A855F7" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path fill="#ffffff" d="M8 6.5a1.5 1.5 0 0 0-1.5 1.5v16a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm3 4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm-2.7 13.2 5.2-6.5a1.5 1.5 0 0 1 2.34 0l2.36 2.95 2.8-3.73a1.5 1.5 0 0 1 2.4 0l4.3 5.74a1.2 1.2 0 0 1-.96 1.94H9.26a1.2 1.2 0 0 1-.96-1.9Z"/>',
-    fill: '#A855F7',
-    viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/>',
-  },
-  'custom-size': {
-    coloredGlyph: '<path fill="#8B5CF6" d="M5 9a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V9Z"/><path fill="#ffffff" d="M9 7.5a1.5 1.5 0 0 0-1.5 1.5v3.5a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2H9Zm14 0h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0V9a1.5 1.5 0 0 0-1.5-1.5ZM7.5 23a1.5 1.5 0 0 0 1.5 1.5h2a1 1 0 1 0 0-2H9v-2a1 1 0 1 0-2 0V23Zm17 0v-2a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2a1.5 1.5 0 0 0 1.5-1.5Z"/>',
-    fill: '#8B5CF6',
-    viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M5 9a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V9Z"/>',
-  },
-  upload: {
-    coloredGlyph: '<g transform="translate(4, 4)"><path fill="#0EA5E9" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><path fill="#ffffff" d="M14 13v4h-4v-4H7l5-5 5 5h-3z"/></g>',
-    fill: '#0EA5E9',
-    viewBox: '0 0 32 32',
-    whiteGlyph: '<g transform="translate(4, 4)"><path fill="#ffffff" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></g>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
   video: {
-    coloredGlyph: '<path fill="#E11D48" d="M25.874 18.503c-.033 3.118-.218 4.89-1.232 6.174a5.771 5.771 0 0 1-.96.959c-1.572 1.239-3.876 1.239-8.484 1.239h-.53c-4.607 0-6.91 0-8.483-1.239a5.772 5.772 0 0 1-.96-.959c-1.24-1.571-1.24-3.872-1.24-8.475v-.53c0-4.602 0-6.903 1.24-8.475.281-.356.603-.678.96-.958C7.758 5 10.061 5 14.67 5h.53c4.607 0 6.91 0 8.483 1.239.357.28.679.602.96.958 1.014 1.285 1.199 3.057 1.232 6.175l3.612-2.114a.962.962 0 0 1 1.449.83v7.698a.962.962 0 0 1-1.449.83l-3.612-2.113Z"/><path fill="#ffffff" d="M12.89 20.693l5.482-3.167c1.498-.851 1.498-2.213.034-3.064l-5.516-3.167c-1.464-.85-2.69-.136-2.69 1.566v6.265c0 1.703 1.192 2.418 2.69 1.567Z"/>',
+    coloredGlyph: '<defs><linearGradient id="g-video" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E64165"/><stop offset="1" stop-color="#E11D48"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-video)"/><rect x="6" y="9.5" width="14.5" height="13" rx="3.5" fill="#FFFFFF"/><path d="M22.5 14.3l2.9-1.9a.8.8 0 0 1 1.2.7v5.8a.8.8 0 0 1-1.2.7l-2.9-1.9Z" fill="#FFFFFF"/><path d="M12.4 13.8v4.4l3.7-2.2Z" fill="#E11D48" stroke="#E11D48" stroke-width="1.4" stroke-linejoin="round"/>',
     fill: '#E11D48',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M25.874 18.503c-.033 3.118-.218 4.89-1.232 6.174a5.771 5.771 0 0 1-.96.959c-1.572 1.239-3.876 1.239-8.484 1.239h-.53c-4.607 0-6.91 0-8.483-1.239a5.772 5.772 0 0 1-.96-.959c-1.24-1.571-1.24-3.872-1.24-8.475v-.53c0-4.602 0-6.903 1.24-8.475.281-.356.603-.678.96-.958C7.758 5 10.061 5 14.67 5h.53c4.607 0 6.91 0 8.483 1.239.357.28.679.602.96.958 1.014 1.285 1.199 3.057 1.232 6.175l3.612-2.114a.962.962 0 0 1 1.449.83v7.698a.962.962 0 0 1-1.449.83l-3.612-2.113Z"/>',
-  },
-  more: {
-    coloredGlyph: '<circle cx="7" cy="16" r="2.5" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="currentColor"/><circle cx="25" cy="16" r="2.5" fill="currentColor"/>',
-    fill: 'currentColor',
-    viewBox: '0 0 32 32',
-    whiteGlyph: '<circle cx="7" cy="16" r="2.5" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="currentColor"/><circle cx="25" cy="16" r="2.5" fill="currentColor"/>',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
 };
 
@@ -672,31 +648,27 @@ export function getVideoSvg(format = '16_9'): string {
 export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): CanvasIconDef {
   const normalized = (typeOrCategory || unit || 'board').toLowerCase().trim();
   if (normalized === 'templates' || normalized === 'template') return CANVAS_ICONS.template;
-  if (normalized === 'custom' || normalized === 'custom-size' || normalized === 'custom_size') return CANVAS_ICONS['custom-size'];
-  if (normalized === 'photos' || normalized === 'photo') return CANVAS_ICONS.photos;
-  if (normalized === 'upload' || normalized === 'uploads') return CANVAS_ICONS.upload;
   if (normalized === 'presentation' || normalized === 'presentations') return CANVAS_ICONS.presentation;
   if (normalized === 'doc' || normalized === 'docs' || normalized === 'document') return CANVAS_ICONS.doc;
   if (normalized === 'sheet' || normalized === 'sheets' || normalized === 'spreadsheet') return CANVAS_ICONS.sheet;
   if (normalized === 'social' || normalized === 'socials') return CANVAS_ICONS.social;
   if (normalized === 'video' || normalized === 'videos') return CANVAS_ICONS.video;
-  if (normalized === 'more') return CANVAS_ICONS.more;
   return CANVAS_ICONS.board;
 }
 
 export function getCategoryBadgeIconSvg(category: string, className = 'component-badge__icon'): string {
   const def = resolveCanvasIconDef(category);
-  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true">${def.coloredGlyph}</svg>`;
+  return `<svg class="${className}" viewBox="${def.viewBox}" fill="none" aria-hidden="true">${def.coloredGlyph}</svg>`;
 }
 
 export function getCategoryMenuSvg(category: string, className = 'menu-item__icon menu-item__icon--colored'): string {
   const def = resolveCanvasIconDef(category);
-  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true">${def.coloredGlyph}</svg>`;
+  return `<svg class="${className}" viewBox="${def.viewBox}" fill="none" aria-hidden="true">${def.coloredGlyph}</svg>`;
 }
 
 export function getCanvasTypeIconSvg(canvasType?: string, unit?: string, className = 'canvas-card__meta-icon canvas-card__meta-icon--colored'): string {
   const def = resolveCanvasIconDef(canvasType, unit);
-  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true">${def.coloredGlyph}</svg>`;
+  return `<svg class="${className}" viewBox="${def.viewBox}" fill="none" aria-hidden="true">${def.coloredGlyph}</svg>`;
 }
 
 

@@ -448,6 +448,30 @@ export class CanvasCommentsController {
       }, { signal });
     }
 
+    if (this.commentsLayer) {
+      this.commentsLayer.addEventListener('pointermove', (e: PointerEvent) => {
+        if (!this.isPlacingComment) return;
+        const rect = this.commentsLayer!.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        this.onCanvasPointerMove(screenX, screenY);
+      }, { signal });
+
+      this.commentsLayer.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (!this.isPlacingComment) return;
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const rect = this.commentsLayer!.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const transform = this.getCanvasTransform();
+        const canvasX = (screenX - transform.panX) / transform.zoom;
+        const canvasY = (screenY - transform.panY) / transform.zoom;
+        this.onCanvasPointerDown(canvasX, canvasY, screenX, screenY);
+      }, { signal });
+    }
+
     const btnClosePanel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-comments-panel"]');
     if (btnClosePanel) {
       btnClosePanel.addEventListener('click', () => {
@@ -702,6 +726,23 @@ export class CanvasCommentsController {
         this.replyMentionsPopup.classList.add('is-hidden');
       }
     }, { signal });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.isPlacingComment) {
+          this.isPlacingComment = false;
+          if (this.commentsLayer) {
+            this.commentsLayer.style.pointerEvents = 'none';
+            this.commentsLayer.style.cursor = '';
+          }
+          this.removeGhostPin();
+        } else if (this.composerCard && !this.composerCard.classList.contains('is-hidden')) {
+          this.hideComposer();
+        } else if (this.threadCard && !this.threadCard.classList.contains('is-hidden')) {
+          this.hideThread();
+        }
+      }
+    }, { signal });
   }
 
   private bindEmojiPickerEvents(): void {
@@ -781,6 +822,10 @@ export class CanvasCommentsController {
     this.commentsPanel?.classList.add('is-hidden');
     this.btnToggleComments?.classList.remove('is-active');
     this.isPlacingComment = false;
+    if (this.commentsLayer) {
+      this.commentsLayer.style.pointerEvents = 'none';
+      this.commentsLayer.style.cursor = '';
+    }
     this.removeGhostPin();
   }
 
@@ -788,12 +833,20 @@ export class CanvasCommentsController {
     this.hideCommentsPanel();
     this.hideThread();
     this.isPlacingComment = true;
+    if (this.commentsLayer) {
+      this.commentsLayer.style.pointerEvents = 'auto';
+      this.commentsLayer.style.cursor = 'crosshair';
+    }
     showToast('Haz clic en cualquier parte del lienzo para agregar un comentario.', 'info');
   }
 
   public onCanvasPointerDown(canvasX: number, canvasY: number, screenX: number, screenY: number): boolean {
     if (!this.isPlacingComment) return false;
     this.isPlacingComment = false;
+    if (this.commentsLayer) {
+      this.commentsLayer.style.pointerEvents = 'none';
+      this.commentsLayer.style.cursor = '';
+    }
     this.removeGhostPin();
 
     this.pendingPinPos = { x: Math.round(canvasX), y: Math.round(canvasY) };
@@ -835,8 +888,10 @@ export class CanvasCommentsController {
 
     const cardWidth = 340;
     const cardHeight = 160;
-    const winW = window.innerWidth;
-    const winH = window.innerHeight;
+    const targetParent = this.commentsLayer?.parentElement || this.container;
+    const parentRect = targetParent.getBoundingClientRect();
+    const winW = parentRect.width || window.innerWidth;
+    const winH = parentRect.height || window.innerHeight;
 
     let posX = screenX + 16;
     let posY = screenY - 20;
@@ -862,6 +917,11 @@ export class CanvasCommentsController {
     this.composerCard?.classList.add('is-hidden');
     this.hideEmojiPicker();
     this.pendingPinPos = null;
+    this.isPlacingComment = false;
+    if (this.commentsLayer) {
+      this.commentsLayer.style.pointerEvents = 'none';
+      this.commentsLayer.style.cursor = '';
+    }
     this.removeGhostPin();
   }
 
@@ -923,8 +983,10 @@ export class CanvasCommentsController {
 
       const cardWidth = 340;
       const cardHeight = 320;
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
+      const targetParent = this.commentsLayer?.parentElement || this.container;
+      const parentRect = targetParent.getBoundingClientRect();
+      const winW = parentRect.width || window.innerWidth;
+      const winH = parentRect.height || window.innerHeight;
 
       let posX = screenX + 24;
       let posY = screenY - 20;

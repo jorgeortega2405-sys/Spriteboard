@@ -3159,7 +3159,8 @@ html.dark-theme .component-card-button--downgrade {
   background-color: var(--bg-surface);
 }
 
-.modal-create-canvas__sidebar .menu-item .menu-item__icon {
+.modal-create-canvas__sidebar .menu-item .menu-item__icon,
+.modal-create-canvas__sidebar .menu-item .component-icon {
   width: 20px;
   height: 20px;
   font-size: 20px;

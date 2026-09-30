@@ -68,50 +68,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       : (isSocial ? 'Diseño para redes sin título' : (isDoc ? 'Documento sin título' : (isSheet ? 'Hoja de cálculo sin título' : 'Pizarrón sin título'))));
   const name = options.name.trim() || defaultName;
   const solidColor = options.solidColor || '#ffffff';
-
-  let templateDataUrl: string | null = null;
-
-  if (options.templateImage) {
-    try {
-      const offscreen = document.createElement('canvas');
-      offscreen.width = width || 320;
-      offscreen.height = height || 180;
-      const ctx = offscreen.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingEnabled = false;
-        const img = new Image();
-        await new Promise<void>((resolve) => {
-          let resolved = false;
-          const done = () => {
-            if (resolved) return;
-            resolved = true;
-            try {
-              ctx.drawImage(img, 0, 0, offscreen.width, offscreen.height);
-            } catch {}
-            resolve();
-          };
-          img.onload = done;
-          img.onerror = () => {
-            if (!resolved) {
-              resolved = true;
-              resolve();
-            }
-          };
-          img.src = options.templateImage!;
-          if (img.complete && img.naturalWidth > 0) {
-            done();
-          }
-        });
-        try {
-          templateDataUrl = offscreen.toDataURL('image/png');
-        } catch {}
-      }
-    } catch {}
-
-    if (!templateDataUrl) {
-      templateDataUrl = options.templateImage;
-    }
-  }
+  const templateDataUrl: string | null = options.templateImage || null;
 
   let initialProject: any = options.initialProject || null;
 
@@ -309,105 +266,35 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   }
 
   const initialData = JSON.stringify(initialProject);
-
-  let previewThumbnail: string | null = null;
-  if (isDoc) {
-    previewThumbnail = generateDocThumbnail(initialProject);
-  } else if (isSheet) {
-    previewThumbnail = generateSheetThumbnail(initialProject);
-  } else if (isVideo) {
-    const thumbCanvas = document.createElement('canvas');
-    thumbCanvas.width = 320;
-    thumbCanvas.height = 180;
-    const thumbCtx = thumbCanvas.getContext('2d');
-    if (thumbCtx) {
-      thumbCtx.fillStyle = '#0f172a';
-      thumbCtx.fillRect(0, 0, 320, 180);
-      thumbCtx.fillStyle = 'rgba(244, 63, 94, 0.2)';
-      thumbCtx.beginPath();
-      thumbCtx.arc(160, 90, 32, 0, Math.PI * 2);
-      thumbCtx.fill();
-      thumbCtx.fillStyle = '#f43f5e';
-      thumbCtx.beginPath();
-      thumbCtx.moveTo(150, 75);
-      thumbCtx.lineTo(176, 90);
-      thumbCtx.lineTo(150, 105);
-      thumbCtx.closePath();
-      thumbCtx.fill();
-      try {
-        previewThumbnail = thumbCanvas.toDataURL('image/png');
-      } catch {}
-    }
-  } else {
-    const thumbW = 320;
-    const thumbH = 180;
-    const thumbCanvas = document.createElement('canvas');
-    thumbCanvas.width = thumbW;
-    thumbCanvas.height = thumbH;
-    const thumbCtx = thumbCanvas.getContext('2d');
-
-    if (thumbCtx) {
-      thumbCtx.fillStyle = '#ffffff';
-      thumbCtx.fillRect(0, 0, thumbW, thumbH);
-
-      thumbCtx.fillStyle = '#cbd5e1';
-      const step = 16;
-      for (let y = 8; y < thumbH; y += step) {
-        for (let x = 8; x < thumbW; x += step) {
-          thumbCtx.beginPath();
-          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-          thumbCtx.fill();
-        }
-      }
-
-      if (templateDataUrl) {
-        const thumbImg = new Image();
-        await new Promise<void>((r) => {
-          thumbImg.onload = () => {
-            try {
-              const maxDim = Math.min(thumbW * 0.7, thumbH * 0.7);
-              const imgRatio = thumbImg.naturalWidth / thumbImg.naturalHeight;
-              let dw = maxDim;
-              let dh = maxDim;
-              if (imgRatio >= 1) {
-                dh = maxDim / imgRatio;
-              } else {
-                dw = maxDim * imgRatio;
-              }
-              const dx = (thumbW - dw) / 2;
-              const dy = (thumbH - dh) / 2;
-              thumbCtx.imageSmoothingEnabled = false;
-              thumbCtx.drawImage(thumbImg, dx, dy, dw, dh);
-            } catch {}
-            r();
-          };
-          thumbImg.onerror = () => r();
-          thumbImg.src = templateDataUrl!;
-          if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-            try {
-              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-            } catch {}
-            r();
-          }
-        });
-      }
-
-      try {
-        previewThumbnail = thumbCanvas.toDataURL('image/png');
-      } catch {
-        previewThumbnail = templateDataUrl;
-      }
-    } else {
-      previewThumbnail = templateDataUrl;
-    }
-  }
+  const previewThumbnail: string | null = isDoc ? generateDocThumbnail(initialProject) : (isSheet ? generateSheetThumbnail(initialProject) : templateDataUrl);
 
   const unit: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
   const canvasType: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
   const targetRoute = `/design/`;
 
+  const canvasUuid = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const isGuest = !currentUser;
+
+  await saveLocalCanvas({
+    canvas_type: canvasType,
+    created_at: now,
+    data: initialData,
+    height,
+    is_local: isGuest,
+    name,
+    preview_thumbnail: previewThumbnail || undefined,
+    unit,
+    updated_at: now,
+    uuid: canvasUuid,
+    width,
+  });
+
+  showToast(isGuest ? t('canvas.toast_created_guest') : t('canvas.toast_created'), 'success');
+  window.open(`${targetRoute}${canvasUuid}`, '_blank');
+
   if (currentUser) {
-    const res = await postApi(API_ROUTES.canvases.base, {
+    void postApi(API_ROUTES.canvases.base, {
       canvas_type: canvasType,
       data: initialData,
       height,
@@ -415,45 +302,21 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       preview_thumbnail: previewThumbnail,
       team_uuid: options.teamUuid || undefined,
       unit,
+      uuid: canvasUuid,
       width,
-    });
-
-    if (res.ok) {
-      const created = await res.json();
-      const canvasUuid = created?.canvas?.uuid || created?.uuid;
-      if (created?.canvas) {
-        await saveLocalCanvas({
-          ...created.canvas,
-          data: created.canvas.data || initialData,
-          is_local: false,
-          preview_thumbnail: created.canvas.preview_thumbnail || previewThumbnail || undefined,
-        });
+    }).then(async (res) => {
+      if (res.ok) {
+        const created = await res.json();
+        if (created?.canvas) {
+          await saveLocalCanvas({
+            ...created.canvas,
+            data: created.canvas.data || initialData,
+            is_local: false,
+            preview_thumbnail: created.canvas.preview_thumbnail || previewThumbnail || undefined,
+          });
+          window.dispatchEvent(new CustomEvent('canvas:synced', { detail: created.canvas }));
+        }
       }
-      showToast(t('canvas.toast_created'), 'success');
-      window.open(`${targetRoute}${canvasUuid}`, '_blank');
-      return;
-    }
-
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.error || err?.message || t('canvas.error_save') || 'Error al guardar el lienzo');
+    }).catch(() => {});
   }
-
-  const localUuid = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await saveLocalCanvas({
-    canvas_type: canvasType,
-    created_at: now,
-    data: initialData,
-    height,
-    is_local: true,
-    name,
-    preview_thumbnail: previewThumbnail || undefined,
-    unit,
-    updated_at: now,
-    uuid: localUuid,
-    width,
-  });
-
-  showToast(t('canvas.toast_created_guest'), 'success');
-  window.open(`${targetRoute}${localUuid}`, '_blank');
 }

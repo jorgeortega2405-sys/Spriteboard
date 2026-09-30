@@ -261,13 +261,19 @@ export class BoardController {
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
       container: this.container,
-      getCanvasTransform: () => ({
-        height: this.canvasElement ? this.canvasElement.height : 800,
-        panX: this.camera.x,
-        panY: this.camera.y,
-        width: this.canvasElement ? this.canvasElement.width : 1200,
-        zoom: this.camera.zoom,
-      }),
+      getCanvasTransform: () => {
+        const rect = this.canvasElement?.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const w = rect?.width || (this.canvasElement ? this.canvasElement.width / dpr : 1200);
+        const h = rect?.height || (this.canvasElement ? this.canvasElement.height / dpr : 800);
+        return {
+          height: h,
+          panX: (w / 2) - this.camera.x * this.camera.zoom,
+          panY: (h / 2) - this.camera.y * this.camera.zoom,
+          width: w,
+          zoom: this.camera.zoom,
+        };
+      },
       getCurrentFrameIndex: () => 0,
       onRequestRedraw: () => this.requestRedraw(),
     });
@@ -514,7 +520,7 @@ export class BoardController {
   private async loadBoardData(): Promise<boolean> {
     let canvas: CanvasItem | null = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvas || !canvas.is_local || canvas.id || !canvas.data) {
+    if (!canvas || !canvas.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -5766,6 +5772,7 @@ export class BoardController {
     }
 
     ctx.restore();
+    this.commentsController?.renderPins();
   }
 
   public isBoardEmpty(): boolean {

@@ -1,7 +1,7 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasThumbnail, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
-import { Request, Response } from 'express';
 
 export async function listCanvases(req: Request, res: Response): Promise<void> {
   try {
@@ -58,7 +58,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    const { access_level, canvas_type, data, height, name, preview_thumbnail, public_role, unit, width } = req.body;
+    const { access_level, canvas_type, data, folder_id, folder_uuid, height, name, preview_thumbnail, public_role, team_uuid, unit, uuid, width } = req.body;
     const finalCanvasType = resolveCanvasType({ canvas_type, data, unit });
     const isInfinite = finalCanvasType === 'board' || unit === 'infinite';
     const defaultW = finalCanvasType === 'presentation' || finalCanvasType === 'video' || finalCanvasType === 'sheet' ? 1920 : (finalCanvasType === 'social' ? 940 : 816);
@@ -71,15 +71,21 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       return;
     }
 
+    const cleanUuid = typeof uuid === 'string' && uuid.trim().length === 36 ? uuid.trim() : undefined;
+
     const canvas = await createCanvas(user.id, {
       access_level: access_level === 'public' ? 'public' : 'private',
       canvas_type: finalCanvasType,
       data,
+      folder_id: typeof folder_id === 'number' ? folder_id : undefined,
+      folder_uuid: typeof folder_uuid === 'string' ? folder_uuid : undefined,
       height: numHeight,
       name,
       preview_thumbnail: typeof preview_thumbnail === 'string' ? preview_thumbnail : null,
       public_role: public_role === 'viewer' ? 'viewer' : 'editor',
+      team_uuid: typeof team_uuid === 'string' ? team_uuid : undefined,
       unit: finalCanvasType,
+      uuid: cleanUuid,
       width: numWidth,
     });
 

@@ -3,7 +3,7 @@ import { PresetVariant } from '../config/templates.config.js';
 import { escapeHtml, uploadFilesApi } from '../services/api.service.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
-import { renderIcons } from '../services/icon.service.js';
+import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 
@@ -93,11 +93,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <span class="menu-item__text">Documento Doc</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'custom-size' ? ' is-active' : ''}" data-ref="tab-category-custom-size" data-category="custom-size">
-                ${getCategoryMenuSvg('custom-size')}
+                ${createIconSvg('aspect_ratio')}
                 <span class="menu-item__text">Elegir tamaño</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'upload' ? ' is-active' : ''}" data-ref="tab-category-upload" data-category="upload">
-                ${getCategoryMenuSvg('upload')}
+                ${createIconSvg('upload')}
                 <span class="menu-item__text">Subir</span>
               </button>
             </div>

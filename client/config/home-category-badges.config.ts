@@ -1,4 +1,5 @@
 import { getCategoryBadgeIconSvg } from '../components/create-canvas-graphics.js';
+import { createIconSvg } from '../services/icon.service.js';
 import { t } from '../services/i18n.service.js';
 
 export interface HomeCategoryBadgeItem {
@@ -49,33 +50,37 @@ export const HOME_CATEGORY_BADGES: HomeCategoryBadgeItem[] = [
     label: 'Hoja de cálculo',
   },
   {
-    category: 'photos',
-    dataRef: 'cat-badge-photos',
-    i18nKey: 'home.badge_photos',
-    label: 'Fotos',
-  },
-  {
     category: 'videos',
     dataRef: 'cat-badge-videos',
     i18nKey: 'home.badge_videos',
     label: 'Videos',
   },
   {
+    category: 'photos',
+    dataRef: 'cat-badge-photos',
+    i18nKey: 'home.badge_photos',
+    iconSvg: createIconSvg('photo_library'),
+    label: 'Fotos',
+  },
+  {
     category: 'custom',
     dataRef: 'cat-badge-custom',
     i18nKey: 'home.badge_custom',
+    iconSvg: createIconSvg('aspect_ratio'),
     label: 'Personalizar',
   },
   {
     category: 'upload',
     dataRef: 'cat-badge-upload',
     i18nKey: 'home.badge_upload',
+    iconSvg: createIconSvg('upload'),
     label: 'Subir',
   },
   {
     category: 'more',
     dataRef: 'cat-badge-more',
     i18nKey: 'home.badge_more',
+    iconSvg: createIconSvg('more_horiz'),
     label: 'Más',
   },
 ];

@@ -391,10 +391,10 @@ class HomeController {
         name: 'Hoja de cálculo sin título',
       });
     });
-    bindCreationBadge('cat-badge-photos', () => {});
     bindCreationBadge('cat-badge-videos', () => {
       openCreateCanvasModal({ initialType: 'video' });
     });
+    bindCreationBadge('cat-badge-photos', () => {});
     bindCreationBadge('cat-badge-custom', () => {
       openCreateCanvasModal({ initialType: 'custom-size' });
     });

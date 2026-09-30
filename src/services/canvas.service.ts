@@ -229,6 +229,26 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     } catch {}
   }
 
+  const [existingRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+    'SELECT id, uuid, user_id, folder_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+    [uuid]
+  );
+  if (existingRows.length > 0) {
+    const existingCanvas = existingRows[0] as Canvas;
+    existingCanvas.effective_tier = effectiveTier as any;
+    if (targetTeam) {
+      existingCanvas.team_info = {
+        id: targetTeam.id,
+        uuid: dto.team_uuid || '',
+        name: targetTeam.name,
+      };
+    }
+    if (dataStr) {
+      existingCanvas.data = dataStr;
+    }
+    return existingCanvas;
+  }
+
   const query = `
     INSERT INTO canvases (uuid, user_id, folder_id, name, width, height, unit, canvas_type, size_bytes, compressed_bytes, access_level, public_role, short_code, data, preview_thumbnail)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -285,8 +305,8 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     if (previewThumbnail) {
       createdCanvas.preview_thumbnail = previewThumbnail;
     }
-    await invalidateUserCanvasesCache(userId);
-    await invalidateUserStorageCache(storageCheckUserId);
+    void invalidateUserCanvasesCache(userId);
+    void invalidateUserStorageCache(storageCheckUserId);
     return createdCanvas;
   } catch (err) {
     logger.db.error('Error al insertar registro en la base de datos de lienzos', err);
@@ -296,25 +316,20 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 
 export async function invalidateUserCanvasesCache(userId: number): Promise<void> {
   try {
+    await redis.del(
+      `user:canvases:${userId}`,
+      `user:shared_canvases:${userId}`,
+      `user:trash_canvases:${userId}`
+    );
     const stream = redis.scanStream({
       match: `user:canvases:${userId}*`,
       count: 100,
     });
-    const keys: string[] = [];
-    await new Promise<void>((resolve) => {
-      stream.on('data', (resultKeys: string[]) => {
-        keys.push(...resultKeys);
-      });
-      stream.on('end', () => resolve());
-      stream.on('error', () => resolve());
+    stream.on('data', (resultKeys: string[]) => {
+      if (resultKeys.length > 0) {
+        void redis.del(...resultKeys);
+      }
     });
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    } else {
-      await redis.del(`user:canvases:${userId}`);
-    }
-    await redis.del(`user:shared_canvases:${userId}`);
-    await redis.del(`user:trash_canvases:${userId}`);
   } catch {}
 }
 

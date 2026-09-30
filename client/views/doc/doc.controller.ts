@@ -242,7 +242,7 @@ export class DocController implements ViewController {
   private async loadCanvasData(): Promise<boolean> {
     let canvasRecord: any = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvasRecord || !canvasRecord.is_local || canvasRecord.id || !canvasRecord.data) {
+    if (!canvasRecord || !canvasRecord.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {

@@ -237,9 +237,21 @@ export class StageCanvasController {
 
   private async loadPresentationData(): Promise<void> {
     let rawData: any = null;
-    let canvas: any = this.canvasRecord || null;
+    let canvas: any = this.canvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
+    if (canvas && canvas.data) {
+      this.canvasRecord = canvas;
+      rawData = canvas.data;
+      this.canvasServerId = canvas.id || null;
+      this.canvasUserId = canvas.user_id || null;
+      if (canvas.public_role) {
+        this.publicRole = canvas.public_role;
+      }
+      if (canvas.access_level) {
+        this.accessLevel = canvas.access_level;
+      }
+    }
 
-    if (!canvas || !canvas.is_local || canvas.id || !canvas.data) {
+    if (!canvas || !canvas.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -843,13 +855,19 @@ export class StageCanvasController {
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
       container: this.container,
-      getCanvasTransform: () => ({
-        height: this.canvas ? this.canvas.height : 720,
-        panX: 0,
-        panY: 0,
-        width: this.canvas ? this.canvas.width : 1280,
-        zoom: this.zoom,
-      }),
+      getCanvasTransform: () => {
+        const rect = this.canvas?.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const w = rect?.width || (this.canvas ? this.canvas.width / dpr : 1280);
+        const h = rect?.height || (this.canvas ? this.canvas.height / dpr : 720);
+        return {
+          height: h,
+          panX: (w / 2) - this.panOffset.x * this.zoom,
+          panY: (h / 2) - this.panOffset.y * this.zoom,
+          width: w,
+          zoom: this.zoom,
+        };
+      },
       getCurrentFrameIndex: () => this.getActiveSlideIndex(),
       onRequestRedraw: () => this.render(),
     });
@@ -4755,6 +4773,7 @@ export class StageCanvasController {
     this.renderOverlays();
     this.updateFloatingToolbarPosition();
     this.syncInlineVideoPosition();
+    this.commentsController?.renderPins();
   }
 
   private escapeHtml(str: string): string {
