@@ -28,7 +28,9 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
       : (user.role ? [user.role] : ['USER']);
     const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
 
-    const canPublish = hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
+    const canPublish = hasPermission(userPermissions, 'templates:publish') ||
+      hasPermission(userPermissions, 'templates:official_publish') ||
+      hasPermission(userPermissions, 'templates:manage_all');
     if (!canPublish) {
       sendForbidden(res, 'No tienes permisos para publicar plantillas. Esta función está reservada para diseñadores.');
       return;
@@ -120,7 +122,10 @@ export async function getMyTemplatesHandler(req: Request, res: Response): Promis
     }
 
     const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
-    const canAccess = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
+    const canAccess = hasPermission(userPermissions, 'designer:dashboard') ||
+      hasPermission(userPermissions, 'templates:publish') ||
+      hasPermission(userPermissions, 'templates:official_publish') ||
+      hasPermission(userPermissions, 'templates:manage_all');
     if (!canAccess) {
       sendForbidden(res, 'No tienes permisos para acceder al panel de diseñador.');
       return;
@@ -155,7 +160,10 @@ export async function getMyTemplateMetricsHandler(req: Request, res: Response): 
     }
 
     const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
-    const canAccess = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
+    const canAccess = hasPermission(userPermissions, 'designer:dashboard') ||
+      hasPermission(userPermissions, 'templates:publish') ||
+      hasPermission(userPermissions, 'templates:official_publish') ||
+      hasPermission(userPermissions, 'templates:manage_all');
     if (!canAccess) {
       sendForbidden(res, 'No tienes permisos para acceder a las métricas de diseñador.');
       return;

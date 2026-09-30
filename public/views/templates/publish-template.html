@@ -1,0 +1,214 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="publish-template-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="publish-template-scrollable">
+    <div class="view-body" data-ref="publish-template-body">
+      <div class="view-backdrop" data-ref="publish-template-backdrop"></div>
+
+      <div class="publish-template-container" data-ref="publish-template-container">
+        <div class="publish-template-card" data-ref="publish-template-card">
+
+          <div class="publish-template-grid" data-ref="publish-template-grid">
+
+            <!-- Columna Izquierda: Formulario de Publicación -->
+            <div class="publish-template-form-col" data-ref="publish-form-col">
+              <div class="publish-template-top" data-ref="publish-top">
+                <button type="button" class="component-button component-button--h36 component-button--bordered" data-ref="btn-publish-back">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                  <span data-i18n="modal.back">Atrás</span>
+                </button>
+                <div class="publish-template-heading">
+                  <h1 class="publish-template-title" data-ref="publish-heading-title" data-i18n="templates.publish_title">Publicar como plantilla</h1>
+                  <p class="publish-template-subtitle" data-ref="publish-heading-desc" data-i18n="templates.publish_desc">Comparte este diseño en la galería de plantillas para que otros puedan usarlo.</p>
+                </div>
+              </div>
+
+              <div class="publish-template-form" data-ref="publish-form">
+
+                <!-- Campo: Título de la plantilla -->
+                <div class="field-group" data-ref="group-template-title">
+                  <label class="field" data-ref="label-template-title">
+                    <input class="field__input" data-ref="input-template-title" type="text" placeholder=" " autocomplete="off" maxlength="150" />
+                    <span class="field__label" data-i18n="templates.modal_field_title">Título de la plantilla *</span>
+                  </label>
+                </div>
+
+                <!-- Campo: Categoría (Custom Dropdown Trigger) -->
+                <div class="field-group" data-ref="group-template-category">
+                  <span class="field-group__label">Categoría en la galería *</span>
+                  <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-category">
+                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-category" aria-label="Categoría en la galería">
+                      <div class="dropdown-trigger__left">
+                        <svg class="component-icon dropdown-trigger__icon" data-ref="category-selected-icon" aria-hidden="true"><use href="/icons.svg#business_center"></use></svg>
+                        <span class="dropdown-trigger__text" data-ref="category-selected-text">Negocios</span>
+                      </div>
+                      <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                    </button>
+                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-category">
+                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-category" style="max-height: 260px; overflow-y: auto;">
+                        <div class="menu-panel__list" data-ref="list-category">
+                          <button type="button" class="menu-item is-selected" data-ref="item-cat-business" data-value="business">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#business_center"></use></svg>
+                            <div class="menu-item__content">
+                              <span class="menu-item__text">Negocios</span>
+                              <span class="menu-item__subtext">Presentaciones, Documentos, Hojas de cálculo, Pizarrones</span>
+                            </div>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="item-cat-social" data-value="social">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                            <div class="menu-item__content">
+                              <span class="menu-item__text">Redes sociales</span>
+                              <span class="menu-item__subtext">Posts, Stories, Reels, TikTok, YouTube, Portadas</span>
+                            </div>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="item-cat-videos" data-value="videos">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+                            <div class="menu-item__content">
+                              <span class="menu-item__text">Videos</span>
+                              <span class="menu-item__subtext">Video horizontal, Shorts, Reels, Clips, Mensajes en video</span>
+                            </div>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="item-cat-marketing" data-value="marketing">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#storefront"></use></svg>
+                            <div class="menu-item__content">
+                              <span class="menu-item__text">Marketing e Impresión</span>
+                              <span class="menu-item__subtext">Flyers, Posters, Tarjetas de presentación, Menús, Folletos</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campo: Tipo de acceso (Custom Dropdown Trigger) -->
+                <div class="field-group" data-ref="group-template-pricing">
+                  <span class="field-group__label" data-i18n="templates.pricing_type_label">Tipo de acceso *</span>
+                  <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-pricing">
+                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-pricing" aria-label="Tipo de acceso">
+                      <div class="dropdown-trigger__left">
+                        <svg class="component-icon dropdown-trigger__icon" data-ref="pricing-selected-icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+                        <span class="dropdown-trigger__text" data-ref="pricing-selected-text">Libre (Gratis para todos)</span>
+                      </div>
+                      <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                    </button>
+                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-pricing">
+                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-pricing">
+                        <div class="menu-panel__list" data-ref="list-pricing">
+                          <button type="button" class="menu-item is-selected" data-ref="item-tier-free" data-value="free">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+                            <div class="menu-item__content">
+                              <span class="menu-item__text" data-i18n="templates.tier_free">Libre</span>
+                              <span class="menu-item__subtext" data-i18n="templates.tier_free_tag">Gratis para todos los usuarios</span>
+                            </div>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="item-tier-premium" data-value="premium">
+                            <svg class="component-icon menu-item__icon" style="color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                            <div class="menu-item__content">
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="menu-item__text" data-i18n="templates.tier_premium">Premium</span>
+                                <span class="component-badge component-badge--neutral" style="font-size: 10px; padding: 1px 6px; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #f59e0b;">PRO</span>
+                              </div>
+                              <span class="menu-item__subtext" data-i18n="templates.tier_premium_sub">Exclusivo para suscriptores Pro y Negocios</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Banner dinámico sobre el tipo de acceso -->
+                  <div class="banner banner--info publish-pricing-notice" data-ref="pricing-notice" style="margin-top: 8px; font-size: 12.5px; line-height: 1.45; padding: 10px 14px; border-radius: 8px;">
+                    <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+                    <span class="banner__message" data-ref="pricing-notice-text" data-i18n="templates.notice_free">Esta plantilla estará disponible de forma gratuita para todos los usuarios de Spriteboard.</span>
+                  </div>
+                </div>
+
+                <!-- Campo: Descripción (opcional) -->
+                <div class="field-group" data-ref="group-template-desc">
+                  <label class="field field--textarea" data-ref="label-template-desc">
+                    <textarea class="field__input field__textarea" data-ref="input-template-desc" placeholder=" " rows="3" maxlength="500" style="resize: vertical; min-height: 80px;"></textarea>
+                    <span class="field__label" data-i18n="templates.modal_field_desc">Descripción (opcional)</span>
+                  </label>
+                </div>
+
+                <!-- Campo: Etiquetas -->
+                <div class="field-group" data-ref="group-template-tags">
+                  <label class="field" data-ref="label-template-tags">
+                    <input class="field__input" data-ref="input-template-tags" type="text" placeholder=" " autocomplete="off" maxlength="200" />
+                    <span class="field__label" data-i18n="templates.modal_field_tags">Etiquetas separadas por comas (ej. Pitch, Startup, Retrospectiva)</span>
+                  </label>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="publish-template-actions" data-ref="publish-actions" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+                  <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-submit-publish">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    <span data-ref="btn-submit-publish-text" data-i18n="templates.btn_publish">Publicar plantilla</span>
+                  </button>
+
+                  <button type="button" class="component-button component-button--h44 component-button--outline component-button--w-full" data-ref="btn-cancel-publish">
+                    <span data-i18n="modal.cancel">Cancelar</span>
+                  </button>
+
+                  <div class="banner banner--danger publish-error-banner" data-ref="publish-error-banner" style="display: none; margin-top: 8px;">
+                    <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+                    <span class="banner__message" data-ref="publish-error-msg"></span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Vista Previa en Vivo del Lienzo -->
+            <div class="publish-template-media-col" data-ref="publish-media-col">
+              <div class="publish-preview-sticky" data-ref="publish-preview-sticky">
+                <div class="publish-preview-header">
+                  <span class="publish-preview-eyebrow">Vista previa en la galería</span>
+                  <span class="publish-preview-hint">Así se mostrará a los usuarios</span>
+                </div>
+
+                <div class="publish-preview-card" data-ref="publish-preview-card">
+                  <div class="publish-preview-thumbnail" data-ref="publish-preview-thumbnail">
+                    <img class="publish-preview-image image-lazy-fade" data-ref="preview-canvas-img" src="" alt="Vista previa del lienzo" loading="eager" />
+                    
+                    <div class="publish-preview-placeholder" data-ref="preview-canvas-placeholder" style="display: none;">
+                      <svg class="component-icon" style="font-size: 48px; color: var(--text-secondary); opacity: 0.5;" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+                    </div>
+
+                    <div class="publish-preview-badge-overlay" data-ref="preview-badge-overlay">
+                      <span class="template-card__premium-badge" data-ref="preview-premium-badge" style="display: none;">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                        <span>PRO</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="publish-preview-meta-card" data-ref="publish-preview-meta-card">
+                    <div class="publish-preview-meta-top">
+                      <h3 class="publish-preview-meta-title" data-ref="preview-meta-title">Título de la plantilla</h3>
+                      <div class="publish-preview-meta-badge" data-ref="preview-meta-badge">
+                        <svg class="component-icon" data-ref="preview-meta-badge-icon" aria-hidden="true"><use href="/icons.svg#business_center"></use></svg>
+                        <span data-ref="preview-meta-badge-text">Negocios</span>
+                      </div>
+                    </div>
+
+                    <div class="publish-preview-meta-bottom">
+                      <div class="publish-preview-author">
+                        <div class="publish-preview-author-avatar" data-ref="preview-author-avatar">
+                          <span data-ref="preview-author-initials">S</span>
+                        </div>
+                        <span class="publish-preview-author-name" data-ref="preview-author-name">Spriteboard Oficial</span>
+                      </div>
+                      <span class="publish-preview-dimensions" data-ref="preview-meta-dims">1920 × 1080 px</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -43,11 +43,8 @@ export interface TemplateCategory {
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   { defaultName: 'Para ti', iconCategory: 'templates', id: 'all', nameKey: 'templates.filter_all' },
-  { defaultName: 'Presentaciones', iconCategory: 'presentation', id: 'presentation', nameKey: 'templates.filter_presentation' },
+  { defaultName: 'Negocios', iconCategory: 'business', id: 'business', nameKey: 'templates.filter_business' },
   { defaultName: 'Redes sociales', iconCategory: 'social', id: 'social', nameKey: 'templates.filter_social' },
-  { defaultName: 'Documentos', iconCategory: 'doc', id: 'doc', nameKey: 'templates.filter_doc' },
-  { defaultName: 'Pizarrones', iconCategory: 'board', id: 'board', nameKey: 'templates.filter_board' },
-  { defaultName: 'Hojas de cálculo', iconCategory: 'sheet', id: 'sheet', nameKey: 'templates.filter_sheet' },
   { defaultName: 'Videos', iconCategory: 'videos', id: 'videos', nameKey: 'templates.filter_videos' },
 ];
 

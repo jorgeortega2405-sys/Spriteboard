@@ -150,6 +150,26 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
+    id: 'templates-publish',
+    match: (path) => path === '/templates/publish' || path === '/publish-template',
+    handler: async (ctx) => {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('../views/auth.view.js');
+        return [await createLoginView()];
+      }
+      if (!canPublishTemplates(currentUser)) {
+        window.history.replaceState({}, '', '/creators');
+        await loadStylesheet('/css/components/component-creators.css');
+        const { createCreatorsView } = await import('../views/creators.view.js');
+        return [await createCreatorsView()];
+      }
+      const canvasUuid = ctx.query.get('canvas') || '';
+      const { createPublishTemplateView } = await import('../views/publish-template.view.js');
+      return [await createPublishTemplateView(canvasUuid)];
+    },
+  },
+  {
     id: 'templates',
     match: (path) => path === '/templates',
     handler: async () => {

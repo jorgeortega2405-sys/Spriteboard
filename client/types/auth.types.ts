@@ -106,10 +106,12 @@ export function canPublishTemplates(user?: User | null): boolean {
   if (Array.isArray(user.permissions) && user.permissions.length > 0) {
     return user.permissions.includes('*') ||
            user.permissions.includes('templates:publish') ||
+           user.permissions.includes('templates:official_publish') ||
+           user.permissions.includes('templates:manage_all') ||
            user.permissions.includes('designer:dashboard');
   }
   const roles = user.roles && user.roles.length > 0 ? user.roles : (user.role ? [user.role] : []);
-  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
+  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN') || roles.includes('SYSTEM_ACCOUNT');
 }
 
 export function canPublishElements(user?: User | null): boolean {
@@ -117,11 +119,13 @@ export function canPublishElements(user?: User | null): boolean {
   if (Array.isArray(user.permissions) && user.permissions.length > 0) {
     return user.permissions.includes('*') ||
            user.permissions.includes('elements:publish') ||
+           user.permissions.includes('elements:official_publish') ||
+           user.permissions.includes('elements:manage_all') ||
            user.permissions.includes('elements:create') ||
            user.permissions.includes('designer:dashboard');
   }
   const roles = user.roles && user.roles.length > 0 ? user.roles : (user.role ? [user.role] : []);
-  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
+  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN') || roles.includes('SYSTEM_ACCOUNT');
 }
 
 const NON_ADMIN_ROLES = ['USER', 'DESIGNER', 'SYSTEM_ACCOUNT'];

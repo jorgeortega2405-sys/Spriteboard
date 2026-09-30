@@ -65,6 +65,7 @@ class TemplatesController {
 
     this.renderCategoryBadges();
     this.initCarousel();
+    this.filterExploreCarousel(this.activeCategory);
     this.renderTemplates();
     this.bindEvents();
   }
@@ -93,6 +94,32 @@ class TemplatesController {
       this.cleanupExploreDrag = bindDragToScroll(exploreCarouselEl);
       this.exploreCarouselController?.updateButtons();
     }
+  }
+
+  private filterExploreCarousel(category: string): void {
+    const exploreCarouselEl = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-carousel"]');
+    if (!exploreCarouselEl) return;
+
+    const cards = exploreCarouselEl.querySelectorAll<HTMLElement>('.templates-explore-card');
+    const target = category.toLowerCase();
+
+    cards.forEach((card) => {
+      const cardCat = (card.getAttribute('data-category') || '').toLowerCase();
+      if (target === 'all') {
+        card.style.display = '';
+      } else if (target === 'business') {
+        card.style.display = cardCat === 'business' ? '' : 'none';
+      } else if (target === 'social') {
+        card.style.display = cardCat === 'social' ? '' : 'none';
+      } else if (target === 'videos' || target === 'video') {
+        card.style.display = (cardCat === 'videos' || cardCat === 'video') ? '' : 'none';
+      } else {
+        card.style.display = cardCat === target ? '' : 'none';
+      }
+    });
+
+    exploreCarouselEl.scrollLeft = 0;
+    this.exploreCarouselController?.updateButtons();
   }
 
   private renderCategoryBadges(): void {
@@ -162,6 +189,7 @@ class TemplatesController {
         if (catId !== this.activeCategory) {
           this.activeCategory = catId;
           this.updateBadgeActiveState(catId);
+          this.filterExploreCarousel(catId);
           this.renderTemplates();
         }
       },
@@ -174,16 +202,7 @@ class TemplatesController {
       (e) => {
         const card = (e.target as HTMLElement).closest<HTMLElement>('.templates-explore-card');
         if (!card) return;
-        const category = card.getAttribute('data-category');
         const query = card.getAttribute('data-explore-query') || '';
-
-        if (category && category !== 'all') {
-          this.activeCategory = category;
-          this.updateBadgeActiveState(category);
-        } else {
-          this.activeCategory = 'all';
-          this.updateBadgeActiveState('all');
-        }
 
         if (searchInput) {
           searchInput.value = query;
@@ -239,10 +258,19 @@ class TemplatesController {
     let filtered = [...this.availableTemplates];
 
     if (this.activeCategory !== 'all') {
+      const target = this.activeCategory.toLowerCase();
       filtered = filtered.filter((item) => {
         const cat = (item.categoryKey || '').toLowerCase();
         const type = (item.canvasType || '').toLowerCase();
-        const target = this.activeCategory.toLowerCase();
+        if (target === 'business') {
+          return type === 'presentation' || type === 'doc' || type === 'board' || type === 'sheet' || cat === 'business' || cat === 'marketing' || cat === 'presentation' || cat === 'doc' || cat === 'board' || cat === 'sheet';
+        }
+        if (target === 'social') {
+          return type === 'social' || cat === 'social';
+        }
+        if (target === 'videos' || target === 'video') {
+          return type === 'video' || cat === 'videos' || cat === 'video';
+        }
         return cat === target || type === target;
       });
     }
@@ -396,7 +424,7 @@ class TemplatesController {
         return { canvasType: 'social', label: t('templates.filter_social') || 'Redes sociales' };
       case 'marketing':
       case 'impresión':
-        return { canvasType: 'social', label: 'Marketing e Impresión' };
+        return { canvasType: 'marketing', label: t('templates.canvas_type_marketing') || 'Marketing e Impresión' };
       default:
         if (item.width === 1920 && item.height === 1080) {
           return { canvasType: 'presentation', label: t('templates.filter_presentation') || 'Presentación' };

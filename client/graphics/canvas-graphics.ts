@@ -609,6 +609,18 @@ export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
     viewBox: '0 0 32 32',
     whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
   },
+  marketing: {
+    coloredGlyph: '<defs><linearGradient id="g-marketing" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F43F5E"/><stop offset="1" stop-color="#E11D48"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-marketing)"/><path d="M7 8h18v11H7z" fill="#FFFFFF" fill-opacity=".25"/><path d="M7 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7z" stroke="#FFFFFF" stroke-width="1.8"/><path d="M10 25h12M16 22v3" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>',
+    fill: '#F43F5E',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
+  },
+  business: {
+    coloredGlyph: '<defs><linearGradient id="g-negocios" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#3730A3"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-negocios)"/><path d="M12 9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2h-8V9Z" fill="#FFFFFF" fill-opacity=".45"/><rect x="6.5" y="11" width="19" height="13" rx="3" fill="#FFFFFF"/><path d="M6.5 15h19M14.5 15v2.5a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V15" stroke="#3730A3" stroke-width="1.6" stroke-linecap="round"/>',
+    fill: '#4F46E5',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<rect x="2" y="2" width="28" height="28" rx="8.5" fill="#ffffff"/>',
+  },
   video: {
     coloredGlyph: '<defs><linearGradient id="g-video" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E64165"/><stop offset="1" stop-color="#E11D48"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-video)"/><rect x="6" y="9.5" width="14.5" height="13" rx="3.5" fill="#FFFFFF"/><path d="M22.5 14.3l2.9-1.9a.8.8 0 0 1 1.2.7v5.8a.8.8 0 0 1-1.2.7l-2.9-1.9Z" fill="#FFFFFF"/><path d="M12.4 13.8v4.4l3.7-2.2Z" fill="#E11D48" stroke="#E11D48" stroke-width="1.4" stroke-linejoin="round"/>',
     fill: '#E11D48',
@@ -648,10 +660,12 @@ export function getVideoSvg(format = '16_9'): string {
 export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): CanvasIconDef {
   const normalized = (typeOrCategory || unit || 'board').toLowerCase().trim();
   if (normalized === 'templates' || normalized === 'template') return CANVAS_ICONS.template;
+  if (normalized === 'business' || normalized === 'negocios' || normalized === 'work') return CANVAS_ICONS.business;
   if (normalized === 'presentation' || normalized === 'presentations') return CANVAS_ICONS.presentation;
   if (normalized === 'doc' || normalized === 'docs' || normalized === 'document') return CANVAS_ICONS.doc;
   if (normalized === 'sheet' || normalized === 'sheets' || normalized === 'spreadsheet') return CANVAS_ICONS.sheet;
   if (normalized === 'social' || normalized === 'socials') return CANVAS_ICONS.social;
+  if (normalized === 'marketing' || normalized === 'print' || normalized === 'marketings') return CANVAS_ICONS.marketing;
   if (normalized === 'video' || normalized === 'videos') return CANVAS_ICONS.video;
   return CANVAS_ICONS.board;
 }

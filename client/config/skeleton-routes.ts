@@ -10,6 +10,8 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/ai': 'grouped-layout',
   '/teams': 'grouped-layout',
   '/templates': 'templates-layout',
+  '/templates/publish': 'grouped-layout',
+  '/publish-template': 'grouped-layout',
   '/designer': 'templates-layout',
   '/your-apps': 'templates-layout',
   '/apply-designer': 'grouped-layout',

@@ -28,17 +28,18 @@ export async function publishCanvasAsTemplate(
   const canManageAll = hasPermission(userPermissions, 'templates:manage_all');
   const canPublishOfficial = hasPermission(userPermissions, 'templates:official_publish');
 
-  if (!canPublish && !canManageAll) {
+  if (!canPublish && !canManageAll && !canPublishOfficial) {
     throw new Error('Unauthorized role to publish template');
   }
 
-  if (!isOwner && !canManageAll) {
+  if (!isOwner && !canManageAll && !canPublishOfficial) {
     throw new Error('Unauthorized to publish this canvas as template');
   }
 
   const templateUuid = crypto.randomUUID();
-  const rawType = canvas.canvas_type || canvas.unit || 'board';
-  const canvasType = rawType === 'presentation' ? 'presentation' : (rawType === 'doc' ? 'doc' : 'board');
+  const rawType = String(canvas.canvas_type || canvas.unit || 'board').toLowerCase().trim();
+  const validCanvasTypes = new Set(['board', 'doc', 'presentation', 'sheet', 'social', 'video']);
+  const canvasType = validCanvasTypes.has(rawType) ? rawType : 'board';
   const title = (dto.title && dto.title.trim()) || canvas.name || 'Plantilla sin título';
   const description = dto.description && dto.description.trim() ? dto.description.trim() : null;
   const category = (dto.category && dto.category.trim()) || canvasType;
@@ -106,9 +107,10 @@ export async function getPublishedTemplates(options: {
     conditions.push('status = "approved"');
   }
 
-  if (type && (type === 'board' || type === 'presentation' || type === 'doc')) {
+  const validCanvasTypes = new Set(['board', 'doc', 'presentation', 'sheet', 'social', 'video']);
+  if (type && validCanvasTypes.has(type.toLowerCase().trim())) {
     conditions.push('canvas_type = ?');
-    params.push(type);
+    params.push(type.toLowerCase().trim());
   }
 
   if (category && category !== 'all') {
@@ -241,9 +243,10 @@ export async function getDesignerTemplates(
     params.push(status);
   }
 
-  if (type && (type === 'board' || type === 'presentation' || type === 'doc')) {
+  const validCanvasTypes = new Set(['board', 'doc', 'presentation', 'sheet', 'social', 'video']);
+  if (type && validCanvasTypes.has(type.toLowerCase().trim())) {
     conditions.push('t.canvas_type = ?');
-    params.push(type);
+    params.push(type.toLowerCase().trim());
   }
 
   if (search && search.trim()) {
