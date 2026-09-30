@@ -1,5 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiQuotaService } from '../services/ai-quota.service.js';
+import { AiSessionService } from '../services/ai-session.service.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { removeBackgroundWithPhotoroom } from '../services/image-ai.service.js';
 import { logger } from '../services/logger.service.js';
@@ -636,8 +637,88 @@ export class AiController {
       });
     }
   }
+
+  static async listStudioSessions(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({ error: 'No autenticado.', success: false });
+        return;
+      }
+
+      const sessions = await AiSessionService.listUserSessions(currentUser.id);
+      res.status(200).json({ sessions, success: true });
+    } catch (error) {
+      logger.app.error('AiController: Error al listar sesiones', error);
+      res.status(500).json({ error: 'Ha ocurrido un error al obtener las conversaciones.', success: false });
+    }
+  }
+
+  static async getStudioSession(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({ error: 'No autenticado.', success: false });
+        return;
+      }
+
+      const { uuid } = req.params;
+      const session = await AiSessionService.getSessionByUuid(uuid, currentUser.id);
+      if (!session) {
+        res.status(404).json({ error: 'Conversación no encontrada.', success: false });
+        return;
+      }
+
+      res.status(200).json({ session, success: true });
+    } catch (error) {
+      logger.app.error('AiController: Error al obtener sesion', error);
+      res.status(500).json({ error: 'Ha ocurrido un error al cargar la conversación.', success: false });
+    }
+  }
+
+  static async saveStudioSession(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({ error: 'No autenticado.', success: false });
+        return;
+      }
+
+      const { canvasUuid, messages, title, uuid } = req.body;
+      const savedUuid = await AiSessionService.saveSession({
+        canvasUuid,
+        messages: Array.isArray(messages) ? messages : [],
+        title,
+        userId: currentUser.id,
+        uuid,
+      });
+
+      res.status(200).json({ success: true, uuid: savedUuid });
+    } catch (error) {
+      logger.app.error('AiController: Error al guardar sesion', error);
+      res.status(500).json({ error: 'Ha ocurrido un error al guardar la conversación.', success: false });
+    }
+  }
+
+  static async deleteStudioSession(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({ error: 'No autenticado.', success: false });
+        return;
+      }
+
+      const { uuid } = req.params;
+      const deleted = await AiSessionService.deleteSession(uuid, currentUser.id);
+      res.status(200).json({ deleted, success: true });
+    } catch (error) {
+      logger.app.error('AiController: Error al eliminar sesion', error);
+      res.status(500).json({ error: 'Ha ocurrido un error al eliminar la conversación.', success: false });
+    }
+  }
 }
 
 export default AiController;
+
 
 

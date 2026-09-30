@@ -1,16 +1,30 @@
-<div class="ai-studio-container" data-ref="ai-studio-container">
+<div class="component-wrapper component-wrapper--full no-padding view-wrapper ai-studio-wrapper" data-ref="ai-studio-container">
   <header class="ai-studio-header" data-ref="ai-studio-header">
     <div class="ai-studio-header__left" data-ref="ai-studio-header-left">
-      <div class="ai-studio-brand" data-ref="ai-studio-brand">
-        <span class="ai-studio-brand__sparkle" aria-hidden="true">✨</span>
-        <h1 class="ai-studio-brand__title">Spritebot Studio</h1>
-        <span class="component-badge component-badge--sm component-badge--primary" data-ref="badge-studio-status">IA</span>
+      <div class="dropdown-wrapper" data-ref="dropdown-wrapper-chat-history">
+        <button type="button" class="dropdown-trigger dropdown-trigger--sm" data-ref="btn-trigger-chat-history" aria-label="Historial de conversaciones">
+          <div class="dropdown-trigger__left">
+            <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+            <span class="dropdown-trigger__text" data-ref="lbl-active-session-title">Conversaciones</span>
+          </div>
+          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-chat-history">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-325 menu-panel--h-auto" data-ref="dropdown-menu-chat-history">
+            <div class="menu-panel__drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list ai-studio-history-list" data-ref="chat-history-list"></div>
+            <div class="ai-studio-history-empty" data-ref="chat-history-empty" style="display: none;">
+              <p>No tienes chats previos aún.</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="ai-studio-header__right" data-ref="ai-studio-header-right">
-      <button type="button" class="component-button component-button--secondary component-button--sm" data-ref="btn-new-chat" aria-label="Nueva conversación">
+
+      <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-new-chat" data-tooltip="Nuevo chat" aria-label="Nuevo chat">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        <span>Nuevo chat</span>
       </button>
     </div>
   </header>
@@ -18,10 +32,7 @@
   <div class="ai-studio-workspace" data-ref="ai-studio-workspace">
     <section class="ai-studio-chat-panel" data-ref="ai-studio-chat-panel">
       <div class="ai-studio-hero" data-ref="ai-studio-hero">
-        <div class="ai-studio-hero__avatar" data-ref="ai-studio-hero-avatar">
-          <span class="ai-studio-hero__emoji" aria-hidden="true">✨</span>
-        </div>
-        <h2 class="ai-studio-hero__title">¿Qué deseas crear hoy?</h2>
+        <h2 class="ai-studio-hero__title" data-ref="ai-studio-hero-title">¿Qué vamos a diseñar hoy, <span data-ref="hero-username"></span>?</h2>
         <p class="ai-studio-hero__subtitle">Describe tu idea y Spritebot diseñará presentaciones, mapas conceptuales, documentos o posts listos para editar.</p>
 
         <div class="ai-studio-starters" data-ref="ai-studio-starters">
@@ -59,19 +70,16 @@
         </div>
       </div>
 
-      <div class="ai-studio-messages" data-ref="ai-studio-messages" style="display: none;"></div>
+      <div class="chat-messages ai-studio-messages" data-ref="ai-studio-messages" style="display: none;"></div>
 
-      <div class="ai-studio-input-wrapper" data-ref="ai-studio-input-wrapper">
-        <form class="ai-studio-input-form" data-ref="ai-studio-input-form">
-          <div class="ai-studio-input-box" data-ref="ai-studio-input-box">
-            <textarea class="ai-studio-textarea" data-ref="ai-studio-textarea" placeholder="Escribe lo que deseas crear o pide cambios..." rows="1"></textarea>
-            <div class="ai-studio-input-box__actions" data-ref="ai-studio-input-box-actions">
-              <button type="submit" class="ai-studio-send-btn" data-ref="btn-studio-send" aria-label="Enviar mensaje">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
-              </button>
-            </div>
-          </div>
-        </form>
+      <div class="chat-panel__bottom ai-studio-chat-bottom" data-ref="chat-panel-bottom">
+        <div class="chat-pill-input" data-ref="chat-input-box">
+          <textarea class="chat-pill-input__field" data-ref="chat-input" placeholder="Escribe un mensaje..." rows="1" maxlength="2500"></textarea>
+          <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" aria-label="Enviar mensaje" data-tooltip="Enviar mensaje">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
+          </button>
+        </div>
+        <p class="chat-disclaimer" data-ref="chat-disclaimer">Las conversaciones son procesadas por IA y auditadas para garantizar la calidad y seguridad.</p>
       </div>
     </section>
 

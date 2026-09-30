@@ -20,6 +20,9 @@ let activeEarlySkeletonSession: SkeletonSession | null = null;
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
   const clean = rawPath.replace(/\/+$/, '');
+  if (clean === '/ia') {
+    return '/ai';
+  }
   if (clean === '/marca') {
     return '/brand';
   }

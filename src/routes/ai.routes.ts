@@ -49,6 +49,14 @@ aiRouter.post('/remove-background', requireAuth, requireFeature('ai_bg_removal')
 aiRouter.post('/ai/remove-background', requireAuth, requireFeature('ai_bg_removal'), uploadLimiter, singleImageUploadMiddleware, AiController.removeBackground);
 aiRouter.post('/studio-chat', requireAuth, aiChatLimiter, AiController.studioChat);
 aiRouter.post('/ai/studio-chat', requireAuth, aiChatLimiter, AiController.studioChat);
+aiRouter.get('/studio-sessions', requireAuth, AiController.listStudioSessions);
+aiRouter.get('/ai/studio-sessions', requireAuth, AiController.listStudioSessions);
+aiRouter.get('/studio-sessions/:uuid', requireAuth, AiController.getStudioSession);
+aiRouter.get('/ai/studio-sessions/:uuid', requireAuth, AiController.getStudioSession);
+aiRouter.post('/studio-sessions', requireAuth, AiController.saveStudioSession);
+aiRouter.post('/ai/studio-sessions', requireAuth, AiController.saveStudioSession);
+aiRouter.delete('/studio-sessions/:uuid', requireAuth, AiController.deleteStudioSession);
+aiRouter.delete('/ai/studio-sessions/:uuid', requireAuth, AiController.deleteStudioSession);
 aiRouter.get('/quota', requireAuth, AiController.getQuota);
 aiRouter.get('/ai/quota', requireAuth, AiController.getQuota);
 

@@ -235,6 +235,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   }
 
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
+  const isAi = path === '/ai' || path === '/ia';
   const isTemplates = path === '/templates';
   const isDesigner = path === '/designer' || path.startsWith('/designer');
   const isBrand = path === '/brand' || path === '/marca';
@@ -250,6 +251,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   };
 
   updateItem('rail-item-home', 'btn-rail-home', isHome);
+  updateItem('rail-item-ai', 'btn-rail-ai', isAi);
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
   updateItem('rail-item-brand', 'btn-rail-brand', isBrand);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
@@ -397,7 +399,9 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   };
 
   const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
+  const isAi = currentPath === '/ai' || currentPath === '/ia';
   bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
+  bindNav('rail-item-ai', 'btn-rail-ai', '/ai', isAi);
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
   bindNav('rail-item-brand', 'btn-rail-brand', '/brand', currentPath === '/brand' || currentPath === '/marca');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');

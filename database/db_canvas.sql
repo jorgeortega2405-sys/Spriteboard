@@ -314,5 +314,20 @@ ON DUPLICATE KEY UPDATE
     tags = VALUES(tags),
     svg_content = VALUES(svg_content);
 
+CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT 'Nueva conversación',
+    canvas_uuid VARCHAR(36) NULL DEFAULT NULL,
+    messages JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ai_chat_user (user_id),
+    INDEX idx_ai_chat_uuid (uuid),
+    INDEX idx_ai_chat_updated (user_id, updated_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT ALL PRIVILEGES ON db_canvas.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
+
