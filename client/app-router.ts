@@ -20,11 +20,11 @@ let activeEarlySkeletonSession: SkeletonSession | null = null;
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
   const clean = rawPath.replace(/\/+$/, '');
-  if (clean === '/ia') {
-    return '/ai';
+  if (clean === '/ia' || clean.startsWith('/ia/')) {
+    return clean.replace(/^\/ia/, '/ai');
   }
-  if (clean === '/marca') {
-    return '/brand';
+  if (clean === '/marca' || clean.startsWith('/marca/')) {
+    return clean.replace(/^\/marca/, '/brand');
   }
   if (clean === '/templates/my-templates') {
     return '/designer';
@@ -83,15 +83,15 @@ export function showEarlySkeleton(): void {
   }
 
   const isCanvas = isCanvasRoute(path);
-  if (isAuthView || (isEmbedded && !isCanvas)) {
-    if (isAuthView) layoutContent.classList.add('is-auth-mode');
+  if (isAuthView) {
+    layoutContent.classList.add('is-auth-mode');
   } else {
     layoutContent.classList.remove('is-auth-mode');
     mountSidebarSkeleton(layoutContent);
   }
 
   activeEarlySkeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
-    minDuration: 180,
+    minDuration: isEmbedded ? 0 : 180,
     onlyBottom: false,
   });
 }
@@ -185,7 +185,7 @@ export async function render(): Promise<void> {
   }
 
   let currentSidebar: HTMLElement | null = null;
-  if (!isAuthView && (!isEmbedded || isNowCanvas)) {
+  if (!isAuthView) {
     currentSidebar = await ensureSidebarMounted(layoutContent);
     currentSidebar.style.display = '';
     layoutContent.classList.remove('is-auth-mode');
@@ -213,7 +213,7 @@ export async function render(): Promise<void> {
 
   if (!skeletonSession) {
     skeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
-      minDuration: 180,
+      minDuration: isEmbedded ? 0 : 180,
       onlyBottom: !isInitialPageLoad && !isAuthView,
     });
   }
@@ -273,7 +273,9 @@ export async function render(): Promise<void> {
 
   isInitialPageLoad = false;
 
-  attachChatSidebarToView(layoutContent);
+  if (!isEmbedded) {
+    attachChatSidebarToView(layoutContent);
+  }
 
   if (currentSidebar && !isAuthView) {
     updateSidebarActiveState(currentSidebar, path);

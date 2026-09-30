@@ -193,8 +193,8 @@ html.dark-theme .layout-content {
 .layout-content.is-embedded-canvas [data-ref*="canvas-metrics"],
 .layout-content.is-embedded-canvas [data-ref*="canvas-comments"],
 .layout-content.is-embedded-canvas .rail-top-default,
-.layout-content.is-embedded-canvas .rail-center-default,
 .layout-content.is-embedded-canvas .rail-top-canvas,
+.layout-content.is-embedded-canvas .rail-center-default,
 .layout-content.is-embedded-canvas .rail-divider,
 .layout-content.is-embedded-canvas .layout-rail__bottom {
   display: none !important;
@@ -206,6 +206,7 @@ html.dark-theme .layout-content {
   display: flex !important;
   position: relative !important;
   background-color: transparent !important;
+  overflow: visible !important;
 }
 
 .layout-content.is-embedded-canvas .layout-rail {
@@ -214,11 +215,22 @@ html.dark-theme .layout-content {
   min-width: 60px !important;
   max-width: 64px !important;
   gap: 8px !important;
+  display: flex !important;
 }
 
+.layout-content.is-embedded-canvas .layout-nav.is-canvas-mode .rail-center-canvas,
 .layout-content.is-embedded-canvas .rail-center-canvas {
   display: flex !important;
   gap: 6px !important;
+}
+
+.layout-content.is-embedded-canvas .layout-drawer {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important;
+  height: 100% !important;
+  z-index: 60 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
 }
 
 .layout-content.is-embedded-canvas .view-wrapper,

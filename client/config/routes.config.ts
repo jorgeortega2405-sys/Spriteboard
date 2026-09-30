@@ -87,16 +87,18 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     id: 'ai-studio',
-    match: (path) => path === '/ia' || path === '/ai',
-    handler: async () => {
+    match: (path) => path === '/ia' || path === '/ai' || path.startsWith('/ai/') || path.startsWith('/ia/'),
+    handler: async ({ path }) => {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('../views/auth.view.js');
         return [await createLoginView()];
       }
+      const match = path.match(/^\/(?:ai|ia)\/([a-zA-Z0-9_-]+)/);
+      const sessionUuid = match?.[1] || undefined;
       await loadStylesheet('/css/components/component-ai-studio.css');
       const { createAiStudioView } = await import('../views/ai-studio.view.js');
-      return [await createAiStudioView()];
+      return [await createAiStudioView(sessionUuid)];
     },
   },
   {

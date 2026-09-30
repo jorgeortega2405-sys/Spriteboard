@@ -188,7 +188,9 @@ export function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
   return (
     pathname.startsWith('/settings') ||
-    pathname.startsWith('/help')
+    pathname.startsWith('/help') ||
+    pathname.startsWith('/ai') ||
+    pathname.startsWith('/ia')
   );
 }
 
@@ -241,7 +243,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   }
 
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
-  const isAi = path === '/ai' || path === '/ia';
+  const isAi = path === '/ai' || path === '/ia' || path.startsWith('/ai/') || path.startsWith('/ia/');
   const isTemplates = path === '/templates';
   const isDesigner = path === '/designer' || path.startsWith('/designer');
   const isBrand = path === '/brand' || path === '/marca';
@@ -405,7 +407,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   };
 
   const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
-  const isAi = currentPath === '/ai' || currentPath === '/ia';
+  const isAi = currentPath === '/ai' || currentPath === '/ia' || currentPath.startsWith('/ai/') || currentPath.startsWith('/ia/');
   bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
   bindNav('rail-item-ai', 'btn-rail-ai', '/ai', isAi);
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
@@ -3771,6 +3773,158 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
   renderIcons(drawerBody);
 }
 
+async function renderAiDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): Promise<void> {
+  const currentPath = window.location.pathname;
+  const match = currentPath.match(/^\/(?:ai|ia)\/([a-zA-Z0-9_-]+)/);
+  const activeSessionUuid = match?.[1] || null;
+
+  drawerBody.innerHTML = `
+    <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+      <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.ai">${t('nav.ai') || 'Spriteboard IA'}</span>
+    </div>
+    <button type="button" class="menu-item menu-item--bordered" data-ref="btn-nav-ai-new-chat" style="margin-bottom: 8px;">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+      <span class="menu-item__text" data-i18n="ai.new_chat">${t('ai.new_chat') || 'Nueva conversación'}</span>
+    </button>
+
+    <div class="drawer-section" data-ref="drawer-section-ai-tools">
+      <div class="drawer-section__header" data-ref="drawer-header-ai-tools">
+        <span class="drawer-section__title">Herramientas IA</span>
+      </div>
+      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-presentation" data-prompt="Crea una presentación de 5 diapositivas para lanzar una startup de inteligencia artificial">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+        <span class="menu-item__text">Presentación Ejecutiva</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-mindmap" data-prompt="Crea un mapa mental sobre energías renovables y sostenibilidad">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#psychology"></use></svg>
+        <span class="menu-item__text">Mapa Mental</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-doc" data-prompt="Redacta un documento con las políticas de trabajo remoto y mejores prácticas para el equipo">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+        <span class="menu-item__text">Documento o Reporte</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-social" data-prompt="Diseña un post para Instagram promocionando una semana de descuentos en cursos digitales">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+        <span class="menu-item__text">Post para Redes</span>
+      </button>
+    </div>
+
+    <div class="drawer-section" data-ref="drawer-section-ai-chats">
+      <div class="drawer-section__header" data-ref="drawer-header-ai-chats">
+        <span class="drawer-section__title">Conversaciones</span>
+      </div>
+      <div class="drawer-items-list" data-ref="drawer-ai-chats-list">
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 70%; height: 12px; border-radius: 4px;"></div>
+        </div>
+      </div>
+      <div class="ai-studio-history-empty" data-ref="drawer-ai-chats-empty" style="display: none; padding: 12px; font-size: 12px; color: var(--text-tertiary); text-align: center;">
+        <p>No tienes chats previos aún.</p>
+      </div>
+    </div>
+  `;
+
+  translateElement(drawerBody);
+
+  const btnNewChat = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-ai-new-chat"]');
+  btnNewChat?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    const currentP = window.location.pathname;
+    if (currentP === '/ai' || currentP === '/ia') {
+      const activeBtnNew = document.querySelector<HTMLElement>('[data-ref="btn-new-chat"]');
+      if (activeBtnNew) {
+        activeBtnNew.click();
+        return;
+      }
+    }
+    navigate('/ai');
+  });
+
+  const toolBtns = drawerBody.querySelectorAll<HTMLElement>('[data-ref^="btn-nav-ai-tool-"]');
+  toolBtns.forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prompt = btn.getAttribute('data-prompt');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      const currentP = window.location.pathname;
+      if (currentP.startsWith('/ai') || currentP.startsWith('/ia')) {
+        const textarea = document.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
+        const sendBtn = document.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
+        if (textarea && sendBtn && prompt) {
+          textarea.value = prompt;
+          sendBtn.click();
+          return;
+        }
+      }
+      if (prompt) {
+        navigate(`/ai?prompt=${encodeURIComponent(prompt)}`);
+      } else {
+        navigate('/ai');
+      }
+    });
+  });
+
+  const chatsList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-ai-chats-list"]');
+  const chatsEmpty = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-ai-chats-empty"]');
+
+  if (currentUser) {
+    try {
+      const res = await getApi('/api/ai/studio-sessions');
+      if (res.ok) {
+        const data = await res.json();
+        const sessions: Array<{ uuid: string; title: string; updated_at: string }> = Array.isArray(data?.sessions) ? data.sessions : [];
+        if (chatsList && chatsEmpty) {
+          if (sessions.length === 0) {
+            chatsList.style.display = 'none';
+            chatsEmpty.style.display = 'block';
+          } else {
+            chatsEmpty.style.display = 'none';
+            chatsList.style.display = 'flex';
+            chatsList.innerHTML = '';
+            sessions.forEach((sess) => {
+              const itemBtn = document.createElement('button');
+              itemBtn.type = 'button';
+              itemBtn.className = `menu-item${sess.uuid === activeSessionUuid ? ' is-active' : ''}`;
+              itemBtn.setAttribute('data-ref', `drawer-chat-item-${sess.uuid}`);
+              itemBtn.innerHTML = `
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
+                <span class="menu-item__text">${escapeHtml(sess.title || 'Conversación')}</span>
+              `;
+              itemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.innerWidth <= 768) {
+                  toggleDrawer(false);
+                }
+                navigate(`/ai/${sess.uuid}`);
+              });
+              chatsList.appendChild(itemBtn);
+            });
+          }
+        }
+      }
+    } catch {
+      if (chatsList) chatsList.style.display = 'none';
+      if (chatsEmpty) chatsEmpty.style.display = 'block';
+    }
+  } else {
+    if (chatsList) chatsList.style.display = 'none';
+    if (chatsEmpty) chatsEmpty.style.display = 'block';
+  }
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  renderIcons(drawerBody);
+}
+
 async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
   const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
   if (!drawerBody) return;
@@ -3791,6 +3945,11 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
 
   if (isCanvasRoute(currentPath)) {
     renderCanvasDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (currentPath.startsWith('/ai') || currentPath.startsWith('/ia')) {
+    await renderAiDrawerContent(drawer, drawerBody);
     return;
   }
 

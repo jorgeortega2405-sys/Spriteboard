@@ -42,32 +42,33 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
 
   const canvasType = detectCanvasType(canvasRecord);
 
+  let element: HTMLElement;
   if (canvasType === 'video') {
     const { createVideoView } = await import('./video.view.js');
-    return await createVideoView(canvasUuid, canvasRecord);
-  }
-
-  if (canvasType === 'doc') {
+    element = await createVideoView(canvasUuid, canvasRecord);
+  } else if (canvasType === 'doc') {
     const { createDocView } = await import('./doc.view.js');
-    return await createDocView(canvasUuid, canvasRecord);
-  }
-
-  if (canvasType === 'presentation') {
+    element = await createDocView(canvasUuid, canvasRecord);
+  } else if (canvasType === 'presentation') {
     const { createPresentationView } = await import('./presentation.view.js');
-    return await createPresentationView(canvasUuid, canvasRecord);
-  }
-
-  if (canvasType === 'social') {
+    element = await createPresentationView(canvasUuid, canvasRecord);
+  } else if (canvasType === 'social') {
     const { createSocialView } = await import('./social.view.js');
-    return await createSocialView(canvasUuid, canvasRecord);
-  }
-
-  if (canvasType === 'sheet') {
+    element = await createSocialView(canvasUuid, canvasRecord);
+  } else if (canvasType === 'sheet') {
     const { createSheetView } = await import('./sheet.view.js');
-    return await createSheetView(canvasUuid, canvasRecord);
+    element = await createSheetView(canvasUuid, canvasRecord);
+  } else {
+    const { createBoardView } = await import('./board.view.js');
+    element = await createBoardView(canvasUuid, canvasRecord);
   }
 
-  const { createBoardView } = await import('./board.view.js');
-  return await createBoardView(canvasUuid, canvasRecord);
+  if (window.parent && window.parent !== window) {
+    try {
+      window.parent.postMessage({ canvasUuid, type: 'canvas:ready' }, '*');
+    } catch {}
+  }
+
+  return element;
 }
 

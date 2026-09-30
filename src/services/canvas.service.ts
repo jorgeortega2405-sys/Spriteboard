@@ -13,10 +13,12 @@ import { checkUserStorageQuota, invalidateUserStorageCache } from './storage.ser
 import { getEffectiveTierForCanvas, getEffectiveTiersForCanvases, getTierLimits, resolveHigherTier } from './subscription.service.js';
 
 export const RESERVED_SLUGS = new Set([
+  'ai',
   'api',
   'apps',
   'assets',
   'board',
+  'brand',
   'client',
   'css',
   'design',
@@ -33,11 +35,13 @@ export const RESERVED_SLUGS = new Set([
   'health',
   'help',
   'icons.svg',
+  'ia',
   'index.html',
   'institution',
   'legal',
   'login',
   'manifest.json',
+  'marca',
   'mindmap',
   'node_modules',
   'public',

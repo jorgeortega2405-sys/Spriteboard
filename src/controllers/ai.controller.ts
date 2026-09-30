@@ -551,7 +551,7 @@ export class AiController {
 
   static async studioChat(req: Request, res: Response): Promise<void> {
     try {
-      const { history, prompt, targetCanvasType } = req.body;
+      const { executeGeneration, history, proposal, prompt, targetCanvasType } = req.body;
 
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         res.status(400).json({
@@ -599,11 +599,13 @@ export class AiController {
       const result = await AiService.generateStudioChat(
         prompt.trim(),
         validHistory,
-        targetCanvasType
+        targetCanvasType,
+        Boolean(executeGeneration),
+        proposal
       );
 
       let updatedQuota = null;
-      if (currentUser && result.usage) {
+      if (currentUser && result.usage && executeGeneration) {
         let featureType: 'board' | 'doc' | 'mindmap' | 'presentation' = 'mindmap';
         if (result.intent.canvasType === 'presentation') featureType = 'presentation';
         else if (result.intent.canvasType === 'doc') featureType = 'doc';
@@ -623,6 +625,7 @@ export class AiController {
       res.status(200).json({
         artifact: result.artifact,
         intent: result.intent,
+        proposal: result.proposal,
         quota: updatedQuota,
         reply: result.reply,
         suggestedFormats: result.suggestedFormats,

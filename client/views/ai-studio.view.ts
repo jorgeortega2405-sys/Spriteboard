@@ -1,3 +1,4 @@
+import { updateDynamicDrawer, updateSidebarActiveState } from '../components/layout.component.js';
 import { convertDiagramToBoardElements } from '../engine-2d/elements.manager.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { createCanvasRecord } from '../services/canvas-creator.service.js';
@@ -5,12 +6,27 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { loadStylesheet, setupDropdown } from '../utils/dom.util.js';
+import { loadStylesheet } from '../utils/dom.util.js';
 
 export interface StudioArtifact {
   canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
   data: any;
   summary?: string;
+  title: string;
+}
+
+export interface StudioOutlineProposal {
+  canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+  customizationSuggestions?: string[];
+  goal?: string;
+  items: Array<{
+    description?: string;
+    details?: string[];
+    subtitle?: string;
+    title: string;
+  }>;
+  summary: string;
+  targetFormatLabel: string;
   title: string;
 }
 
@@ -45,38 +61,31 @@ const AGENT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3
 export class AiStudioController implements ViewController {
   private abortController: AbortController = new AbortController();
   private btnClosePreview: HTMLElement | null = null;
-  private btnNewChat: HTMLElement | null = null;
+  private btnHeaderOpenCanvas: HTMLButtonElement | null = null;
   private btnOpenInCanvas: HTMLElement | null = null;
   private btnSend: HTMLButtonElement | null = null;
-  private btnTriggerChatHistory: HTMLButtonElement | null = null;
   private container: HTMLElement | null = null;
   private currentArtifact: StudioArtifact | null = null;
   private currentCanvasUuid: string | null = null;
-  private dropdownBackdropChatHistory: HTMLElement | null = null;
-  private dropdownMenuChatHistory: HTMLElement | null = null;
-  private dropdownWrapperChatHistory: HTMLElement | null = null;
   private heroContainer: HTMLElement | null = null;
   private heroUsername: HTMLElement | null = null;
   private history: Array<{ role: 'model' | 'user'; text: string }> = [];
-  private historyDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
-  private historyEmpty: HTMLElement | null = null;
-  private historyList: HTMLElement | null = null;
   private isLoading: boolean = false;
-  private lblActiveSessionTitle: HTMLElement | null = null;
   private messagesContainer: HTMLElement | null = null;
   private previewBody: HTMLElement | null = null;
-  private previewFormatBadge: HTMLElement | null = null;
-  private previewFormatIcon: HTMLElement | null = null;
   private previewPanel: HTMLElement | null = null;
-  private previewTitle: HTMLElement | null = null;
   private sessions: StudioSessionSummary[] = [];
   private sessionUuid: string = crypto.randomUUID();
   private textarea: HTMLTextAreaElement | null = null;
   private workspaceContainer: HTMLElement | null = null;
 
-  async init(container: HTMLElement): Promise<void> {
+  async init(container: HTMLElement, initialSessionUuid?: string): Promise<void> {
     this.container = container;
     await loadStylesheet('/css/components/component-ai-studio.css');
+
+    if (initialSessionUuid) {
+      this.sessionUuid = initialSessionUuid;
+    }
 
     this.workspaceContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-workspace"]');
     this.heroContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-hero"]');
@@ -84,35 +93,28 @@ export class AiStudioController implements ViewController {
     this.messagesContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-messages"]');
     this.textarea = this.container.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
     this.btnSend = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
-    this.btnNewChat = this.container.querySelector<HTMLElement>('[data-ref="btn-new-chat"]');
-    this.dropdownWrapperChatHistory = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-chat-history"]');
-    this.btnTriggerChatHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-chat-history"]');
-    this.dropdownBackdropChatHistory = this.container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-chat-history"]');
-    this.dropdownMenuChatHistory = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-chat-history"]');
-    this.historyList = this.container.querySelector<HTMLElement>('[data-ref="chat-history-list"]');
-    this.historyEmpty = this.container.querySelector<HTMLElement>('[data-ref="chat-history-empty"]');
-    this.lblActiveSessionTitle = this.container.querySelector<HTMLElement>('[data-ref="lbl-active-session-title"]');
     this.previewPanel = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-preview-panel"]');
     this.previewBody = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-preview-body"]');
-    this.previewTitle = this.container.querySelector<HTMLElement>('[data-ref="preview-title"]');
-    this.previewFormatBadge = this.container.querySelector<HTMLElement>('[data-ref="preview-format-badge"]');
-    this.previewFormatIcon = this.container.querySelector<HTMLElement>('[data-ref="preview-format-icon"]');
     this.btnOpenInCanvas = this.container.querySelector<HTMLElement>('[data-ref="btn-open-in-canvas"]');
     this.btnClosePreview = this.container.querySelector<HTMLElement>('[data-ref="btn-close-preview"]');
-
-    if (this.dropdownWrapperChatHistory) {
-      this.historyDropdownCtrl = setupDropdown(this.dropdownWrapperChatHistory, {
-        backdrop: this.dropdownBackdropChatHistory,
-        menu: this.dropdownMenuChatHistory,
-        trigger: this.btnTriggerChatHistory,
-      });
-    }
+    this.btnHeaderOpenCanvas = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-header-open-canvas"]');
 
     this.setupGreeting();
     this.bindEvents();
     renderIcons(this.container);
 
-    void this.loadSessions();
+    await this.loadSessions();
+
+    if (initialSessionUuid) {
+      await this.selectSession(initialSessionUuid, false);
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
+      const promptParam = urlParams.get('prompt');
+      if (promptParam) {
+        window.history.replaceState({}, '', '/ai');
+        void this.executePrompt(promptParam);
+      }
+    }
   }
 
   private setupGreeting(): void {
@@ -125,6 +127,12 @@ export class AiStudioController implements ViewController {
       if (heroTitle) {
         heroTitle.textContent = '¿Qué vamos a diseñar hoy?';
       }
+    }
+  }
+
+  private updateHeaderCanvasButton(): void {
+    if (this.btnHeaderOpenCanvas) {
+      this.btnHeaderOpenCanvas.style.display = this.currentCanvasUuid ? 'inline-flex' : 'none';
     }
   }
 
@@ -160,22 +168,22 @@ export class AiStudioController implements ViewController {
       }, { signal });
     });
 
-    this.btnNewChat?.addEventListener('click', () => {
-      this.resetChat();
-    }, { signal });
-
-    const btnPickerNewChat = this.container?.querySelector<HTMLElement>('[data-ref="btn-picker-new-chat"]');
-    btnPickerNewChat?.addEventListener('click', () => {
-      this.resetChat();
-      this.historyDropdownCtrl?.close();
-    }, { signal });
-
     this.btnOpenInCanvas?.addEventListener('click', () => {
+      this.handleOpenInCanvas();
+    }, { signal });
+
+    this.btnHeaderOpenCanvas?.addEventListener('click', () => {
       this.handleOpenInCanvas();
     }, { signal });
 
     this.btnClosePreview?.addEventListener('click', () => {
       this.closePreview();
+    }, { signal });
+
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'canvas:ready') {
+        this.revealPreviewIframe(e.data.canvasUuid);
+      }
     }, { signal });
   }
 
@@ -185,57 +193,11 @@ export class AiStudioController implements ViewController {
       if (res.ok) {
         const body = await res.json();
         this.sessions = Array.isArray(body?.sessions) ? body.sessions : [];
-        this.renderHistoryList();
       }
     } catch {}
   }
 
-  private renderHistoryList(): void {
-    if (!this.historyList || !this.historyEmpty) return;
-    this.historyList.innerHTML = '';
-
-    if (this.sessions.length === 0) {
-      this.historyList.style.display = 'none';
-      this.historyEmpty.style.display = 'block';
-      return;
-    }
-
-    this.historyList.style.display = 'flex';
-    this.historyEmpty.style.display = 'none';
-
-    this.sessions.forEach((sess) => {
-      const itemBtn = document.createElement('button');
-      itemBtn.type = 'button';
-      itemBtn.className = `menu-item${sess.uuid === this.sessionUuid ? ' is-active' : ''}`;
-      itemBtn.setAttribute('data-ref', `history-item-${sess.uuid}`);
-
-      itemBtn.innerHTML = `
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
-        <span class="menu-item__text">${escapeHtml(sess.title || 'Conversación')}</span>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost ai-studio-history-item__delete" data-ref="btn-delete-session-${sess.uuid}" data-tooltip="Eliminar chat" aria-label="Eliminar chat">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
-        </button>
-      `;
-
-      itemBtn.addEventListener('click', (e) => {
-        const delBtn = (e.target as HTMLElement).closest('[data-ref^="btn-delete-session"]');
-        if (delBtn) {
-          e.stopPropagation();
-          e.preventDefault();
-          void this.deleteSession(sess.uuid);
-          return;
-        }
-        void this.selectSession(sess.uuid);
-        this.historyDropdownCtrl?.close();
-      });
-
-      this.historyList?.appendChild(itemBtn);
-    });
-
-    renderIcons(this.historyList);
-  }
-
-  private async selectSession(uuid: string): Promise<void> {
+  public async selectSession(uuid: string, updateHistory = true): Promise<void> {
     try {
       const res = await getApi(`/api/ai/studio-sessions/${encodeURIComponent(uuid)}`);
       if (res.ok) {
@@ -246,12 +208,16 @@ export class AiStudioController implements ViewController {
           this.history = Array.isArray(session.messages) ? session.messages : [];
           this.currentCanvasUuid = session.canvas_uuid || null;
 
-          if (this.lblActiveSessionTitle) {
-            this.lblActiveSessionTitle.textContent = session.title || 'Conversación';
+          if (updateHistory && window.location.pathname !== `/ai/${session.uuid}`) {
+            window.history.pushState({}, '', `/ai/${session.uuid}`);
+            const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+            if (sidebar) {
+              updateSidebarActiveState(sidebar, `/ai/${session.uuid}`);
+            }
           }
 
           this.renderRestoredSession();
-          this.renderHistoryList();
+          void updateDynamicDrawer();
         }
       }
     } catch {}
@@ -265,11 +231,23 @@ export class AiStudioController implements ViewController {
       this.heroContainer.style.display = 'none';
       this.messagesContainer.style.display = 'flex';
 
+      const assistantMsgCount = this.history.filter((m) => m.role === 'model').length;
+      let modelIdx = 0;
+
       this.history.forEach((msg) => {
         if (msg.role === 'user') {
           this.appendUserMessage(msg.text);
         } else {
-          this.appendAssistantMessage(msg.text);
+          modelIdx++;
+          const isLastModel = modelIdx === assistantMsgCount;
+          const artifactCard = (isLastModel && this.currentCanvasUuid)
+            ? {
+                canvasType: 'board' as const,
+                canvasUuid: this.currentCanvasUuid,
+                title: 'Lienzo generado',
+              }
+            : undefined;
+          this.appendAssistantMessage(msg.text, undefined, artifactCard);
         }
       });
     } else {
@@ -277,29 +255,28 @@ export class AiStudioController implements ViewController {
       this.messagesContainer.style.display = 'none';
     }
 
+    this.updateHeaderCanvasButton();
+
     if (this.currentCanvasUuid && this.previewPanel && this.workspaceContainer && this.previewBody) {
       this.workspaceContainer.classList.add('has-preview');
       this.previewPanel.style.display = 'flex';
-      if (this.previewTitle) {
-        this.previewTitle.textContent = this.lblActiveSessionTitle?.textContent || 'Lienzo';
-      }
-      this.showGeneratingState('Cargando conversación...');
-      this.embedCanvasIframe(this.currentCanvasUuid, this.lblActiveSessionTitle?.textContent || 'Lienzo');
+      this.showGeneratingState();
+      this.embedCanvasIframe(this.currentCanvasUuid, 'Lienzo');
     } else if (this.previewPanel && this.workspaceContainer) {
       this.previewPanel.style.display = 'none';
       this.workspaceContainer.classList.remove('has-preview');
     }
   }
 
-  private async deleteSession(uuid: string): Promise<void> {
+  public async deleteSession(uuid: string): Promise<void> {
     try {
       const res = await deleteApi(`/api/ai/studio-sessions/${encodeURIComponent(uuid)}`);
       if (res.ok) {
         this.sessions = this.sessions.filter((s) => s.uuid !== uuid);
-        this.renderHistoryList();
         if (this.sessionUuid === uuid) {
           this.resetChat();
         }
+        void updateDynamicDrawer();
         showToast('Conversación eliminada', 'info');
       }
     } catch {}
@@ -315,7 +292,12 @@ export class AiStudioController implements ViewController {
     await this.executePrompt(text);
   }
 
-  private async executePrompt(promptText: string, targetType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video'): Promise<void> {
+  private async executePrompt(
+    promptText: string,
+    targetType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video',
+    executeGeneration: boolean = false,
+    proposalData?: StudioOutlineProposal
+  ): Promise<void> {
     if (this.isLoading) return;
     this.isLoading = true;
 
@@ -323,17 +305,29 @@ export class AiStudioController implements ViewController {
     if (this.heroContainer) this.heroContainer.style.display = 'none';
     if (this.messagesContainer) this.messagesContainer.style.display = 'flex';
 
-    this.appendUserMessage(promptText);
+    if (window.location.pathname !== `/ai/${this.sessionUuid}`) {
+      window.history.pushState({}, '', `/ai/${this.sessionUuid}`);
+      const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+      if (sidebar) {
+        updateSidebarActiveState(sidebar, `/ai/${this.sessionUuid}`);
+      }
+    }
+
+    if (!executeGeneration) {
+      this.appendUserMessage(promptText);
+    }
     const typingIndicator = this.appendTypingIndicator();
 
-    if (this.currentCanvasUuid || this.workspaceContainer?.classList.contains('has-preview')) {
-      this.showGeneratingState('Actualizando lienzo con IA...');
+    if (executeGeneration || this.currentCanvasUuid || this.workspaceContainer?.classList.contains('has-preview')) {
+      this.showGeneratingState();
     }
 
     try {
       const response = await postApi('/api/ai/studio-chat', {
+        executeGeneration,
         history: this.history,
         prompt: promptText,
+        proposal: proposalData,
         targetCanvasType: targetType,
       });
 
@@ -341,16 +335,33 @@ export class AiStudioController implements ViewController {
       typingIndicator.remove();
 
       if (response.ok && res && res.success) {
-        this.history.push({ role: 'user', text: promptText });
+        if (!executeGeneration) {
+          this.history.push({ role: 'user', text: promptText });
+        }
         this.history.push({ role: 'model', text: res.reply || '' });
 
-        this.appendAssistantMessage(res.reply || '', res.suggestedFormats);
-
+        let artifactCardInfo: { canvasType: string; canvasUuid: string; title: string } | undefined;
         if (res.artifact) {
           this.currentArtifact = res.artifact;
-          await this.showPreview(res.artifact);
+          this.showGeneratingState();
+          const canvasUuid = await this.saveArtifactAsCanvas(res.artifact);
+          this.currentCanvasUuid = canvasUuid;
+          this.updateHeaderCanvasButton();
+          artifactCardInfo = {
+            canvasType: res.artifact.canvasType,
+            canvasUuid,
+            title: res.artifact.title,
+          };
+          this.embedCanvasIframe(canvasUuid, res.artifact.title);
         }
 
+        this.appendAssistantMessage(
+          res.reply || '',
+          res.suggestedFormats,
+          artifactCardInfo,
+          res.proposal,
+          promptText
+        );
         await this.syncSession();
       } else {
         const errorMsg = res?.error || 'No se pudo generar la respuesta.';
@@ -371,9 +382,6 @@ export class AiStudioController implements ViewController {
 
   private async syncSession(): Promise<void> {
     const sessionTitle = this.history[0]?.text ? this.history[0].text.slice(0, 45) : 'Conversación';
-    if (this.lblActiveSessionTitle) {
-      this.lblActiveSessionTitle.textContent = sessionTitle;
-    }
 
     try {
       await postApi('/api/ai/studio-sessions', {
@@ -383,6 +391,7 @@ export class AiStudioController implements ViewController {
         uuid: this.sessionUuid,
       });
       void this.loadSessions();
+      void updateDynamicDrawer();
     } catch {}
   }
 
@@ -412,9 +421,201 @@ export class AiStudioController implements ViewController {
     this.scrollToBottom();
   }
 
+  private renderArtifactCard(container: HTMLElement, artifact: { canvasType: string; canvasUuid: string; title: string }): void {
+    const typeIcons: Record<string, string> = {
+      board: '🧠',
+      doc: '📄',
+      presentation: '📊',
+      sheet: '📈',
+      social: '📱',
+      video: '🎬',
+    };
+    const typeLabels: Record<string, string> = {
+      board: 'Pizarrón',
+      doc: 'Documento',
+      presentation: 'Presentación',
+      sheet: 'Hoja de cálculo',
+      social: 'Redes Sociales',
+      video: 'Video',
+    };
+    const card = document.createElement('div');
+    card.className = 'ai-studio-artifact-card';
+    card.setAttribute('data-ref', 'ai-studio-artifact-card');
+    card.innerHTML = `
+      <div class="ai-studio-artifact-card__header">
+        <span class="ai-studio-artifact-card__icon" aria-hidden="true">${typeIcons[artifact.canvasType] || '✨'}</span>
+        <div class="ai-studio-artifact-card__info">
+          <strong class="ai-studio-artifact-card__title">${escapeHtml(artifact.title)}</strong>
+          <span class="ai-studio-artifact-card__type">${escapeHtml(typeLabels[artifact.canvasType] || artifact.canvasType)} · Spritebot IA</span>
+        </div>
+      </div>
+      <div class="ai-studio-artifact-card__actions">
+        <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-artifact-open" aria-label="Abrir en lienzo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+          <span>Abrir en lienzo</span>
+        </button>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-artifact-preview" aria-label="Ver vista previa">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          <span>Ver vista previa</span>
+        </button>
+      </div>
+    `;
+
+    const btnOpen = card.querySelector<HTMLElement>('[data-ref="btn-artifact-open"]');
+    btnOpen?.addEventListener('click', () => {
+      window.open(`/design/${artifact.canvasUuid}`, '_blank');
+    });
+
+    const btnPreview = card.querySelector<HTMLElement>('[data-ref="btn-artifact-preview"]');
+    btnPreview?.addEventListener('click', () => {
+      this.currentCanvasUuid = artifact.canvasUuid;
+      if (this.previewPanel && this.workspaceContainer && this.previewBody) {
+        this.workspaceContainer.classList.add('has-preview');
+        this.previewPanel.style.display = 'flex';
+        this.updateHeaderCanvasButton();
+        this.showGeneratingState();
+        this.embedCanvasIframe(artifact.canvasUuid, artifact.title);
+      }
+    });
+
+    container.appendChild(card);
+    renderIcons(card);
+  }
+
+  private renderProposalCard(
+    container: HTMLElement,
+    proposal: StudioOutlineProposal,
+    originalPrompt?: string
+  ): void {
+    const typeIcons: Record<string, string> = {
+      board: '🧠',
+      doc: '📄',
+      presentation: '📊',
+      sheet: '📈',
+      social: '📱',
+      video: '🎬',
+    };
+
+    const typeLabels: Record<string, string> = {
+      board: 'Mapa Conceptual',
+      doc: 'Documento',
+      presentation: 'Presentación',
+      sheet: 'Hoja de cálculo',
+      social: 'Post Social',
+      video: 'Video',
+    };
+
+    const formatBadge = typeLabels[proposal.canvasType] || proposal.targetFormatLabel || 'Diseño';
+    const icon = typeIcons[proposal.canvasType] || '✨';
+    const itemsCount = Array.isArray(proposal.items) ? proposal.items.length : 0;
+    const unitLabel = proposal.canvasType === 'presentation'
+      ? `${itemsCount} diapositivas`
+      : proposal.canvasType === 'board'
+      ? `${itemsCount} ramas clave`
+      : `${itemsCount} secciones`;
+
+    const card = document.createElement('div');
+    card.className = 'ai-studio-proposal-card';
+    card.setAttribute('data-ref', 'ai-studio-proposal-card');
+
+    const itemsHtml = Array.isArray(proposal.items)
+      ? proposal.items.map((item, idx) => {
+          const detailsHtml = Array.isArray(item.details) && item.details.length > 0
+            ? `<ul class="ai-studio-proposal-item__details">${item.details.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`
+            : '';
+          const subHtml = item.subtitle ? `<span class="ai-studio-proposal-item__subtitle">${escapeHtml(item.subtitle)}</span>` : '';
+          const descHtml = item.description ? `<p class="ai-studio-proposal-item__desc">${escapeHtml(item.description)}</p>` : '';
+          return `
+            <div class="ai-studio-proposal-item" data-ref="proposal-item-${idx + 1}">
+              <div class="ai-studio-proposal-item__num">${idx + 1}</div>
+              <div class="ai-studio-proposal-item__content">
+                <div class="ai-studio-proposal-item__header">
+                  <strong class="ai-studio-proposal-item__title">${escapeHtml(item.title)}</strong>
+                  ${subHtml}
+                </div>
+                ${descHtml}
+                ${detailsHtml}
+              </div>
+            </div>
+          `;
+        }).join('')
+      : '';
+
+    const suggestions = Array.isArray(proposal.customizationSuggestions) ? proposal.customizationSuggestions : [];
+    const suggestionsHtml = suggestions.length > 0
+      ? `
+        <div class="ai-studio-proposal-chips-box" data-ref="proposal-chips-box">
+          <span class="ai-studio-proposal-chips-label">Personalizar antes de generar:</span>
+          <div class="ai-studio-proposal-chips" data-ref="proposal-chips">
+            ${suggestions.map((s, sIdx) => `
+              <button type="button" class="ai-studio-tweak-chip" data-ref="btn-tweak-chip-${sIdx}" data-tweak-text="${escapeHtml(s)}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                <span>${escapeHtml(s)}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+    card.innerHTML = `
+      <div class="ai-studio-proposal-card__header">
+        <div class="ai-studio-proposal-card__badge-row">
+          <span class="ai-studio-proposal-badge">${icon} ${escapeHtml(formatBadge)}</span>
+          <span class="ai-studio-proposal-item-count">${unitLabel}</span>
+        </div>
+        <h3 class="ai-studio-proposal-card__title">${escapeHtml(proposal.title)}</h3>
+        ${proposal.goal ? `<p class="ai-studio-proposal-card__goal"><strong>Objetivo:</strong> ${escapeHtml(proposal.goal)}</p>` : ''}
+        ${proposal.summary ? `<p class="ai-studio-proposal-card__summary">${escapeHtml(proposal.summary)}</p>` : ''}
+      </div>
+
+      <div class="ai-studio-proposal-items-list" data-ref="proposal-items-list">
+        ${itemsHtml}
+      </div>
+
+      <div class="ai-studio-proposal-card__actions">
+        <button type="button" class="component-button component-button--h44 component-button--black ai-studio-proposal-generate-btn" data-ref="btn-generate-proposal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          <span>Generar ${escapeHtml(formatBadge)}</span>
+        </button>
+      </div>
+
+      ${suggestionsHtml}
+    `;
+
+    const btnGenerate = card.querySelector<HTMLButtonElement>('[data-ref="btn-generate-proposal"]');
+    btnGenerate?.addEventListener('click', () => {
+      if (this.isLoading) return;
+      btnGenerate.disabled = true;
+      btnGenerate.classList.add('is-loading');
+      btnGenerate.innerHTML = `
+        <span class="spinner" style="width: 16px; height: 16px;"></span>
+        <span>Generando ${escapeHtml(formatBadge)}...</span>
+      `;
+      const promptToUse = originalPrompt || `Generar ${proposal.targetFormatLabel}: ${proposal.title}`;
+      void this.executePrompt(promptToUse, proposal.canvasType, true, proposal);
+    });
+
+    const tweakChips = card.querySelectorAll<HTMLButtonElement>('[data-tweak-text]');
+    tweakChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const text = chip.getAttribute('data-tweak-text');
+        if (text && !this.isLoading) {
+          void this.executePrompt(text, proposal.canvasType, false);
+        }
+      });
+    });
+
+    container.appendChild(card);
+    renderIcons(card);
+  }
+
   private appendAssistantMessage(
     replyText: string,
-    suggestedFormats?: Array<{ canvasType: string; description: string; icon: string; label: string }>
+    suggestedFormats?: Array<{ canvasType: string; description: string; icon: string; label: string }>,
+    artifactCard?: { canvasType: string; canvasUuid: string; title: string },
+    proposal?: StudioOutlineProposal,
+    originalPrompt?: string
   ): void {
     if (!this.messagesContainer) return;
     const wrapper = document.createElement('div');
@@ -427,7 +628,11 @@ export class AiStudioController implements ViewController {
     bubble.className = 'chat-agent-bubble';
     bubble.innerHTML = `<p>${escapeHtml(replyText).replace(/\n/g, '<br/>')}</p>`;
 
-    if (suggestedFormats && suggestedFormats.length > 0) {
+    if (proposal && !artifactCard) {
+      this.renderProposalCard(bubble, proposal, originalPrompt);
+    }
+
+    if (suggestedFormats && suggestedFormats.length > 0 && !proposal && !artifactCard) {
       const chips = document.createElement('div');
       chips.className = 'ai-studio-format-chips';
       chips.setAttribute('data-ref', 'format-chips');
@@ -444,10 +649,14 @@ export class AiStudioController implements ViewController {
           const type = btn.getAttribute('data-canvas-type') as any;
           if (type && !this.isLoading) {
             const lastUserPrompt = this.history[this.history.length - 2]?.text || 'Generar lienzo';
-            void this.executePrompt(lastUserPrompt, type);
+            void this.executePrompt(lastUserPrompt, type, false);
           }
         });
       });
+    }
+
+    if (artifactCard) {
+      this.renderArtifactCard(bubble, artifactCard);
     }
 
     wrapper.appendChild(bubble);
@@ -548,14 +757,11 @@ export class AiStudioController implements ViewController {
     }
   }
 
-  private showGeneratingState(title = 'Vista previa'): void {
+  private showGeneratingState(): void {
     if (!this.previewPanel || !this.workspaceContainer || !this.previewBody) return;
     this.workspaceContainer.classList.add('has-preview');
     this.previewPanel.style.display = 'flex';
-
-    if (this.previewTitle) this.previewTitle.textContent = title;
-    if (this.previewFormatBadge) this.previewFormatBadge.textContent = 'Spritebot IA';
-    if (this.previewFormatIcon) this.previewFormatIcon.textContent = '✨';
+    this.updateHeaderCanvasButton();
 
     this.previewBody.innerHTML = `
       <div class="ai-studio-generating-state" data-ref="ai-generating-state">
@@ -564,8 +770,25 @@ export class AiStudioController implements ViewController {
     `;
   }
 
+  private revealPreviewIframe(canvasUuid?: string): void {
+    if (canvasUuid && this.currentCanvasUuid && canvasUuid !== this.currentCanvasUuid) return;
+    const genState = this.previewBody?.querySelector('.ai-studio-generating-state');
+    if (genState) {
+      genState.remove();
+    }
+    const iframe = this.previewBody?.querySelector<HTMLIFrameElement>('.ai-studio-canvas-iframe');
+    if (iframe) {
+      iframe.style.opacity = '1';
+    }
+  }
+
   private embedCanvasIframe(canvasUuid: string, title?: string): void {
     if (!this.previewBody) return;
+
+    const existingWrapper = this.previewBody.querySelector('[data-ref="canvas-preview-wrapper"]');
+    if (existingWrapper) {
+      existingWrapper.remove();
+    }
 
     const wrapper = document.createElement('div');
     wrapper.className = 'ai-studio-canvas-preview-wrapper';
@@ -577,56 +800,19 @@ export class AiStudioController implements ViewController {
     iframe.src = `/design/${canvasUuid}?embedded=true`;
     iframe.title = title || 'Lienzo';
     iframe.style.opacity = '0';
-    iframe.style.transition = 'opacity 0.3s ease';
+    iframe.style.transition = 'opacity 0.25s ease';
+
+    const timer = setTimeout(() => {
+      this.revealPreviewIframe(canvasUuid);
+    }, 1500);
 
     iframe.onload = () => {
-      const genState = this.previewBody?.querySelector('.ai-studio-generating-state');
-      if (genState) {
-        genState.remove();
-      }
-      iframe.style.opacity = '1';
+      clearTimeout(timer);
+      this.revealPreviewIframe(canvasUuid);
     };
 
     wrapper.appendChild(iframe);
     this.previewBody.appendChild(wrapper);
-  }
-
-  private async showPreview(artifact: StudioArtifact): Promise<void> {
-    if (!this.previewPanel || !this.workspaceContainer || !this.previewBody) return;
-
-    this.workspaceContainer.classList.add('has-preview');
-    this.previewPanel.style.display = 'flex';
-
-    if (this.previewTitle) this.previewTitle.textContent = artifact.title;
-    if (this.previewFormatBadge) {
-      const typeLabels: Record<string, string> = {
-        board: 'Pizarrón',
-        doc: 'Documento',
-        presentation: 'Presentación',
-        sheet: 'Hoja de cálculo',
-        social: 'Redes Sociales',
-        video: 'Video',
-      };
-      this.previewFormatBadge.textContent = typeLabels[artifact.canvasType] || artifact.canvasType;
-    }
-    if (this.previewFormatIcon) {
-      const typeIcons: Record<string, string> = {
-        board: '🧠',
-        doc: '📄',
-        presentation: '📊',
-        sheet: '📈',
-        social: '📱',
-        video: '🎬',
-      };
-      this.previewFormatIcon.textContent = typeIcons[artifact.canvasType] || '✨';
-    }
-
-    this.showGeneratingState('Cargando vista previa interactiva...');
-
-    const canvasUuid = await this.saveArtifactAsCanvas(artifact);
-    this.currentCanvasUuid = canvasUuid;
-
-    this.embedCanvasIframe(canvasUuid, artifact.title);
   }
 
   private async saveArtifactAsCanvas(artifact: StudioArtifact): Promise<string> {
@@ -1077,15 +1263,21 @@ export class AiStudioController implements ViewController {
     }
   }
 
-  private resetChat(): void {
+  public resetChat(): void {
     this.sessionUuid = crypto.randomUUID();
     this.history = [];
     this.currentArtifact = null;
     this.currentCanvasUuid = null;
 
-    if (this.lblActiveSessionTitle) {
-      this.lblActiveSessionTitle.textContent = 'Conversaciones';
+    if (window.location.pathname !== '/ai') {
+      window.history.pushState({}, '', '/ai');
+      const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+      if (sidebar) {
+        updateSidebarActiveState(sidebar, '/ai');
+      }
     }
+
+    this.updateHeaderCanvasButton();
 
     if (this.messagesContainer) {
       this.messagesContainer.innerHTML = '';
@@ -1108,20 +1300,19 @@ export class AiStudioController implements ViewController {
       this.textarea.style.height = 'auto';
       this.textarea.focus();
     }
-    this.renderHistoryList();
+    void updateDynamicDrawer();
   }
 
   destroy(): void {
-    this.historyDropdownCtrl?.destroy();
     this.abortController.abort();
   }
 }
 
-export async function createAiStudioView(): Promise<HTMLElement> {
+export async function createAiStudioView(initialSessionUuid?: string): Promise<HTMLElement> {
   await loadStylesheet('/css/components/component-ai-studio.css');
   const container = await loadTemplate('/views/ai/ai-studio.html');
   const controller = new AiStudioController();
-  await controller.init(container);
+  await controller.init(container, initialSessionUuid);
   (container as any).__controller = controller;
   return container;
 }

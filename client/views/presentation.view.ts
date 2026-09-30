@@ -4,10 +4,12 @@ import { StageCanvasController } from './stage/stage.controller.js';
 
 export async function createPresentationView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
   const container = await loadTemplate('/views/stage/stage.html');
+  const isEmbedded = typeof window !== 'undefined' && (window.self !== window.top || window.location.search.includes('embedded=true'));
 
   const controller = new StageCanvasController(container, canvasUuid, initialRecord, {
     canPresent: true,
     canvasType: 'presentation',
+    isEmbedded,
     pageLabel: 'Lámina',
   });
 
@@ -15,7 +17,7 @@ export async function createPresentationView(canvasUuid: string, initialRecord?:
   try {
     loaded = await Promise.race([
       controller.init(),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 20000)),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), isEmbedded ? 4000 : 10000)),
     ]);
   } catch {
     loaded = false;

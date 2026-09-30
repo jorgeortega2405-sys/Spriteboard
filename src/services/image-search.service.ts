@@ -94,7 +94,7 @@ export class ImageSearchService {
         const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`;
         const res = await fetch(pexelsUrl, {
           headers: { Authorization: pexelsKey },
-          signal: AbortSignal.timeout(3500),
+          signal: AbortSignal.timeout(700),
         });
 
         if (res.ok) {
@@ -110,30 +110,6 @@ export class ImageSearchService {
         }
       } catch {}
     }
-
-    try {
-      const wikiQuery = cleanQuery.replace(/[^\w\s\u00C0-\u024F]/gi, ' ').trim();
-      const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(wikiQuery)}&gsrlimit=5&gsrnamespace=6&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json&origin=*`;
-      const wikiRes = await fetch(wikiUrl, {
-        headers: { 'User-Agent': 'SpriteboardApp/1.0 (https://spriteboard.com)' },
-        signal: AbortSignal.timeout(3500),
-      });
-
-      if (wikiRes.ok) {
-        const data = (await wikiRes.json()) as any;
-        const pages = data?.query?.pages;
-        if (pages) {
-          for (const k of Object.keys(pages)) {
-            const imgInfo = pages[k]?.imageinfo?.[0];
-            const url = imgInfo?.thumburl || imgInfo?.url;
-            if (url && /\.(jpe?g|png|webp)($|\?)/i.test(url)) {
-              this.cache.set(cleanQuery, url);
-              return url;
-            }
-          }
-        }
-      }
-    } catch {}
 
     const matchedKey = matchCategory(cleanQuery);
     const fallbackUrl = FALLBACK_CATEGORY_IMAGES[matchedKey] || FALLBACK_CATEGORY_IMAGES.default;

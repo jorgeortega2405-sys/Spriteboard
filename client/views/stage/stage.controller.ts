@@ -171,21 +171,36 @@ export class StageCanvasController {
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="presentation-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="presentation-collaborators-list"]');
 
+    const isEmbedded = Boolean(this.stageOptions.isEmbedded || (typeof window !== 'undefined' && (window.self !== window.top || window.location.search.includes('embedded=true'))));
+
     await this.loadPresentationData();
     this.loadRecentColors();
     this.setupResizeObserver();
-    this.setupTopBarComponents();
-    this.setupPanels();
+    if (!isEmbedded) {
+      this.setupTopBarComponents();
+      this.setupPanels();
+    }
     this.bindEvents();
     this.slidesManager = new StageSlidesManager(this as any);
-    this.setupCollaboration();
+    if (!isEmbedded) {
+      this.setupCollaboration();
+    }
     this.fitSlide();
     this.render();
     this.renderSlidesTray();
-    this.renderCollaboratorsBar();
-    this.updateSelectionToolbar();
+    if (!isEmbedded) {
+      this.renderCollaboratorsBar();
+      this.updateSelectionToolbar();
+      this.viewTracker = startCanvasViewTracking(this.canvasUuid);
+    }
     renderIcons(this.container);
-    this.viewTracker = startCanvasViewTracking(this.canvasUuid);
+
+    if (isEmbedded && typeof window !== 'undefined' && window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ canvasUuid: this.canvasUuid, type: 'canvas:ready' }, '*');
+      } catch {}
+    }
+
     return true;
   }
 
@@ -302,7 +317,9 @@ export class StageCanvasController {
       }
     }
 
-    if (this.canvasServerId && !this.roomToken) {
+    const isEmbedded = Boolean(this.stageOptions.isEmbedded || (typeof window !== 'undefined' && (window.self !== window.top || window.location.search.includes('embedded=true'))));
+
+    if (!isEmbedded && this.canvasServerId && !this.roomToken) {
       try {
         const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
         if (tokenRes.ok) {

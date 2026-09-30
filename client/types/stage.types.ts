@@ -64,5 +64,6 @@ export interface StageCanvasOptions {
   canvasType?: 'presentation' | 'social';
   defaultHeight?: number;
   defaultWidth?: number;
+  isEmbedded?: boolean;
   pageLabel?: string;
 }

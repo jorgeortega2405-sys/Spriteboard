@@ -19,6 +19,21 @@ export interface AiUsageMetadata {
   totalTokens: number;
 }
 
+export interface StudioOutlineProposal {
+  canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+  customizationSuggestions?: string[];
+  goal?: string;
+  items: Array<{
+    description?: string;
+    details?: string[];
+    subtitle?: string;
+    title: string;
+  }>;
+  summary: string;
+  targetFormatLabel: string;
+  title: string;
+}
+
 export interface UserContext {
   email?: string;
   id?: number;
@@ -26,6 +41,15 @@ export interface UserContext {
   sessionId?: string;
   username?: string;
 }
+
+const PRIMARY_GEMINI_MODEL = config.gemini.model || 'gemini-3.1-flash-lite';
+const FALLBACK_GEMINI_MODELS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.5-flash',
+];
+const GEMINI_REQUEST_TIMEOUT_MS = 6500;
 
 export class AiService {
   static async generateReply(
@@ -73,15 +97,6 @@ export class AiService {
       },
     };
 
-    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
-
-    const fallbackModels = [
-      'gemini-flash-lite-latest',
-      'gemini-flash-latest',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-    ];
-
     const buildUrl = (model: string) =>
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -89,26 +104,30 @@ export class AiService {
       body: JSON.stringify(requestBody),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST' as const,
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     };
 
     try {
-      let response = await fetch(buildUrl(modelName), fetchOptions);
-
-      if (!response.ok && (response.status === 503 || response.status === 404)) {
-        for (const fallback of fallbackModels) {
-          if (fallback === modelName) continue;
-          logger.app.warn(`AiService: Modelo ${modelName} no disponible (${response.status}), reintentando con ${fallback}`);
-          response = await fetch(buildUrl(fallback), fetchOptions);
-          if (response.ok) break;
+      let response: Response | null = null;
+      let usedModel = PRIMARY_GEMINI_MODEL;
+      for (const model of FALLBACK_GEMINI_MODELS) {
+        usedModel = model;
+        try {
+          const res = await fetch(buildUrl(model), fetchOptions);
+          if (res.ok) {
+            response = res;
+            break;
+          }
+          if (res.status === 503 || res.status === 404 || res.status === 429) {
+            logger.app.warn(`AiService: Modelo ${model} devolvió ${res.status}, probando siguiente modelo`);
+          }
+        } catch {
+          logger.app.warn(`AiService: Timeout o error de red con modelo ${model}, probando siguiente`);
         }
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.app.error('AiService: Error HTTP desde Google Gemini API', {
-          response: errorText.slice(0, 300),
-          status: response.status,
-        });
+      if (!response || !response.ok) {
+        logger.app.error('AiService: Error al generar respuesta con Gemini en todos los modelos disponibles');
         return 'Lo siento, en este momento el servicio de asistencia no pudo procesar tu mensaje. Por favor intenta de nuevo en unos instantes.';
       }
 
@@ -151,8 +170,8 @@ export class AiService {
         `;
 
         void Promise.all([
-          cassandraClient.execute(qInsertMsg, [sessionId, now, msgUserTime, userId, username, false, 'user', message, modelName, 0, 0, 'none', '{}'], { prepare: true }),
-          cassandraClient.execute(qInsertMsg, [sessionId, new Date(Date.now() + 10), msgModelTime, userId, username, false, 'model', sanitized, modelName, 0, 0, 'none', '{}'], { prepare: true }),
+          cassandraClient.execute(qInsertMsg, [sessionId, now, msgUserTime, userId, username, false, 'user', message, usedModel, 0, 0, 'none', '{}'], { prepare: true }),
+          cassandraClient.execute(qInsertMsg, [sessionId, new Date(Date.now() + 10), msgModelTime, userId, username, false, 'model', sanitized, usedModel, 0, 0, 'none', '{}'], { prepare: true }),
           cassandraClient.execute(qSession, [userId, bucketMonth, now, sessionId, message.slice(0, 100), (history.length || 0) + 2, now], { prepare: true }),
         ]).catch((casErr) => {
           logger.db.warn('Error no fatal al registrar mensajes de chat en Cassandra', { error: String(casErr) });
@@ -305,29 +324,35 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
       },
     };
 
-    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
-    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash'];
     const buildUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const fetchOptions = {
       body: JSON.stringify(requestBody),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST' as const,
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     };
 
     try {
-      let response = await fetch(buildUrl(modelName), fetchOptions);
-
-      if (!response.ok && (response.status === 503 || response.status === 404)) {
-        for (const fallback of fallbackModels) {
-          if (fallback === modelName) continue;
-          logger.app.warn(`AiService: Reintentando generación de mapa con modelo ${fallback}`);
-          response = await fetch(buildUrl(fallback), fetchOptions);
-          if (response.ok) break;
+      let response: Response | null = null;
+      let usedModel = PRIMARY_GEMINI_MODEL;
+      for (const model of FALLBACK_GEMINI_MODELS) {
+        usedModel = model;
+        try {
+          const res = await fetch(buildUrl(model), fetchOptions);
+          if (res.ok) {
+            response = res;
+            break;
+          }
+          if (res.status === 503 || res.status === 404 || res.status === 429) {
+            logger.app.warn(`AiService: Reintentando generación de mapa, modelo ${model} devolvió ${res.status}`);
+          }
+        } catch {
+          logger.app.warn(`AiService: Timeout o error al generar mapa con ${model}, probando siguiente`);
         }
       }
 
-      if (!response.ok) {
-        logger.app.error('AiService: Error HTTP al generar mapa con Gemini', { status: response.status });
+      if (!response || !response.ok) {
+        logger.app.error('AiService: Error HTTP al generar mapa con Gemini en todos los modelos');
         return this.generateFallbackMindMap(prompt, mode, contextNodeText, diagramType);
       }
 
@@ -367,7 +392,7 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
           title: parsed.title || prompt,
           usage: {
             completionTokens,
-            model: modelName,
+            model: usedModel,
             promptTokens,
             totalTokens,
           },
@@ -588,12 +613,13 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
     action: 'change_tone' | 'continue' | 'fix_grammar' | 'generate' | 'improve' | 'summarize' | 'translate' = 'generate',
     tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
     targetLanguage = 'es',
-    contextText?: string
+    contextText?: string,
+    proposalData?: StudioOutlineProposal
   ): Promise<{ html: string; text: string; usage?: AiUsageMetadata }> {
     const apiKey = config.gemini.apiKey;
     if (!apiKey) {
       logger.app.warn('AiService: GEMINI_API_KEY no configurada para Doc. Usando generador inteligente local.');
-      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText, proposalData);
     }
 
     let actionInstructions = '';
@@ -611,55 +637,67 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
     } else if (action === 'translate') {
       actionInstructions = `Traduce con precisión y naturalidad el siguiente texto al idioma "${targetLanguage}": "${contextText || prompt}".`;
     } else {
-      actionInstructions = `Escribe un texto completo, profesional y bien estructurado sobre el tema o instrucción: "${prompt}".`;
+      actionInstructions = `Escribe un documento completo, exhaustivo, profesional y profundamente desarrollado sobre el tema: "${prompt}".`;
     }
 
-    const toneInstruction = tone ? `Aplica un tono "${tone}".` : 'Aplica un tono claro, profesional y moderno.';
+    let outlinePromptSnippet = '';
+    if (proposalData && Array.isArray(proposalData.items) && proposalData.items.length > 0) {
+      const sections = proposalData.items.map((it: any, idx: number) => `${idx + 1}. ${it.title}: ${it.description || ''}${it.details ? ` (${it.details.join(', ')})` : ''}`).join('\n');
+      outlinePromptSnippet = `\nEstructura obligatoria a desarrollar en profundidad para CADA sección:\n${sections}`;
+    }
 
-    const systemPrompt = `Eres un redactor y editor profesional de clase mundial integrado en un procesador de textos colaborativo.
-Tu objetivo es producir contenido en formato HTML limpio, semántico y moderno.
+    const toneInstruction = tone ? `Aplica un tono "${tone}".` : 'Aplica un tono claro, profesional, riguroso y moderno.';
+
+    const systemPrompt = `Eres un redactor y editor senior corporativo de clase mundial integrado en un procesador de textos colaborativo.
+Tu objetivo es producir un DOCUMENTO COMPLETO, EXTENSO Y PROFESIONAL en formato HTML limpio, semántico y moderno.
 
 Reglas obligatorias:
-1. Devuelve ÚNICAMENTE código HTML válido para ser insertado dentro de un documento (<p>, <h2>, <h3>, <ul>, <ol>, <li>, <blockquote>, <strong>, <em>, <table>, <tr>, <th>, <td>).
-2. NO incluyas etiquetas <html>, <head>, <body>, <!DOCTYPE>, ni estilos inline complejos.
-3. ${toneInstruction}
-4. NO devuelvas bloques de código markdown tipo \`\`\`html ni explicaciones previas o posteriores. DEVUELVE SOLO EL FRAGMENTO HTML DIRECTO.`;
+1. Genera contenido real, detallado y desarrollado con profundidad para CADA sección (mínimo 2 o 3 párrafos sustanciales por sección con listas explicativas y tablas cuando aporte valor).
+2. Devuelve ÚNICAMENTE código HTML válido para ser insertado dentro de un documento (<h1> para título formal, <h2> para secciones principales, <h3> para subsecciones, <p>, <ul>, <ol>, <li>, <blockquote>, <strong>, <em>, <table>, <tr>, <th>, <td>).
+3. NO incluyas etiquetas <html>, <head>, <body>, <!DOCTYPE>, ni estilos inline complejos.
+4. ${toneInstruction}
+5. NO devuelvas bloques de código markdown tipo \`\`\`html ni explicaciones previas o posteriores. DEVUELVE SOLO EL FRAGMENTO HTML DIRECTO.`;
 
     const requestBody = {
-      contents: [{ role: 'user', parts: [{ text: `${actionInstructions}\nContexto adicional: ${prompt}` }] }],
+      contents: [{ role: 'user', parts: [{ text: `${actionInstructions}${outlinePromptSnippet}\nContexto adicional: ${prompt}` }] }],
       generationConfig: {
-        maxOutputTokens: 2500,
-        temperature: action === 'fix_grammar' ? 0.2 : (tone === 'creative' ? 0.8 : 0.5),
+        maxOutputTokens: 4000,
+        temperature: action === 'fix_grammar' ? 0.2 : (tone === 'creative' ? 0.8 : 0.4),
       },
       systemInstruction: {
         parts: [{ text: systemPrompt }],
       },
     };
 
-    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
-    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash'];
     const buildUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const fetchOptions = {
-      body: JSON.stringify(requestBody),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST' as const,
-    };
 
     try {
-      let response = await fetch(buildUrl(modelName), fetchOptions);
-
-      if (!response.ok && (response.status === 503 || response.status === 404)) {
-        for (const fallback of fallbackModels) {
-          if (fallback === modelName) continue;
-          logger.app.warn(`AiService: Reintentando generación de doc con ${fallback}`);
-          response = await fetch(buildUrl(fallback), fetchOptions);
-          if (response.ok) break;
+      let response: Response | null = null;
+      let usedModel = PRIMARY_GEMINI_MODEL;
+      for (const model of FALLBACK_GEMINI_MODELS) {
+        usedModel = model;
+        try {
+          const res = await fetch(buildUrl(model), {
+            body: JSON.stringify(requestBody),
+            headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            signal: AbortSignal.timeout(10000),
+          });
+          if (res.ok) {
+            response = res;
+            break;
+          }
+          if (res.status === 503 || res.status === 404 || res.status === 429) {
+            logger.app.warn(`AiService: Reintentando generación de doc, modelo ${model} devolvió ${res.status}`);
+          }
+        } catch {
+          logger.app.warn(`AiService: Timeout o error al generar doc con ${model}, probando siguiente`);
         }
       }
 
-      if (!response.ok) {
-        logger.app.error('AiService: Error HTTP al generar contenido doc con Gemini', { status: response.status });
-        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+      if (!response || !response.ok) {
+        logger.app.error('AiService: Error HTTP al generar contenido doc con Gemini en todos los modelos');
+        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText, proposalData);
       }
 
       const data = (await response.json()) as any;
@@ -667,7 +705,7 @@ Reglas obligatorias:
 
       if (!rawText || typeof rawText !== 'string') {
         logger.app.warn('AiService: Respuesta vacía de Gemini al generar doc');
-        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText, proposalData);
       }
 
       let cleanHtml = rawText.trim();
@@ -686,14 +724,14 @@ Reglas obligatorias:
         text: plainText,
         usage: {
           completionTokens,
-          model: modelName,
+          model: usedModel,
           promptTokens,
           totalTokens,
         },
       };
     } catch (err) {
       logger.app.error('AiService: Error al procesar generación doc con IA', err);
-      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText, proposalData);
     }
   }
 
@@ -702,13 +740,18 @@ Reglas obligatorias:
     action: 'change_tone' | 'continue' | 'fix_grammar' | 'generate' | 'improve' | 'summarize' | 'translate',
     tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
     _targetLanguage = 'es',
-    contextText?: string
+    contextText?: string,
+    proposalData?: StudioOutlineProposal
   ): { html: string; text: string; usage?: AiUsageMetadata } {
     const baseText = contextText || prompt;
-    const title = prompt.trim() || 'Documento Generado';
+    const rawTitle = proposalData?.title || prompt.trim() || 'Documento Corporativo';
+    const cleanTitle = rawTitle
+      .replace(/^(redacta|crea|diseña|genera|escribe)\s+(un\s+|una\s+)?(documento|reporte|informe|texto|guia|guía)?\s*(con\s+|sobre\s+|de\s+)?/i, '')
+      .trim();
+    const docTitle = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Documento';
 
     if (action === 'summarize') {
-      const html = `<h2>Resumen Ejecutivo: ${title}</h2><p>A continuación se destacan los aspectos fundamentales identificados:</p><ul><li><strong>Aspecto Clave 1:</strong> Definición de objetivos principales y alcance estratégico.</li><li><strong>Aspecto Clave 2:</strong> Metodología de ejecución y optimización de recursos disponibles.</li><li><strong>Aspecto Clave 3:</strong> Medición de resultados e impacto esperado a corto y mediano plazo.</li></ul><p>En conclusión, el enfoque propuesto garantiza eficiencia y alineación con las metas establecidas.</p>`;
+      const html = `<h2>Resumen Ejecutivo: ${docTitle}</h2><p>A continuación se destacan los aspectos fundamentales identificados:</p><ul><li><strong>Aspecto Clave 1:</strong> Definición de objetivos principales y alcance estratégico.</li><li><strong>Aspecto Clave 2:</strong> Metodología de ejecución y optimización de recursos disponibles.</li><li><strong>Aspecto Clave 3:</strong> Medición de resultados e impacto esperado a corto y mediano plazo.</li></ul><p>En conclusión, el enfoque propuesto garantiza eficiencia y alineación con las metas establecidas.</p>`;
       return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
     }
 
@@ -723,7 +766,34 @@ Reglas obligatorias:
       return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
     }
 
-    const html = `<h2>${title}</h2><p>El desarrollo de <strong>${title}</strong> representa una oportunidad estratégica para impulsar la innovación, optimizar flujos de trabajo y alcanzar resultados de alto valor.</p><h3>1. Objetivos Principales</h3><ul><li>Establecer fundamentos sólidos y criterios de calidad.</li><li>Fomentar la colaboración efectiva entre los miembros del equipo.</li><li>Implementar metodologías ágiles y orientadas al usuario final.</li></ul><h3>2. Plan de Acción</h3><p>Para lograr estos objetivos, se recomienda estructurar el trabajo en iteraciones continuas, validando entregables en cada etapa y manteniendo una comunicación transparente.</p><blockquote>«La excelencia no es un acto aislado, sino un hábito continuo de mejora y dedicación.»</blockquote>`;
+    if (proposalData && Array.isArray(proposalData.items) && proposalData.items.length > 0) {
+      const sectionsHtml = proposalData.items.map((item: any, idx: number) => {
+        const itemTitle = String(item.title || '').replace(/^\d+[\.\)]\s*/, '');
+        const detailsList = Array.isArray(item.details) && item.details.length > 0
+          ? `<ul>${item.details.map((d: string) => `<li><strong>${String(d).split(':')[0] || d}:</strong> ${String(d).split(':')[1] || 'Implementación y seguimiento continuo de las directrices establecidas.'}</li>`).join('')}</ul>`
+          : `<ul><li><strong>Definición de criterios:</strong> Establecimiento de estándares de calidad y cumplimiento operativo.</li><li><strong>Asignación de responsabilidades:</strong> Roles claros para asegurar la ejecución sin fricciones.</li><li><strong>Canales y herramientas:</strong> Uso de plataformas corporativas autorizadas para la colaboración diaria.</li></ul>`;
+
+        return `
+          <h2>${idx + 1}. ${itemTitle}</h2>
+          <p>${item.description || `Esta sección define los fundamentos operativos y directrices esenciales para asegurar la máxima efectividad en ${itemTitle.toLowerCase()}.`}</p>
+          <p>Para garantizar el éxito de este proceso, todo el equipo debe alinear sus actividades diarias con los siguientes lineamientos clave:</p>
+          ${detailsList}
+        `;
+      }).join('');
+
+      const html = `
+        <h1>${docTitle}</h1>
+        <p><em>Documento oficial de directrices, lineamientos operativos y mejores prácticas organizacionales.</em></p>
+        <blockquote>«El establecimiento de políticas claras y transparentes constituye la base para la confianza, la excelencia profesional y el logro sostenido de objetivos estratégicos.»</blockquote>
+        ${sectionsHtml}
+        <h2>Conclusiones y Próximos Pasos</h2>
+        <p>El cumplimiento de las políticas estipuladas en este documento asegura un entorno de trabajo colaborativo, seguro y enfocado en resultados de alto valor. Cualquier consulta o solicitud de aclaración deberá canalizarse a través de los líderes de equipo correspondientes.</p>
+      `.trim();
+
+      return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
+    }
+
+    const html = `<h1>${docTitle}</h1><p>El desarrollo de <strong>${docTitle}</strong> representa una oportunidad estratégica para impulsar la innovación, optimizar flujos de trabajo y alcanzar resultados de alto valor.</p><h2>1. Objetivos Principales</h2><ul><li>Establecer fundamentos sólidos y criterios de calidad.</li><li>Fomentar la colaboración efectiva entre los miembros del equipo.</li><li>Implementar metodologías ágiles y orientadas al usuario final.</li></ul><h2>2. Plan de Acción</h2><p>Para lograr estos objetivos, se recomienda estructurar el trabajo en iteraciones continuas, validando entregables en cada etapa y manteniendo una comunicación transparente.</p><blockquote>«La excelencia no es un acto aislado, sino un hábito continuo de mejora y dedicación.»</blockquote>`;
     return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
   }
 
@@ -892,29 +962,35 @@ Reglas estrictas de generación:
       },
     };
 
-    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
-    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash'];
     const buildUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const fetchOptions = {
       body: JSON.stringify(requestBody),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST' as const,
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     };
 
     try {
-      let response = await fetch(buildUrl(modelName), fetchOptions);
-
-      if (!response.ok && (response.status === 503 || response.status === 404)) {
-        for (const fallback of fallbackModels) {
-          if (fallback === modelName) continue;
-          logger.app.warn(`AiService: Reintentando generación de board con ${fallback}`);
-          response = await fetch(buildUrl(fallback), fetchOptions);
-          if (response.ok) break;
+      let response: Response | null = null;
+      let usedModel = PRIMARY_GEMINI_MODEL;
+      for (const model of FALLBACK_GEMINI_MODELS) {
+        usedModel = model;
+        try {
+          const res = await fetch(buildUrl(model), fetchOptions);
+          if (res.ok) {
+            response = res;
+            break;
+          }
+          if (res.status === 503 || res.status === 404 || res.status === 429) {
+            logger.app.warn(`AiService: Reintentando generación de board, modelo ${model} devolvió ${res.status}`);
+          }
+        } catch {
+          logger.app.warn(`AiService: Timeout o error al generar board con ${model}, probando siguiente`);
         }
       }
 
-      if (!response.ok) {
-        logger.app.error('AiService: Error HTTP al generar board con Gemini', { status: response.status });
+      if (!response || !response.ok) {
+        logger.app.error('AiService: Error HTTP al generar board con Gemini en todos los modelos');
         return this.generateFallbackBoardElements(prompt, boardType);
       }
 
@@ -981,7 +1057,7 @@ Reglas estrictas de generación:
           title: parsed.title || prompt,
           usage: {
             completionTokens: Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4),
-            model: modelName,
+            model: usedModel,
             promptTokens: Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4),
             totalTokens: Number(data?.usageMetadata?.totalTokenCount) || ((Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4)) + (Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4))),
           },
@@ -1378,29 +1454,21 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
         {
           parts: [
             {
-              text: `Genera una presentación completa de ${safeCount} diapositivas con estilo "${tone}" sobre el siguiente tema:\n\n${prompt}`,
+              text: `Genera una presentación ejecutiva de ${safeCount} diapositivas con estilo "${tone}" sobre el siguiente tema:\n\n${prompt}`,
             },
           ],
           role: 'user',
         },
       ],
       generationConfig: {
-        maxOutputTokens: 6000,
+        maxOutputTokens: 3500,
         responseMimeType: 'application/json',
-        temperature: 0.4,
+        temperature: 0.35,
       },
       systemInstruction: {
         parts: [{ text: systemInstruction }],
       },
     };
-
-    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
-    const fallbackModels = [
-      'gemini-flash-lite-latest',
-      'gemini-flash-latest',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-    ];
 
     const buildUrl = (model: string) =>
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -1409,23 +1477,32 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       body: JSON.stringify(requestBody),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST' as const,
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     };
 
     try {
-      let response = await fetch(buildUrl(modelName), fetchOptions);
+      let response: Response | null = null;
+      let usedModel = PRIMARY_GEMINI_MODEL;
 
-      if (!response.ok && (response.status === 503 || response.status === 404)) {
-        for (const fallback of fallbackModels) {
-          if (fallback === modelName) continue;
-          logger.app.warn(`AiService: Modelo ${modelName} no disponible (${response.status}), reintentando presentación con ${fallback}`);
-          response = await fetch(buildUrl(fallback), fetchOptions);
-          if (response.ok) break;
+      for (const model of FALLBACK_GEMINI_MODELS) {
+        usedModel = model;
+        try {
+          const res = await fetch(buildUrl(model), fetchOptions);
+          if (res.ok) {
+            response = res;
+            break;
+          }
+          if (res.status === 503 || res.status === 404 || res.status === 429) {
+            logger.app.warn(`AiService: Reintentando presentación, modelo ${model} devolvió ${res.status}`);
+          }
+        } catch {
+          logger.app.warn(`AiService: Timeout o error de red con modelo ${model} al generar presentación`);
         }
       }
 
-      if (!response.ok) {
-        logger.app.error('AiService: Error HTTP al generar presentación con Gemini', { status: response.status });
-        return this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
+      if (!response || !response.ok) {
+        logger.app.error('AiService: Error al generar presentación con Gemini en todos los modelos');
+        return await this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
       }
 
       const data = (await response.json()) as any;
@@ -1433,7 +1510,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
 
       if (!rawText || typeof rawText !== 'string') {
         logger.app.warn('AiService: Respuesta vacía de Gemini al generar presentación');
-        return this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
+        return await this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
       }
 
       let cleanJson = rawText.trim();
@@ -1505,31 +1582,33 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
           title: String(parsed.title || prompt.trim()),
           usage: {
             completionTokens: Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4),
-            model: modelName,
+            model: usedModel,
             promptTokens: Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4),
             totalTokens: Number(data?.usageMetadata?.totalTokenCount) || ((Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4)) + (Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4))),
           },
         };
       }
 
-      return this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
+      return await this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
     } catch (err) {
       logger.app.error('AiService: Error al procesar presentación con IA', err);
-      return this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
+      return await this.generateFallbackPresentation(prompt, safeCount, tone, slideWidth, slideHeight);
     }
   }
 
-  private static generateFallbackPresentation(
+  private static async generateFallbackPresentation(
     prompt: string,
     slideCount: number = 5,
     tone: 'creative' | 'educational' | 'minimal' | 'pitch' | 'professional' = 'professional',
     _slideWidth: number = 1280,
     _slideHeight: number = 720
-  ): {
+  ): Promise<{
     slides: Array<{
       background?: { color: string; dotColor?: string; type: 'blank' | 'dark' | 'dots' | 'solid' };
       elements: Array<{
+        alt?: string;
         arrowEnd?: boolean;
+        aspectRatio?: number;
         color?: string;
         fillColor?: string;
         fontFamily?: string;
@@ -1539,6 +1618,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
         fromId?: string;
         height?: number;
         id: string;
+        imageQuery?: string;
         isMindMapNode?: boolean;
         label?: string;
         opacity?: number;
@@ -1550,7 +1630,8 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
         text?: string;
         textColor?: string;
         toId?: string;
-        type: 'connector' | 'shape' | 'sticky' | 'text';
+        type: 'connector' | 'image' | 'shape' | 'sticky' | 'text';
+        url?: string;
         width?: number;
         x?: number;
         y?: number;
@@ -1559,10 +1640,11 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
     }>;
     title: string;
     usage?: AiUsageMetadata;
-  } {
+  }> {
     const title = prompt.trim() || 'Presentación Estratégica';
     const now = Date.now();
     const count = Math.max(3, Math.min(10, slideCount || 5));
+    const coverImageUrl = await ImageSearchService.searchImage(prompt);
 
     const palettes = {
       creative: { accent: '#f97316', bgCover: '#18181b', bgLight: '#faf5ff', cardBg: '#ffffff', cardBorder: '#fed7aa', primary: '#f43f5e', secondary: '#8b5cf6', textDark: '#18181b', textLight: '#ffffff', textMuted: '#94a3b8' },
@@ -1583,11 +1665,12 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
     slides.push({
       background: { color: p.bgCover, type: 'solid' },
       elements: [
-        { color: p.accent, fillColor: p.accent, fontSize: 13, fontWeight: 700, height: 32, id: `cov_tag_${now}`, shapeType: 'pill', strokeColor: p.accent, strokeWidth: 0, text: 'PRESENTACIÓN EJECUTIVA', textColor: '#ffffff', type: 'shape', width: 220, x: -500, y: -160 },
-        { color: p.textLight, fontSize: 44, fontWeight: 700, height: 110, id: `cov_title_${now}`, text: title, type: 'text', width: 1000, x: -500, y: -100 },
-        { color: p.textMuted, fontSize: 20, height: 50, id: `cov_sub_${now}`, text: 'Estrategia, fundamentos y plan de acción para el éxito del proyecto', type: 'text', width: 900, x: -500, y: 30 },
-        { color: p.accent, fillColor: p.accent, height: 4, id: `cov_line_${now}`, shapeType: 'round-rect', strokeColor: p.accent, strokeWidth: 0, type: 'shape', width: 260, x: -500, y: 100 },
-        { color: p.textMuted, fontSize: 14, height: 30, id: `cov_footer_${now}`, text: 'Spriteboard Presentation Engine • 2026', type: 'text', width: 400, x: -500, y: 190 },
+        { color: p.accent, fillColor: p.accent, fontSize: 13, fontWeight: 700, height: 32, id: `cov_tag_${now}`, shapeType: 'pill', strokeColor: p.accent, strokeWidth: 0, text: 'PRESENTACIÓN EJECUTIVA', textColor: '#ffffff', type: 'shape', width: 220, x: -520, y: -160 },
+        { color: p.textLight, fontSize: 40, fontWeight: 700, height: 110, id: `cov_title_${now}`, text: title, type: 'text', width: 540, x: -520, y: -100 },
+        { color: p.textMuted, fontSize: 18, height: 60, id: `cov_sub_${now}`, text: 'Estrategia, fundamentos y plan de acción para el éxito del proyecto', type: 'text', width: 540, x: -520, y: 30 },
+        { color: p.accent, fillColor: p.accent, height: 4, id: `cov_line_${now}`, shapeType: 'round-rect', strokeColor: p.accent, strokeWidth: 0, type: 'shape', width: 200, x: -520, y: 110 },
+        { color: p.textMuted, fontSize: 14, height: 30, id: `cov_footer_${now}`, text: 'Spriteboard Presentation Engine • 2026', type: 'text', width: 400, x: -520, y: 180 },
+        { alt: title, aspectRatio: 16 / 9, height: 360, id: `cov_img_${now}`, imageQuery: prompt, type: 'image', url: coverImageUrl, width: 480, x: 60, y: -160 },
       ],
       name: 'Portada',
     });
@@ -1684,30 +1767,31 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
     };
   }
 
-  static async generateStudioChat(
+  static async generateStudioProposal(
     prompt: string,
     history: ChatMessage[] = [],
-    targetCanvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video',
-    contextData?: any
+    targetCanvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video'
   ): Promise<{
-    artifact?: {
-      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
-      data: any;
-      summary?: string;
-      title: string;
-    };
     intent: {
       canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
       subtype?: string;
       title: string;
     };
-    reply: string;
-    suggestedFormats?: Array<{
-      canvasType: string;
+    proposal: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      customizationChips: string[];
       description: string;
-      icon: string;
-      label: string;
-    }>;
+      estimatedCount: number;
+      formatBadge: string;
+      formatIcon: string;
+      items: Array<{
+        description?: string;
+        number?: number;
+        title: string;
+      }>;
+      title: string;
+    };
+    reply: string;
     usage?: AiUsageMetadata;
   }> {
     const norm = prompt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1747,6 +1831,295 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       }
     }
 
+    const cleanTitle = prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt;
+    const apiKey = config.gemini.apiKey;
+
+    if (apiKey) {
+      const systemInstruction = `Eres Spritebot, un director de diseño y estratega de contenido de élite en Spriteboard.
+Tu objetivo es analizar la solicitud del usuario y proponer un ESQUEMA ESTRUCTURADO (outline y plan de diseño) antes de crear el lienzo definitivo.
+
+REGLAS DE RESPUESTA:
+1. Tipo sugerido: "${detectedType}".
+2. Si es 'presentation': describe 5 diapositivas ejecutivas con narrativa coherente (Portada, Problema/Contexto, Solución/Pilares, Métricas/Tracción, Conclusiones).
+3. Si es 'board': describe un nodo central y 4 o 5 ramas conceptuales principales.
+4. Si es 'doc': describe 4 o 5 secciones editoriales (Resumen, Alcance, Lineamientos, Procedimientos, Conclusiones).
+5. Si es 'social': describe el Gancho/Titular, Contenido de valor, CTA y formato sugerido.
+6. Si es 'sheet': describe 5 o 6 columnas con tipos de datos.
+7. Devuelve ÚNICAMENTE un objeto JSON estricto con esta estructura:
+{
+  "canvasType": "${detectedType}",
+  "title": "Título conciso y profesional del proyecto",
+  "description": "Objetivo principal y valor que entregará este diseño",
+  "formatBadge": "Texto del formato (ej. 'Presentación Ejecutiva • 5 Diapositivas 16:9' o 'Mapa Mental • 4 Ramas Principales')",
+  "formatIcon": "slideshow" | "psychology" | "article" | "share" | "table_chart",
+  "estimatedCount": 5,
+  "items": [
+    { "number": 1, "title": "Nombre de la Diapositiva o Sección", "description": "Detalle conciso de qué incluirá y su propósito" },
+    ...
+  ],
+  "customizationChips": [
+    "Sugerencia rápida 1 (ej. 'Agregar 2 diapositivas más')",
+    "Sugerencia rápida 2 (ej. 'Estilo oscuro minimalista')",
+    "Sugerencia rápida 3 (ej. 'Enfocar en métricas de ROI')",
+    "Sugerencia rápida 4 (ej. 'Hacerlo más técnico')"
+  ],
+  "reply": "Texto cálido en español explicando brevemente la propuesta al usuario e invitándolo a hacer clic en Generar o pedir cambios."
+}`;
+
+      const requestBody = {
+        contents: [
+          {
+            parts: [{ text: `Genera una propuesta de diseño estructurada para:\n${prompt}` }],
+            role: 'user',
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 1200,
+          responseMimeType: 'application/json',
+          temperature: 0.4,
+        },
+        systemInstruction: {
+          parts: [{ text: systemInstruction }],
+        },
+      };
+
+      const buildUrl = (model: string) =>
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const fetchOptions = {
+        body: JSON.stringify(requestBody),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST' as const,
+        signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
+      };
+
+      try {
+        for (const model of FALLBACK_GEMINI_MODELS) {
+          try {
+            const res = await fetch(buildUrl(model), fetchOptions);
+            if (res.ok) {
+              const data = (await res.json()) as any;
+              const candidate = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (candidate) {
+                const parsed = JSON.parse(candidate);
+                if (parsed && parsed.title && Array.isArray(parsed.items) && parsed.items.length > 0) {
+                  return {
+                    intent: {
+                      canvasType: parsed.canvasType || detectedType,
+                      subtype: detectedSubtype,
+                      title: parsed.title,
+                    },
+                    proposal: {
+                      canvasType: parsed.canvasType || detectedType,
+                      customizationChips: Array.isArray(parsed.customizationChips) ? parsed.customizationChips : [
+                        'Agregar 2 diapositivas más',
+                        'Estilo oscuro y tecnológico',
+                        'Hacerlo más formal',
+                        'Enfocar en métricas clave',
+                      ],
+                      description: parsed.description || 'Diseño estructurado y optimizado para comunicación visual.',
+                      estimatedCount: parsed.estimatedCount || parsed.items.length,
+                      formatBadge: parsed.formatBadge || (detectedType === 'presentation' ? 'Presentación Ejecutiva • 5 Diapositivas 16:9' : 'Lienzo estructurado'),
+                      formatIcon: parsed.formatIcon || (detectedType === 'presentation' ? 'slideshow' : (detectedType === 'doc' ? 'article' : (detectedType === 'social' ? 'share' : 'psychology'))),
+                      items: parsed.items,
+                      title: parsed.title,
+                    },
+                    reply: parsed.reply || `He preparado una propuesta estructurada para "${parsed.title}". Revisa los puntos a continuación o haz clic en **Generar** para crear tu lienzo editable.`,
+                    usage: {
+                      completionTokens: data?.usageMetadata?.candidatesTokenCount || 0,
+                      model,
+                      promptTokens: data?.usageMetadata?.promptTokenCount || 0,
+                      totalTokens: data?.usageMetadata?.totalTokenCount || 0,
+                    },
+                  };
+                }
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+
+    if (detectedType === 'presentation') {
+      return {
+        intent: { canvasType: 'presentation', subtype: detectedSubtype, title: cleanTitle },
+        proposal: {
+          canvasType: 'presentation',
+          customizationChips: [
+            'Agregar 2 diapositivas más',
+            'Estilo oscuro minimalista',
+            'Enfocar en inversores y ROI',
+            'Hacerlo más técnico',
+          ],
+          description: 'Estructura narrativa de 5 diapositivas con portada de impacto, contexto de problema, pilares de solución, tracción y conclusiones.',
+          estimatedCount: 5,
+          formatBadge: 'Presentación Ejecutiva • 5 Diapositivas 16:9',
+          formatIcon: 'slideshow',
+          items: [
+            { description: 'Título principal con propuesta de valor, subtítulo y fotografía conceptual.', number: 1, title: 'Portada de Alto Impacto' },
+            { description: 'Diagnóstico del problema actual y oportunidades de mejora identificadas.', number: 2, title: 'Contexto y Oportunidad' },
+            { description: 'Arquitectura de solución, ventajas diferenciales y pilares estratégicos.', number: 3, title: 'Pilares de Solución' },
+            { description: 'Tarjetas con números grandes, porcentajes de aceleración e indicadores clave.', number: 4, title: 'Métricas e Impacto Esperado' },
+            { description: 'Llamado a la acción, alineación del equipo y compromisos de entrega.', number: 5, title: 'Conclusiones y Próximos Pasos' },
+          ],
+          title: cleanTitle,
+        },
+        reply: `He diseñado una propuesta estructurada de 5 diapositivas para "${cleanTitle}". Puedes revisar cada diapositiva en el esquema de abajo, solicitar ajustes o presionar **Generar Presentación** para crear el lienzo editable.`,
+      };
+    }
+
+    if (detectedType === 'doc') {
+      return {
+        intent: { canvasType: 'doc', subtype: detectedSubtype, title: cleanTitle },
+        proposal: {
+          canvasType: 'doc',
+          customizationChips: [
+            'Hacerlo más formal y legal',
+            'Agregar tabla comparativa',
+            'Reducir a resumen de una página',
+            'Enfocar en procedimientos',
+          ],
+          description: 'Documento editorial profesional con encabezados jerárquicos, lineamientos y puntos de acción organizados.',
+          estimatedCount: 4,
+          formatBadge: 'Documento Ejecutivo • 4 Secciones',
+          formatIcon: 'article',
+          items: [
+            { description: 'Objetivo del documento, contexto general y resumen de directrices.', number: 1, title: '1. Resumen Ejecutivo y Alcance' },
+            { description: 'Definición de lineamientos aplicables, responsabilidades y roles asignados.', number: 2, title: '2. Políticas y Lineamientos' },
+            { description: 'Paso a paso de procesos operativos, herramientas requeridas y cronogramas.', number: 3, title: '3. Procedimientos de Implementación' },
+            { description: 'Criterios de cumplimiento, canales de soporte y firmas de conformidad.', number: 4, title: '4. Conclusiones y Soporte' },
+          ],
+          title: cleanTitle,
+        },
+        reply: `He estructurado la propuesta para tu documento "${cleanTitle}". Revisa las secciones sugeridas o presiona **Generar Documento** para abrirlo en el editor.`,
+      };
+    }
+
+    if (detectedType === 'social') {
+      return {
+        intent: { canvasType: 'social', subtype: detectedSubtype, title: cleanTitle },
+        proposal: {
+          canvasType: 'social',
+          customizationChips: [
+            'Versión para LinkedIn profesional',
+            'Estilo carrusel de 3 imágenes',
+            'Hacer el copy más persuasivo',
+            'Agregar más hashtags del sector',
+          ],
+          description: 'Post optimizado para redes sociales con titular de captura, copy de valor y llamada a la acción clara.',
+          estimatedCount: 3,
+          formatBadge: 'Post para Redes • 1080×1080 px',
+          formatIcon: 'share',
+          items: [
+            { description: 'Titular visual de alto contraste para captar atención en el feed.', number: 1, title: 'Gancho Visual (Headline)' },
+            { description: '3 puntos de valor esenciales con emojis y formato legible.', number: 2, title: 'Cuerpo del Mensaje' },
+            { description: 'Pregunta para interacción en comentarios, enlace en bio y etiquetas.', number: 3, title: 'Llamado a la Acción & Hashtags' },
+          ],
+          title: cleanTitle,
+        },
+        reply: `He preparado el esquema de publicación para "${cleanTitle}". Revisa los elementos y presiona **Generar Publicación** cuando estés listo.`,
+      };
+    }
+
+    if (detectedType === 'sheet') {
+      return {
+        intent: { canvasType: 'sheet', subtype: detectedSubtype, title: cleanTitle },
+        proposal: {
+          canvasType: 'sheet',
+          customizationChips: [
+            'Agregar columnas de fecha y plazo',
+            'Incluir cálculo automático de totales',
+            'Formato de presupuesto financiero',
+            'Añadir columna de prioridad',
+          ],
+          description: 'Planilla con columnas organizadas, formatos de moneda/estado y registros iniciales estructurados.',
+          estimatedCount: 6,
+          formatBadge: 'Hoja de Cálculo • 6 Columnas',
+          formatIcon: 'table_chart',
+          items: [
+            { description: 'Identificador del concepto, iniciativa o tarea a registrar.', number: 1, title: 'Columna: Elemento / Tarea' },
+            { description: 'Agrupación temática (Estrategia, Diseño, Operaciones, etc.).', number: 2, title: 'Columna: Categoría' },
+            { description: 'Miembro o equipo responsable de la ejecución.', number: 3, title: 'Columna: Responsable' },
+            { description: 'Estado actual (Completado, En progreso, Pendiente).', number: 4, title: 'Columna: Estado' },
+            { description: 'Nivel de urgencia o impacto en el proyecto.', number: 5, title: 'Columna: Prioridad' },
+            { description: 'Valores monetarios con cálculo de subtotales.', number: 6, title: 'Columna: Presupuesto ($)' },
+          ],
+          title: cleanTitle,
+        },
+        reply: `He diseñado la estructura de columnas para tu hoja de cálculo "${cleanTitle}". Presiona **Generar Hoja de Cálculo** para crear la tabla interactiva.`,
+      };
+    }
+
+    return {
+      intent: { canvasType: 'board', subtype: detectedSubtype || 'mindmap', title: cleanTitle },
+      proposal: {
+        canvasType: 'board',
+        customizationChips: [
+          'Agregar más sub-ramas a cada nodo',
+          'Estilo de diagrama de flujo formal',
+          'Enfocar en casos de uso prácticos',
+          'Formato tablero Kanban',
+        ],
+        description: 'Mapa mental interconectado con un nodo central y ramas temáticas diferenciadas por color.',
+        estimatedCount: 5,
+        formatBadge: 'Mapa Mental • 4 Ramas Principales',
+        formatIcon: 'psychology',
+        items: [
+          { description: 'Concepto raíz destacado con tipografía y color primario.', number: 1, title: 'Nodo Central: ' + cleanTitle },
+          { description: 'Definiciones, requerimientos iniciales y marco conceptual.', number: 2, title: 'Rama 1: Fundamentos y Objetivos' },
+          { description: 'Plan de acción, arquitectura técnica y metodologías.', number: 3, title: 'Rama 2: Estrategia y Ejecución' },
+          { description: 'Herramientas requeridas, plataformas e infraestructura.', number: 4, title: 'Rama 3: Recursos y Herramientas' },
+          { description: 'Criterios de éxito, KPIs de rendimiento y resultados esperados.', number: 5, title: 'Rama 4: Métricas y Resultados' },
+        ],
+        title: cleanTitle,
+      },
+      reply: `He elaborado la propuesta para el mapa conceptual de "${cleanTitle}". Revisa la estructura y presiona **Generar Mapa Mental** para abrir el pizarrón interactivo.`,
+    };
+  }
+
+  static async generateStudioChat(
+    prompt: string,
+    history: ChatMessage[] = [],
+    targetCanvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video',
+    executeGeneration = false,
+    proposalData?: any
+  ): Promise<{
+    artifact?: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      data: any;
+      summary?: string;
+      title: string;
+    };
+    intent: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      subtype?: string;
+      title: string;
+    };
+    proposal?: {
+      canvasType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+      customizationChips: string[];
+      description: string;
+      estimatedCount: number;
+      formatBadge: string;
+      formatIcon: string;
+      items: Array<{
+        description?: string;
+        number?: number;
+        title: string;
+      }>;
+      title: string;
+    };
+    reply: string;
+    suggestedFormats?: Array<{
+      canvasType: string;
+      description: string;
+      icon: string;
+      label: string;
+    }>;
+    usage?: AiUsageMetadata;
+  }> {
+    const norm = prompt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
     const suggestedFormats = [
       { canvasType: 'board', description: 'Mapa mental, conceptual o pizarra infinita', icon: 'dashboard', label: 'Pizarrón' },
       { canvasType: 'presentation', description: 'Diapositivas y presentaciones 16:9', icon: 'slideshow', label: 'Presentación' },
@@ -1755,8 +2128,54 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       { canvasType: 'sheet', description: 'Tablas de datos y hojas de cálculo con fórmulas', icon: 'table_chart', label: 'Hoja de cálculo' },
     ];
 
+    if (!executeGeneration) {
+      const proposalResult = await this.generateStudioProposal(prompt, history, targetCanvasType);
+      return {
+        intent: proposalResult.intent,
+        proposal: proposalResult.proposal,
+        reply: proposalResult.reply,
+        suggestedFormats,
+        usage: proposalResult.usage,
+      };
+    }
+
+    let detectedType: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video' = targetCanvasType || proposalData?.canvasType || 'board';
+    let detectedSubtype: string | undefined = undefined;
+
+    if (!targetCanvasType && !proposalData?.canvasType) {
+      if (/(presentacion|diapositiva|slide|pitch|deck|exposicion)/i.test(norm)) {
+        detectedType = 'presentation';
+      } else if (/(mapa conceptual|conceptual)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'conceptmap';
+      } else if (/(diagrama de flujo|flujograma|flowchart|proceso)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'flowchart';
+      } else if (/(kanban|tablero agil|sprint)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'kanban';
+      } else if (/(linea de tiempo|timeline|roadmap|cronograma)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'timeline';
+      } else if (/(organigrama|jerarquia|estructura de equipo)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'orgchart';
+      } else if (/(mapa mental|mindmap|pizarron|whiteboard|lluvia de ideas|brainstorm)/i.test(norm)) {
+        detectedType = 'board';
+        detectedSubtype = 'mindmap';
+      } else if (/(documento|doc|articulo|ensayo|politica|reporte|informe|manual|contrato|propuesta|resumen)/i.test(norm)) {
+        detectedType = 'doc';
+      } else if (/(post|instagram|facebook|linkedin|tiktok|twitter|tweet|carrusel|redes|social)/i.test(norm)) {
+        detectedType = 'social';
+      } else if (/(hoja de calculo|calculo|tabla|excel|spreadsheet|presupuesto|metricas|balance)/i.test(norm)) {
+        detectedType = 'sheet';
+      } else if (/(video|youtube|shorts|reels)/i.test(norm)) {
+        detectedType = 'video';
+      }
+    }
+
     let artifactData: any = null;
-    let artifactTitle = 'Diseño inteligente';
+    let artifactTitle = proposalData?.title || 'Diseño inteligente';
     let artifactSummary = '';
     let replyText = '';
     let usageMeta: AiUsageMetadata | undefined = undefined;
@@ -1764,22 +2183,26 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
     if (detectedType === 'presentation') {
       const presResult = await this.generatePresentation(prompt, 5, 'professional');
       artifactData = presResult;
-      artifactTitle = presResult.title || 'Presentación';
+      artifactTitle = presResult.title || proposalData?.title || 'Presentación';
       artifactSummary = `${presResult.slides.length} diapositivas diseñadas con estructura visual profesional`;
       usageMeta = presResult.usage;
       replyText = `¡He creado una presentación completa de ${presResult.slides.length} diapositivas sobre "${artifactTitle}"! Puedes explorar cada diapositiva en la vista previa a la derecha y abrirla en el editor cuando desees.`;
     } else if (detectedType === 'doc') {
-      const docResult = await this.generateDocContent(prompt, 'generate', 'professional', 'es');
+      const rawDocTitle = proposalData?.title || prompt;
+      const cleanDocTitle = rawDocTitle
+        .replace(/^(redacta|crea|diseña|genera|escribe)\s+(un\s+|una\s+)?(documento|reporte|informe|texto|guia|guía)?\s*(con\s+|sobre\s+|de\s+)?/i, '')
+        .trim();
+      artifactTitle = cleanDocTitle ? cleanDocTitle.charAt(0).toUpperCase() + cleanDocTitle.slice(1) : (proposalData?.title || 'Documento Corporativo');
+      const docResult = await this.generateDocContent(prompt, 'generate', 'professional', 'es', undefined, proposalData);
       artifactData = docResult;
-      artifactTitle = prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt;
-      artifactSummary = 'Documento formateado con secciones temáticas';
+      artifactSummary = proposalData?.items?.length ? `${proposalData.items.length} secciones editoriales estructuradas` : 'Documento formateado con secciones temáticas';
       usageMeta = docResult.usage;
       replyText = `He redactado y estructurado el documento "${artifactTitle}". Revisa la vista previa y ábrelo en el editor de documentos para personalizarlo.`;
     } else if (detectedType === 'social') {
       const isInstagram = /(instagram|ig)/i.test(norm);
       const isLinkedIn = /(linkedin)/i.test(norm);
       const platformName = isInstagram ? 'Instagram' : (isLinkedIn ? 'LinkedIn' : 'Redes Sociales');
-      artifactTitle = `Post para ${platformName}: ${prompt.slice(0, 40)}`;
+      artifactTitle = proposalData?.title || `Post para ${platformName}: ${prompt.slice(0, 40)}`;
       artifactData = {
         callToAction: '¡Haz clic en el enlace del perfil para más detalles!',
         caption: `💡 ${prompt}\n\nDescubre cómo transformar tus ideas con herramientas modernas. Comparte este contenido si te pareció útil.`,
@@ -1791,7 +2214,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       artifactSummary = `Diseño de publicación cuadrada (1080×1080 px) para ${platformName}`;
       replyText = `He preparado el diseño y copy de la publicación para ${platformName}. Puedes ver el diseño previo a la derecha y llevarlo al editor.`;
     } else if (detectedType === 'sheet') {
-      artifactTitle = `Planilla: ${prompt.slice(0, 40)}`;
+      artifactTitle = proposalData?.title || `Planilla: ${prompt.slice(0, 40)}`;
       artifactData = {
         columns: ['Elemento / Concepto', 'Categoría', 'Responsable', 'Estado', 'Prioridad', 'Estimación ($)'],
         rows: [
@@ -1808,7 +2231,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       const diagType = (detectedSubtype as any) || 'mindmap';
       const mapResult = await this.generateMindMap(prompt, 'full', undefined, diagType);
       artifactData = mapResult;
-      artifactTitle = mapResult.title || 'Esquema visual';
+      artifactTitle = mapResult.title || proposalData?.title || 'Esquema visual';
       artifactSummary = `${mapResult.nodes.length} conceptos y ramas interconectadas`;
       usageMeta = mapResult.usage;
       replyText = `¡He diseñado el ${diagType === 'conceptmap' ? 'mapa conceptual' : (diagType === 'flowchart' ? 'diagrama de flujo' : 'mapa mental')} de "${artifactTitle}"! Observa las conexiones en el visor interactivo de la derecha.`;
