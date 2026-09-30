@@ -82,7 +82,8 @@ export function showEarlySkeleton(): void {
     layoutContent.classList.remove('is-embedded-canvas');
   }
 
-  if (isAuthView || isEmbedded) {
+  const isCanvas = isCanvasRoute(path);
+  if (isAuthView || (isEmbedded && !isCanvas)) {
     if (isAuthView) layoutContent.classList.add('is-auth-mode');
   } else {
     layoutContent.classList.remove('is-auth-mode');
@@ -184,7 +185,7 @@ export async function render(): Promise<void> {
   }
 
   let currentSidebar: HTMLElement | null = null;
-  if (!isAuthView && !isEmbedded) {
+  if (!isAuthView && (!isEmbedded || isNowCanvas)) {
     currentSidebar = await ensureSidebarMounted(layoutContent);
     currentSidebar.style.display = '';
     layoutContent.classList.remove('is-auth-mode');

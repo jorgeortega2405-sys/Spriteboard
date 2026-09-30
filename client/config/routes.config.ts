@@ -94,6 +94,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         const { createLoginView } = await import('../views/auth.view.js');
         return [await createLoginView()];
       }
+      await loadStylesheet('/css/components/component-ai-studio.css');
       const { createAiStudioView } = await import('../views/ai-studio.view.js');
       return [await createAiStudioView()];
     },

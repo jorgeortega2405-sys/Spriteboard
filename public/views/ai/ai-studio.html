@@ -1,29 +1,31 @@
 <div class="component-wrapper component-wrapper--full no-padding view-wrapper ai-studio-wrapper" data-ref="ai-studio-container">
-  <header class="ai-studio-header" data-ref="ai-studio-header">
-    <div class="ai-studio-header__left" data-ref="ai-studio-header-left">
-      <div class="dropdown-wrapper" data-ref="dropdown-wrapper-chat-history">
-        <button type="button" class="dropdown-trigger dropdown-trigger--sm" data-ref="btn-trigger-chat-history" aria-label="Historial de conversaciones">
-          <div class="dropdown-trigger__left">
-            <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span class="dropdown-trigger__text" data-ref="lbl-active-session-title">Conversaciones</span>
+  <header class="view-header ai-studio-header" data-ref="ai-studio-header">
+    <div class="view-header__left" data-ref="ai-studio-header-left">
+      <div class="brand-kit-picker ai-chat-picker" data-ref="dropdown-wrapper-chat-history">
+        <button type="button" class="brand-kit-picker__btn ai-chat-picker__btn" data-ref="btn-trigger-chat-history" aria-label="Historial de conversaciones">
+          <div class="ai-chat-picker__label">
+            <svg class="component-icon ai-chat-picker__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <span class="ai-chat-picker__text" data-ref="lbl-active-session-title">Conversaciones</span>
           </div>
-          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <svg class="component-icon ai-chat-picker__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
         </button>
 
         <div class="dropdown-backdrop" data-ref="dropdown-backdrop-chat-history">
-          <div class="menu-panel menu-panel--dropdown menu-panel--w-325 menu-panel--h-auto" data-ref="dropdown-menu-chat-history">
-            <div class="menu-panel__drag-zone" aria-hidden="true">
-              <div class="menu-panel__drag-handle"></div>
-            </div>
-            <div class="menu-panel__list ai-studio-history-list" data-ref="chat-history-list"></div>
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="dropdown-menu-chat-history">
+            <div class="menu-panel__list menu-panel__list--scrollable ai-studio-history-list" data-ref="chat-history-list" style="max-height: 280px;"></div>
             <div class="ai-studio-history-empty" data-ref="chat-history-empty" style="display: none;">
               <p>No tienes chats previos aún.</p>
             </div>
+            <div class="menu-divider"></div>
+            <button type="button" class="menu-item" data-ref="btn-picker-new-chat">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span class="menu-item__text">Nueva conversación</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-new-chat" data-tooltip="Nuevo chat" aria-label="Nuevo chat">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-new-chat" data-tooltip="Nueva conversación" aria-label="Nueva conversación">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
       </button>
     </div>
@@ -93,13 +95,12 @@
           </div>
         </div>
         <div class="ai-studio-preview-header__actions" data-ref="ai-studio-preview-actions">
-          <button type="button" class="component-button component-button--secondary component-button--sm" data-ref="btn-preview-copy" data-tooltip="Copiar contenido" aria-label="Copiar contenido">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-            <span>Copiar</span>
-          </button>
-          <button type="button" class="component-button component-button--primary component-button--sm" data-ref="btn-open-in-canvas" aria-label="Abrir y editar en el lienzo">
+          <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-open-in-canvas" aria-label="Abrir en lienzo">
             <span aria-hidden="true">✨</span>
             <span>Abrir en lienzo</span>
+          </button>
+          <button type="button" class="component-button component-button--h36 component-button--icon-only component-button--ghost" data-ref="btn-close-preview" data-tooltip="Cerrar vista previa" aria-label="Cerrar vista previa">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
       </div>

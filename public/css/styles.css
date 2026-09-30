@@ -178,28 +178,47 @@ html.dark-theme .layout-content {
   height: 100vh !important;
   overflow: hidden !important;
   background-color: transparent !important;
+  display: flex !important;
+  flex-direction: row !important;
 }
 
-.layout-content.is-embedded-canvas .layout-nav,
-.layout-content.is-embedded-canvas [data-ref="sidebar"],
-.layout-content.is-embedded-canvas [data-ref="sidebar-skeleton"],
 .layout-content.is-embedded-canvas .layout-header,
 .layout-content.is-embedded-canvas .general-content-top,
 .layout-content.is-embedded-canvas .component-top,
 .layout-content.is-embedded-canvas .view-header,
-.layout-content.is-embedded-canvas .design-vertical-toolbar-container,
-.layout-content.is-embedded-canvas .design-vertical-toolbar-wrapper,
-.layout-content.is-embedded-canvas .design-floating-toolbar,
-.layout-content.is-embedded-canvas .canvas-action-bar,
-.layout-content.is-embedded-canvas .board-selection-toolbar,
 .layout-content.is-embedded-canvas [data-ref*="file-menu-wrapper"],
 .layout-content.is-embedded-canvas [data-ref*="share-wrapper"],
-.layout-content.is-embedded-canvas [data-ref*="magic-ai"],
 .layout-content.is-embedded-canvas [data-ref*="collaborators-bar"],
 .layout-content.is-embedded-canvas [data-ref*="canvas-cloud-status"],
 .layout-content.is-embedded-canvas [data-ref*="canvas-metrics"],
-.layout-content.is-embedded-canvas [data-ref*="canvas-comments"] {
+.layout-content.is-embedded-canvas [data-ref*="canvas-comments"],
+.layout-content.is-embedded-canvas .rail-top-default,
+.layout-content.is-embedded-canvas .rail-center-default,
+.layout-content.is-embedded-canvas .rail-top-canvas,
+.layout-content.is-embedded-canvas .rail-divider,
+.layout-content.is-embedded-canvas .layout-rail__bottom {
   display: none !important;
+}
+
+.layout-content.is-embedded-canvas .layout-nav {
+  height: 100% !important;
+  z-index: 50 !important;
+  display: flex !important;
+  position: relative !important;
+  background-color: transparent !important;
+}
+
+.layout-content.is-embedded-canvas .layout-rail {
+  height: 100% !important;
+  padding: 8px 4px !important;
+  min-width: 60px !important;
+  max-width: 64px !important;
+  gap: 8px !important;
+}
+
+.layout-content.is-embedded-canvas .rail-center-canvas {
+  display: flex !important;
+  gap: 6px !important;
 }
 
 .layout-content.is-embedded-canvas .view-wrapper,
@@ -207,10 +226,13 @@ html.dark-theme .layout-content {
   margin: 0 !important;
   padding: 0 !important;
   top: 0 !important;
-  width: 100% !important;
+  flex: 1 1 auto !important;
+  width: auto !important;
   height: 100% !important;
   max-height: 100% !important;
   border-radius: 0 !important;
+  min-width: 0 !important;
+  position: relative !important;
 }
 
 .layout-content.is-embedded-canvas .component-bottom,
@@ -220,7 +242,7 @@ html.dark-theme .layout-content {
   border-radius: 0 !important;
 }
 
-.layout-content:has(.layout-nav) {
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) {
   padding: 0 6px 0 0;
   gap: 0;
   background-color: #ffffff;
@@ -230,12 +252,12 @@ html.dark-theme .layout-content {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-html[data-theme="dark"] .layout-content:has(.layout-nav),
-html.dark-theme .layout-content:has(.layout-nav) {
+html[data-theme="dark"] .layout-content:not(.is-embedded-canvas):has(.layout-nav),
+html.dark-theme .layout-content:not(.is-embedded-canvas):has(.layout-nav) {
   background-color: #09090b;
 }
 
-.layout-content:has(.layout-nav)::after {
+.layout-content:not(.is-embedded-canvas):has(.layout-nav)::after {
   content: '';
   display: block;
   width: 0;
@@ -244,7 +266,7 @@ html.dark-theme .layout-content:has(.layout-nav) {
   pointer-events: none;
 }
 
-.layout-content:has(.layout-nav) .layout-nav {
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .layout-nav {
   position: sticky !important;
   top: 0 !important;
   align-self: flex-start !important;
@@ -255,9 +277,9 @@ html.dark-theme .layout-content:has(.layout-nav) {
   box-sizing: border-box;
 }
 
-.layout-content:has(.layout-nav) .view-wrapper,
-.layout-content:has(.layout-nav) .home-wrapper,
-.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .view-wrapper,
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .home-wrapper,
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .component-wrapper:not(.no-padding) {
   position: sticky !important;
   top: 6px !important;
   margin-top: 6px;
@@ -273,14 +295,14 @@ html.dark-theme .layout-content:has(.layout-nav) {
   touch-action: pan-y;
 }
 
-.layout-content:has(.layout-nav) .component-wrapper--full:not(.no-padding) {
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .component-wrapper--full:not(.no-padding) {
   height: calc(100vh - 6px) !important;
   height: calc(100dvh - 6px) !important;
   max-height: calc(100vh - 6px) !important;
   max-height: calc(100dvh - 6px) !important;
 }
 
-.layout-content:has(.layout-nav) .view-wrapper .layout-body--scrollable,
+.layout-content:not(.is-embedded-canvas):has(.layout-nav) .view-wrapper .layout-body--scrollable,
 .layout-content:has(.layout-nav) .view-wrapper .layout-main--scrollable,
 .layout-content:has(.layout-nav) .view-wrapper .layout-scrollable,
 .layout-content:has(.layout-nav) .view-wrapper .view-scrollable,

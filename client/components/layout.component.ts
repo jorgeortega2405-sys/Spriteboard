@@ -202,7 +202,13 @@ export function isCanvasRoute(pathname: string): boolean {
     pathname === '/doc' ||
     pathname.startsWith('/doc/') ||
     pathname === '/presentation' ||
-    pathname.startsWith('/presentation/')
+    pathname.startsWith('/presentation/') ||
+    pathname === '/social' ||
+    pathname.startsWith('/social/') ||
+    pathname === '/sheet' ||
+    pathname.startsWith('/sheet/') ||
+    pathname === '/video' ||
+    pathname.startsWith('/video/')
   );
 }
 

@@ -44,7 +44,7 @@ const AGENT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3
 
 export class AiStudioController implements ViewController {
   private abortController: AbortController = new AbortController();
-  private btnCopy: HTMLElement | null = null;
+  private btnClosePreview: HTMLElement | null = null;
   private btnNewChat: HTMLElement | null = null;
   private btnOpenInCanvas: HTMLElement | null = null;
   private btnSend: HTMLButtonElement | null = null;
@@ -98,7 +98,7 @@ export class AiStudioController implements ViewController {
     this.previewFormatBadge = this.container.querySelector<HTMLElement>('[data-ref="preview-format-badge"]');
     this.previewFormatIcon = this.container.querySelector<HTMLElement>('[data-ref="preview-format-icon"]');
     this.btnOpenInCanvas = this.container.querySelector<HTMLElement>('[data-ref="btn-open-in-canvas"]');
-    this.btnCopy = this.container.querySelector<HTMLElement>('[data-ref="btn-preview-copy"]');
+    this.btnClosePreview = this.container.querySelector<HTMLElement>('[data-ref="btn-close-preview"]');
 
     if (this.dropdownWrapperChatHistory) {
       this.historyDropdownCtrl = setupDropdown(this.dropdownWrapperChatHistory, {
@@ -117,7 +117,7 @@ export class AiStudioController implements ViewController {
 
   private setupGreeting(): void {
     if (!this.heroUsername) return;
-    const name = currentUser?.name?.trim() || currentUser?.username?.trim() || '';
+    const name = currentUser?.username?.trim() || '';
     if (name) {
       this.heroUsername.textContent = name;
     } else {
@@ -164,12 +164,18 @@ export class AiStudioController implements ViewController {
       this.resetChat();
     }, { signal });
 
+    const btnPickerNewChat = this.container?.querySelector<HTMLElement>('[data-ref="btn-picker-new-chat"]');
+    btnPickerNewChat?.addEventListener('click', () => {
+      this.resetChat();
+      this.historyDropdownCtrl?.close();
+    }, { signal });
+
     this.btnOpenInCanvas?.addEventListener('click', () => {
       this.handleOpenInCanvas();
     }, { signal });
 
-    this.btnCopy?.addEventListener('click', () => {
-      this.handleCopyContent();
+    this.btnClosePreview?.addEventListener('click', () => {
+      this.closePreview();
     }, { signal });
   }
 
@@ -277,7 +283,7 @@ export class AiStudioController implements ViewController {
       if (this.previewTitle) {
         this.previewTitle.textContent = this.lblActiveSessionTitle?.textContent || 'Lienzo';
       }
-      this.showGeneratingState('Cargando conversación...', 'Restaurando lienzo y elementos');
+      this.showGeneratingState('Cargando conversación...');
       this.embedCanvasIframe(this.currentCanvasUuid, this.lblActiveSessionTitle?.textContent || 'Lienzo');
     } else if (this.previewPanel && this.workspaceContainer) {
       this.previewPanel.style.display = 'none';
@@ -321,7 +327,7 @@ export class AiStudioController implements ViewController {
     const typingIndicator = this.appendTypingIndicator();
 
     if (this.currentCanvasUuid || this.workspaceContainer?.classList.contains('has-preview')) {
-      this.showGeneratingState('Actualizando lienzo con IA...', 'Aplicando cambios y regenerando elementos');
+      this.showGeneratingState('Actualizando lienzo con IA...');
     }
 
     try {
@@ -542,7 +548,7 @@ export class AiStudioController implements ViewController {
     }
   }
 
-  private showGeneratingState(title = 'Diseñando tu lienzo con IA...', subtitle = 'Estructurando elementos, estilos y tipografías en tiempo real'): void {
+  private showGeneratingState(title = 'Vista previa'): void {
     if (!this.previewPanel || !this.workspaceContainer || !this.previewBody) return;
     this.workspaceContainer.classList.add('has-preview');
     this.previewPanel.style.display = 'flex';
@@ -553,35 +559,7 @@ export class AiStudioController implements ViewController {
 
     this.previewBody.innerHTML = `
       <div class="ai-studio-generating-state" data-ref="ai-generating-state">
-        <div class="ai-studio-generating-glow"></div>
-        <div class="ai-studio-generating-orb">
-          <div class="ai-studio-generating-orb__core"></div>
-          <div class="ai-studio-generating-orb__ring ai-studio-generating-orb__ring--1"></div>
-          <div class="ai-studio-generating-orb__ring ai-studio-generating-orb__ring--2"></div>
-          <div class="ai-studio-generating-orb__ring ai-studio-generating-orb__ring--3"></div>
-          <svg class="ai-studio-generating-icon" viewBox="0 0 32 32" fill="none">
-            <defs>
-              <linearGradient id="sb-gen-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#38bdf8"/>
-                <stop offset="50%" stop-color="#60a5fa"/>
-                <stop offset="100%" stop-color="#3b82f6"/>
-              </linearGradient>
-            </defs>
-            <rect width="32" height="32" rx="8" fill="#0f172a"/>
-            <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" stroke="rgba(56, 189, 248, 0.4)"/>
-            <rect x="7" y="7" width="8" height="8" rx="2.5" fill="url(#sb-gen-grad)"/>
-            <rect x="17" y="7" width="8" height="8" rx="2.5" fill="url(#sb-gen-grad)"/>
-            <rect x="7" y="17" width="8" height="8" rx="2.5" fill="url(#sb-gen-grad)"/>
-            <rect x="17" y="17" width="8" height="8" rx="2.5" fill="url(#sb-gen-grad)"/>
-          </svg>
-        </div>
-        <div class="ai-studio-generating-info">
-          <h3 class="ai-studio-generating-title">${escapeHtml(title)}</h3>
-          <p class="ai-studio-generating-subtitle">${escapeHtml(subtitle)}</p>
-          <div class="ai-studio-generating-progress">
-            <div class="ai-studio-generating-progress__bar"></div>
-          </div>
-        </div>
+        <div class="ai-studio-generating-card" data-ref="ai-generating-card"></div>
       </div>
     `;
   }
@@ -643,7 +621,7 @@ export class AiStudioController implements ViewController {
       this.previewFormatIcon.textContent = typeIcons[artifact.canvasType] || '✨';
     }
 
-    this.showGeneratingState('Cargando vista previa interactiva...', 'Renderizando elementos en el lienzo');
+    this.showGeneratingState('Cargando vista previa interactiva...');
 
     const canvasUuid = await this.saveArtifactAsCanvas(artifact);
     this.currentCanvasUuid = canvasUuid;
@@ -1087,24 +1065,16 @@ export class AiStudioController implements ViewController {
     }
   }
 
-  private handleCopyContent(): void {
-    if (!this.currentArtifact) return;
-    let contentToCopy = this.currentArtifact.title;
-
-    if (this.currentArtifact.canvasType === 'doc') {
-      contentToCopy = this.currentArtifact.data?.markdown || this.currentArtifact.data?.content || this.currentArtifact.title;
-    } else if (this.currentArtifact.canvasType === 'social') {
-      contentToCopy = `${this.currentArtifact.data?.headline || ''}\n\n${this.currentArtifact.data?.caption || ''}\n\n${this.currentArtifact.data?.hashtags || ''}`;
-    } else if (this.currentArtifact.canvasType === 'presentation') {
-      const slides = this.currentArtifact.data?.slides || [];
-      contentToCopy = slides.map((s: any, idx: number) => {
-        const texts = (s.elements || []).filter((el: any) => el.type === 'text').map((t: any) => t.text).join('\n');
-        return `--- Diapositiva ${idx + 1}: ${s.name} ---\n${texts}`;
-      }).join('\n\n');
+  private closePreview(): void {
+    if (this.previewPanel) {
+      this.previewPanel.style.display = 'none';
     }
-
-    void navigator.clipboard.writeText(contentToCopy);
-    showToast('Contenido copiado al portapapeles', 'success');
+    if (this.previewBody) {
+      this.previewBody.innerHTML = '';
+    }
+    if (this.workspaceContainer) {
+      this.workspaceContainer.classList.remove('has-preview');
+    }
   }
 
   private resetChat(): void {
@@ -1148,6 +1118,7 @@ export class AiStudioController implements ViewController {
 }
 
 export async function createAiStudioView(): Promise<HTMLElement> {
+  await loadStylesheet('/css/components/component-ai-studio.css');
   const container = await loadTemplate('/views/ai/ai-studio.html');
   const controller = new AiStudioController();
   await controller.init(container);
