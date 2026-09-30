@@ -2,7 +2,6 @@ import { createPopper, Instance as PopperInstance, VirtualElement } from '@poppe
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
-import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { openCreateFolderModal, openRenameFolderModal } from '../components/folder-modal.component.js';
 import { openModal } from '../components/modal.component.js';
@@ -10,10 +9,11 @@ import { openMoveCanvasModal } from '../components/move-canvas-modal.component.j
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { FOLDER_BACK_TAB_SVG, getFolderFrontIconSvg } from '../config/folder-graphics.config.js';
 import { renderHomeCategoryBadgesHtml } from '../config/home-category-badges.config.js';
 import { getUserTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
+import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
+import { FOLDER_BACK_TAB_SVG, getFolderFrontIconSvg } from '../graphics/folder-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';

@@ -1,9 +1,9 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../../config/diagram-components.data.js';
-import { renderElementCategoryTilesHtml } from '../../config/element-category-tiles.config.js';
 import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../../config/mockups.config.js';
 import { STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
+import { renderElementCategoryTilesHtml } from '../../graphics/element-category-tiles.graphics.js';
 import { escapeHtml, getApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';

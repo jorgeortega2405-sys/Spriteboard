@@ -1,4 +1,4 @@
-import { getCategoryBadgeIconSvg } from '../components/create-canvas-graphics.js';
+import { getCategoryBadgeIconSvg } from '../graphics/canvas-graphics.js';
 import { createIconSvg } from '../services/icon.service.js';
 import { t } from '../services/i18n.service.js';
 

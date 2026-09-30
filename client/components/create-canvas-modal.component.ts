@@ -1,5 +1,5 @@
-import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg, getVideoSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
+import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg, getVideoSvg } from '../graphics/canvas-graphics.js';
 import { escapeHtml, uploadFilesApi } from '../services/api.service.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';

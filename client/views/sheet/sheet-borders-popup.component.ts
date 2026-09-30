@@ -1,4 +1,4 @@
-import { renderSheetBorderButtonsHtml, SHEET_BORDER_CLEAR_ICON, SHEET_BORDER_STYLE_ICON } from '../../config/sheet-borders.config.js';
+import { renderSheetBorderButtonsHtml, SHEET_BORDER_CLEAR_ICON, SHEET_BORDER_STYLE_ICON } from '../../graphics/sheet-borders.graphics.js';
 import { SheetBorderStyle } from './sheet.types.js';
 
 export type SheetBorderType =

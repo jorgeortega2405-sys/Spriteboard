@@ -1,5 +1,5 @@
 import { navigate } from '../app-router.js';
-import { getEmptyIllustration } from '../config/empty-illustrations.config.js';
+import { getEmptyIllustration } from '../graphics/empty-illustrations.graphics.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';

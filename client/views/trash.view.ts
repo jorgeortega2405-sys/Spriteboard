@@ -1,6 +1,6 @@
-import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { emptyLocalTrash, getLocalTrashCanvases, removeLocalCanvas, restoreLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';

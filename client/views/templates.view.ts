@@ -1,8 +1,8 @@
 import { navigate } from '../app-router.js';
-import { getCategoryBadgeIconSvg } from '../components/create-canvas-graphics.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
+import { getCategoryBadgeIconSvg } from '../graphics/canvas-graphics.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';

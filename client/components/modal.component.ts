@@ -1,5 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
-import { MODAL_2FA_SHIELD_SVG } from '../config/modal-illustrations.config.js';
+import { MODAL_2FA_SHIELD_SVG } from '../graphics/modal-illustrations.graphics.js';
 import { postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';

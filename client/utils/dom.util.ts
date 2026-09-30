@@ -1,6 +1,6 @@
 import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
 import { navigate } from '../app-router.js';
-import { EmptyIllustrationKey, getEmptyIllustration } from '../config/empty-illustrations.config.js';
+import { EmptyIllustrationKey, getEmptyIllustration } from '../graphics/empty-illustrations.graphics.js';
 import { BannerManager } from '../types/common.types.js';
 
 

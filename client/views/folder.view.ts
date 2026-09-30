@@ -2,12 +2,12 @@ import { createPopper, Instance as PopperInstance, VirtualElement } from '@poppe
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
-import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openRenameFolderModal } from '../components/folder-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';

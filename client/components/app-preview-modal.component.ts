@@ -1,5 +1,5 @@
-import { getAppShowcaseSvg } from '../config/app-showcases.config.js';
 import { SPRITEBOARD_APPS } from '../config/apps.config.js';
+import { getAppShowcaseSvg } from '../graphics/app-showcases.graphics.js';
 import { escapeHtml } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
