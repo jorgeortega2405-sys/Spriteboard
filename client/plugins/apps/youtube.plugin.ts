@@ -17,7 +17,7 @@ export class YouTubePlugin implements AppPlugin {
         <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
           <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
             <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#youtube_colored"></use></svg>
-            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">YouTube</span>
+            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">YouTube Embed</span>
           </div>
           <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
             <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>

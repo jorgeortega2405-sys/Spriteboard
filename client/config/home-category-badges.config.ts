@@ -29,13 +29,13 @@ export const HOME_CATEGORY_BADGES: HomeCategoryBadgeItem[] = [
     category: 'social',
     dataRef: 'cat-badge-social',
     i18nKey: 'home.badge_social',
-    label: 'Redes',
+    label: 'Redes sociales',
   },
   {
     category: 'doc',
     dataRef: 'cat-badge-doc',
     i18nKey: 'home.badge_doc',
-    label: 'Doc',
+    label: 'Documentos',
   },
   {
     category: 'board',

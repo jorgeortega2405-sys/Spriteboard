@@ -7272,28 +7272,28 @@ html[data-theme="dark"] .design-share-search-results,
   --folder-text-color: #18191b;
 }
 
-.canvas-card.canvas-card--folder {
+.canvas-card.canvas-card--folder,
+.canvas-card.canvas-card--folder:hover {
   display: flex;
   flex-direction: column;
   width: 100%;
   background-color: transparent;
   border: none;
-  outline: none;
+  outline: none !important;
   box-shadow: none !important;
   cursor: pointer;
   position: relative;
   user-select: none;
 }
 
-.canvas-card.canvas-card--folder .canvas-card__thumbnail {
+.canvas-card.canvas-card--folder .canvas-card__thumbnail,
+.canvas-card.canvas-card--folder:hover .canvas-card__thumbnail {
   background-color: transparent;
   border: none;
-  box-shadow: none;
-}
-
-.canvas-card.canvas-card--folder:hover .canvas-card__thumbnail {
-  outline: none;
-  box-shadow: none;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  transition: none !important;
 }
 
 .canvas-card.canvas-card--folder:hover .folder-card__front {

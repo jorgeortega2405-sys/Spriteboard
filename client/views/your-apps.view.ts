@@ -84,7 +84,7 @@ class YourAppsController {
 
     const cardSpriteboard = this.container.querySelector<HTMLElement>('[data-ref="card-collection-spriteboard"]');
     cardSpriteboard?.addEventListener('click', () => {
-      this.setCategory('internal');
+      this.setCategory('utilities');
     }, { signal });
 
     const cardProductivity = this.container.querySelector<HTMLElement>('[data-ref="card-collection-productivity"]');
