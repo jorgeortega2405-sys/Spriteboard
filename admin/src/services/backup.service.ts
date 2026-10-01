@@ -108,62 +108,8 @@ export async function ensureBackupTable(): Promise<void> {
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS backups (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        uuid VARCHAR(36) NOT NULL UNIQUE,
-        name VARCHAR(255) NOT NULL,
-        filename VARCHAR(255) NOT NULL,
-        file_path VARCHAR(512) NULL,
-        file_size_bytes BIGINT NOT NULL DEFAULT 0,
-        format VARCHAR(20) NOT NULL DEFAULT 'zip',
-        status ENUM('pending', 'in_progress', 'completed', 'failed') NOT NULL DEFAULT 'pending',
-        progress_percent INT NOT NULL DEFAULT 0,
-        current_step VARCHAR(255) NULL,
-        databases_included JSON NULL,
-        include_s3 BOOLEAN NOT NULL DEFAULT FALSE,
-        s3_buckets_included JSON NULL,
-        include_redis BOOLEAN NOT NULL DEFAULT FALSE,
-        include_cassandra BOOLEAN NOT NULL DEFAULT FALSE,
-        description TEXT NULL,
-        error_message TEXT NULL,
-        created_by_user_id INT NULL,
-        created_by_username VARCHAR(50) NULL,
-        duration_seconds INT NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        completed_at TIMESTAMP NULL,
-        INDEX idx_backups_status (status),
-        INDEX idx_backups_created_at (created_at)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS backup_schedules (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL DEFAULT 'Copia Automática Programada',
-        enabled BOOLEAN NOT NULL DEFAULT FALSE,
-        interval_type ENUM('hourly', 'every_6_hours', 'every_12_hours', 'daily', 'weekly', 'monthly', 'custom_hours') NOT NULL DEFAULT 'daily',
-        interval_hours INT NOT NULL DEFAULT 24,
-        time_of_day VARCHAR(5) NOT NULL DEFAULT '02:00',
-        day_of_week INT NOT NULL DEFAULT 1,
-        day_of_month INT NOT NULL DEFAULT 1,
-        databases_included JSON NULL,
-        include_s3 BOOLEAN NOT NULL DEFAULT TRUE,
-        s3_buckets_included JSON NULL,
-        include_redis BOOLEAN NOT NULL DEFAULT TRUE,
-        include_cassandra BOOLEAN NOT NULL DEFAULT FALSE,
-        format VARCHAR(20) NOT NULL DEFAULT 'zip',
-        retention_count INT NOT NULL DEFAULT 7,
-        description TEXT NULL,
-        last_run_at TIMESTAMP NULL DEFAULT NULL,
-        next_run_at TIMESTAMP NULL DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
   } catch (error) {
-    logger.db.error('Error al asegurar tablas de copias de seguridad en MySQL', error);
+    logger.db.error('Error al asegurar directorio de copias de seguridad', error);
   }
 }
 

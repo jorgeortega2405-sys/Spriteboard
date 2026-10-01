@@ -11,7 +11,8 @@
     "save": "Save",
     "loading": "Processing...",
     "copy": "Copy",
-    "delete": "Delete"
+    "delete": "Delete",
+    "back": "Back"
   },
   "nav": {
     "go_home": "Go to home",
@@ -60,7 +61,8 @@
     "plans_and_pricing": "Plans & pricing",
     "purchase_history": "Purchase history",
     "open_in_desktop": "Open in desktop app",
-    "admin_panel": "Admin panel"
+    "admin_panel": "Admin panel",
+    "ai": "Spritebot AI"
   },
   "topbar": {
     "search_placeholder": "Search canvases, templates...",
@@ -1123,36 +1125,29 @@
     "layers_limit_reached": "You have reached the maximum limit of 25 layers per canvas."
   },
   "upgrade_modal": {
+    "plan_pro_name": "Spriteboard Pro",
+    "plan_business_name": "Spriteboard Business",
+    "plan_enterprise_name": "Spriteboard Enterprise",
+    "cta_prefix": "Upgrade to",
     "title_prefix": "Upgrade to",
     "choose_plan": "Choose your plan.",
-    "cta_prefix": "Upgrade to",
-    "view_all_link": "View all plans & features",
-    "and_much_more": "And much more!",
-    "compare_all": "Compare all",
+    "plan_pro_price": "$9.99/mo",
+    "plan_pro_desc": "For professionals and demanding creators.",
+    "plan_business_price": "$19.99/mo",
+    "plan_business_desc": "Maximum power, collaboration and centralized teams.",
+    "view_all_link": "View all plans and features",
     "col_benefits": "Benefits",
-    "col_free": "Free",
     "col_pro": "Pro",
     "col_business": "Business",
-    "plan_free_name": "Spriteboard Free",
-    "plan_free_desc": "Essential tools to start creating.",
-    "plan_free_price": "Free",
-    "plan_pro_name": "Spriteboard Pro",
-    "plan_pro_desc": "For professionals and indie creators.",
-    "plan_pro_price": "$9.99/mo",
-    "plan_business_name": "Spriteboard Business",
-    "plan_business_desc": "Maximum power, collaboration, and studio tools.",
-    "plan_business_price": "$19.99/mo",
     "benefit_storage": "Cloud storage",
-    "benefit_canvas_size": "Maximum canvas size",
     "benefit_collab": "Live collaboration",
     "benefit_teams": "Work teams",
-    "benefit_export_formats": "Export formats",
-    "benefit_export_scale": "Maximum scale",
-    "benefit_layers": "Layers per canvas",
-    "benefit_history": "Version history",
-    "benefit_trash": "Trash retention",
-    "benefit_sso": "Single Sign-On (SSO)",
-    "benefit_support": "Technical support"
+    "benefit_brand_kits": "Brand kits & palettes",
+    "current_plan": "Your current plan",
+    "included_in_plan": "Included in your plan",
+    "enterprise_active": "You already have the Enterprise plan with all features active.",
+    "contact_sales": "Contact sales",
+    "manage_subscription": "Manage subscription"
   },
   "comments": {
     "title": "Comments",
@@ -1486,31 +1481,6 @@
   "plans": {
     "upgrade_to_business": "Upgrade to Business"
   },
-  "upgrade_modal": {
-    "plan_pro_name": "Spriteboard Pro",
-    "plan_business_name": "Spriteboard Business",
-    "plan_enterprise_name": "Spriteboard Enterprise",
-    "cta_prefix": "Upgrade to",
-    "title_prefix": "Upgrade to",
-    "choose_plan": "Choose your plan.",
-    "plan_pro_price": "$9.99/mo",
-    "plan_pro_desc": "For professionals and demanding creators.",
-    "plan_business_price": "$19.99/mo",
-    "plan_business_desc": "Maximum power, collaboration and centralized teams.",
-    "view_all_link": "View all plans and features",
-    "col_benefits": "Benefits",
-    "col_pro": "Pro",
-    "col_business": "Business",
-    "benefit_storage": "Cloud storage",
-    "benefit_collab": "Live collaboration",
-    "benefit_teams": "Work teams",
-    "benefit_brand_kits": "Brand kits & palettes",
-    "current_plan": "Your current plan",
-    "included_in_plan": "Included in your plan",
-    "enterprise_active": "You already have the Enterprise plan with all features active.",
-    "contact_sales": "Contact sales",
-    "manage_subscription": "Manage subscription"
-  },
   "creators": {
     "hero_tag": "SPRITEBOARD CREATORS",
     "hero_title": "Share your designs with the world",
@@ -1546,5 +1516,11 @@
     "bottom_cta_desc": "Apply today and inspire creators across the globe.",
     "bottom_cta_btn": "Apply as a Creator",
     "back_to_creators": "Back to Creators"
+  },
+  "common": {
+    "saved": "Saved"
+  },
+  "ai": {
+    "new_chat": "New chat"
   }
 }

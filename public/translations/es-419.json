@@ -11,7 +11,8 @@
     "save": "Guardar",
     "loading": "Procesando...",
     "copy": "Copiar",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "back": "Volver"
   },
   "nav": {
     "go_home": "Ir al inicio",
@@ -60,7 +61,8 @@
     "plans_and_pricing": "Planes y precios",
     "purchase_history": "Historial de compra",
     "open_in_desktop": "Abrir en la app de escritorio",
-    "admin_panel": "Panel de administración"
+    "admin_panel": "Panel de administración",
+    "ai": "Spritebot IA"
   },
   "topbar": {
     "search_placeholder": "Buscar lienzos, plantillas...",
@@ -1123,36 +1125,29 @@
     "layers_limit_reached": "Has alcanzado el límite máximo de 25 capas por lienzo."
   },
   "upgrade_modal": {
+    "plan_pro_name": "Spriteboard Pro",
+    "plan_business_name": "Spriteboard Negocios",
+    "plan_enterprise_name": "Spriteboard Empresas",
+    "cta_prefix": "Sube de categoría a",
     "title_prefix": "Sube de categoría a",
     "choose_plan": "Elige tu plan.",
-    "cta_prefix": "Sube de categoría a",
+    "plan_pro_price": "$9.99/mes",
+    "plan_pro_desc": "Para profesionales y creadores exigentes.",
+    "plan_business_price": "$19.99/mes",
+    "plan_business_desc": "Máxima potencia, colaboración y equipos centralizados.",
     "view_all_link": "Ver todos los planes y características",
-    "and_much_more": "¡Y mucho más!",
-    "compare_all": "Comparar todo",
     "col_benefits": "Beneficios",
-    "col_free": "Gratis",
     "col_pro": "Pro",
     "col_business": "Negocios",
-    "plan_free_name": "Spriteboard Gratis",
-    "plan_free_desc": "Funciones esenciales para comenzar a crear.",
-    "plan_free_price": "Gratis",
-    "plan_pro_name": "Spriteboard Pro",
-    "plan_pro_desc": "Para profesionales y creadores independientes.",
-    "plan_pro_price": "$9.99/mes",
-    "plan_business_name": "Spriteboard Negocios",
-    "plan_business_desc": "Máxima potencia, colaboración y herramientas para estudios.",
-    "plan_business_price": "$19.99/mes",
     "benefit_storage": "Almacenamiento en la nube",
-    "benefit_canvas_size": "Lienzo máximo",
     "benefit_collab": "Colaboración en vivo",
     "benefit_teams": "Equipos de trabajo",
-    "benefit_export_formats": "Formatos de exportación",
-    "benefit_export_scale": "Escala máxima",
-    "benefit_layers": "Capas por lienzo",
-    "benefit_history": "Historial de versiones",
-    "benefit_trash": "Retención en papelera",
-    "benefit_sso": "Inicio de sesión único (SSO)",
-    "benefit_support": "Soporte técnico"
+    "benefit_brand_kits": "Kits de marca y paletas",
+    "current_plan": "Tu plan actual",
+    "included_in_plan": "Incluido en tu plan",
+    "enterprise_active": "Ya cuentas con el plan corporativo Empresas con todas las capacidades activas.",
+    "contact_sales": "Hablar con ventas",
+    "manage_subscription": "Gestionar suscripción"
   },
   "comments": {
     "title": "Comentarios",
@@ -1486,31 +1481,6 @@
   "plans": {
     "upgrade_to_business": "Actualizar a Business"
   },
-  "upgrade_modal": {
-    "plan_pro_name": "Spriteboard Pro",
-    "plan_business_name": "Spriteboard Negocios",
-    "plan_enterprise_name": "Spriteboard Empresas",
-    "cta_prefix": "Sube de categoría a",
-    "title_prefix": "Sube de categoría a",
-    "choose_plan": "Elige tu plan.",
-    "plan_pro_price": "$9.99/mes",
-    "plan_pro_desc": "Para profesionales y creadores exigentes.",
-    "plan_business_price": "$19.99/mes",
-    "plan_business_desc": "Máxima potencia, colaboración y equipos centralizados.",
-    "view_all_link": "Ver todos los planes y características",
-    "col_benefits": "Beneficios",
-    "col_pro": "Pro",
-    "col_business": "Negocios",
-    "benefit_storage": "Almacenamiento en la nube",
-    "benefit_collab": "Colaboración en vivo",
-    "benefit_teams": "Equipos de trabajo",
-    "benefit_brand_kits": "Kits de marca y paletas",
-    "current_plan": "Tu plan actual",
-    "included_in_plan": "Incluido en tu plan",
-    "enterprise_active": "Ya cuentas con el plan corporativo Empresas con todas las capacidades activas.",
-    "contact_sales": "Hablar con ventas",
-    "manage_subscription": "Gestionar suscripción"
-  },
   "creators": {
     "hero_tag": "SPRITEBOARD CREATORS",
     "hero_title": "Comparte tus diseños con el mundo",
@@ -1546,5 +1516,11 @@
     "bottom_cta_desc": "Postúlate hoy y comienza a inspirar a creadores de todo el planeta.",
     "bottom_cta_btn": "Postularme como creador",
     "back_to_creators": "Volver a Creators"
+  },
+  "common": {
+    "saved": "Guardado"
+  },
+  "ai": {
+    "new_chat": "Nuevo chat"
   }
 }

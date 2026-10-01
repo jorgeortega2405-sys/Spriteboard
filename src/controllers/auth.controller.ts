@@ -422,131 +422,166 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
-  const result = await removeAccountFromSession(res, req);
-  logger.security.info('Cierre de sesión de cuenta activa', { remainingAccounts: result.remainingCount });
-  sendSuccess(res, {
-    message: 'Sesión cerrada exitosamente.',
-    switched: result.remainingCount > 0,
-    user: result.activeUser ? sanitizeUser(result.activeUser) : null,
-    accounts: result.accounts.map(sanitizeUser),
-  });
+  try {
+    const result = await removeAccountFromSession(res, req);
+    logger.security.info('Cierre de sesión de cuenta activa', { remainingAccounts: result.remainingCount });
+    sendSuccess(res, {
+      message: 'Sesión cerrada exitosamente.',
+      switched: result.remainingCount > 0,
+      user: result.activeUser ? sanitizeUser(result.activeUser) : null,
+      accounts: result.accounts.map(sanitizeUser),
+    });
+  } catch (err) {
+    sendInternalError(res, 'Error al procesar cierre de sesión', err);
+  }
 }
 
 export async function logoutAll(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (user) {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
-    const userAgent = req.headers['user-agent'];
-    await revokeAllUserSessions(user.id, ip, userAgent);
+  try {
+    const user = getCurrentUser(req);
+    if (user) {
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
+      const userAgent = req.headers['user-agent'];
+      await revokeAllUserSessions(user.id, ip, userAgent);
+    }
+    clearSessionCookie(res);
+    logger.security.info('Todas las sesiones fueron cerradas exitosamente', { userId: user?.id });
+    sendSuccess(res, { message: 'Todas las sesiones fueron cerradas exitosamente.' });
+  } catch (err) {
+    sendInternalError(res, 'Error al procesar cierre de todas las sesiones', err);
   }
-  clearSessionCookie(res);
-  logger.security.info('Todas las sesiones fueron cerradas exitosamente', { userId: user?.id });
-  sendSuccess(res, { message: 'Todas las sesiones fueron cerradas exitosamente.' });
 }
 
 export function switchAccount(req: Request, res: Response): void {
-  const { user_id } = req.body;
-  const targetId = Number(user_id);
+  try {
+    const { user_id } = req.body;
+    const targetId = Number(user_id);
 
-  if (!targetId || isNaN(targetId)) {
-    sendBadRequest(res, 'ID de cuenta inválido.');
-    return;
+    if (!targetId || isNaN(targetId)) {
+      sendBadRequest(res, 'ID de cuenta inválido.');
+      return;
+    }
+
+    const result = switchAccountInSession(res, req, targetId);
+    if (!result.success || !result.activeUser) {
+      sendBadRequest(res, 'La cuenta especificada no pertenece a las cuentas vinculadas.');
+      return;
+    }
+
+    logger.security.info('Cambio de cuenta activa exitoso', { targetUserId: targetId });
+    sendSuccess(res, {
+      message: 'Cuenta cambiada exitosamente.',
+      user: sanitizeUser(result.activeUser),
+      accounts: result.accounts.map(sanitizeUser),
+    });
+  } catch (err) {
+    sendInternalError(res, 'Error al cambiar de cuenta activa', err);
   }
-
-  const result = switchAccountInSession(res, req, targetId);
-  if (!result.success || !result.activeUser) {
-    sendBadRequest(res, 'La cuenta especificada no pertenece a las cuentas vinculadas.');
-    return;
-  }
-
-  logger.security.info('Cambio de cuenta activa exitoso', { targetUserId: targetId });
-  sendSuccess(res, {
-    message: 'Cuenta cambiada exitosamente.',
-    user: sanitizeUser(result.activeUser),
-    accounts: result.accounts.map(sanitizeUser),
-  });
 }
 
 export async function me(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    res.json({ user: null, accounts: [] });
-    return;
-  }
-
-  const session = getMultiAccountSession(req);
-  if (session) {
-    const activeAccount = session.accounts.find((a) => a.id === user.id);
-    const sid = activeAccount?.sessionId || session.sessionId;
-    const revoked = await isSessionRevoked(user.id, session.iat, sid);
-    if (revoked) {
-      clearSessionCookie(res);
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
       res.json({ user: null, accounts: [] });
       return;
     }
-  }
 
-  const freshUser = await findUserById(user.id);
-  const activeUserData = freshUser ? sanitizeUser(freshUser) : sanitizeUser(user);
+    const session = getMultiAccountSession(req);
+    if (session) {
+      const activeAccount = session.accounts.find((a) => a.id === user.id);
+      const sid = activeAccount?.sessionId || session.sessionId;
+      const revoked = await isSessionRevoked(user.id, session.iat, sid);
+      if (revoked) {
+        clearSessionCookie(res);
+        res.json({ user: null, accounts: [] });
+        return;
+      }
+    }
 
-  if (freshUser && (freshUser.subscription_tier !== user.subscription_tier || freshUser.role !== user.role)) {
-    updateActiveAccountInSession(res, req, {
-      subscription_tier: freshUser.subscription_tier || 'free',
-      role: freshUser.role || 'USER',
-    });
-  }
+    const freshUser = await findUserById(user.id);
+    const activeUserData = freshUser ? sanitizeUser(freshUser) : sanitizeUser(user);
 
-  const accounts = getLinkedAccounts(req);
-  const updatedAccounts = accounts.map((acc) => {
-    if (acc.id === user.id && freshUser) {
-      return {
-        ...acc,
+    if (freshUser && (freshUser.subscription_tier !== user.subscription_tier || freshUser.role !== user.role)) {
+      updateActiveAccountInSession(res, req, {
         subscription_tier: freshUser.subscription_tier || 'free',
         role: freshUser.role || 'USER',
-      };
+      });
     }
-    return acc;
-  });
 
-  res.json({
-    user: activeUserData,
-    accounts: updatedAccounts.map(sanitizeUser),
-  });
+    const accounts = getLinkedAccounts(req);
+    const updatedAccounts = accounts.map((acc) => {
+      if (acc.id === user.id && freshUser) {
+        return {
+          ...acc,
+          subscription_tier: freshUser.subscription_tier || 'free',
+          role: freshUser.role || 'USER',
+        };
+      }
+      return acc;
+    });
+
+    res.json({
+      user: activeUserData,
+      accounts: updatedAccounts.map(sanitizeUser),
+    });
+  } catch (err) {
+    sendInternalError(res, 'Error al consultar perfil autenticado (/me)', err);
+  }
 }
 
 export async function redirectToGoogle(req: Request, res: Response): Promise<void> {
-  const serverConfig = await getServerConfig();
-  if (!serverConfig.allow_google_login) {
-    res.redirect('/login?error=' + encodeURIComponent('El inicio de sesión con Google está temporalmente deshabilitado.'));
-    return;
+  try {
+    const serverConfig = await getServerConfig();
+    if (!serverConfig.allow_google_login) {
+      res.redirect('/login?error=' + encodeURIComponent('El inicio de sesión con Google está temporalmente deshabilitado.'));
+      return;
+    }
+    const url = getGoogleAuthUrl(req, res);
+    res.redirect(url);
+  } catch (err) {
+    logger.app.error('Error al redirigir a autenticación con Google', err);
+    res.redirect('/login?error=' + encodeURIComponent('Error inesperado al conectar con Google.'));
   }
-  const url = getGoogleAuthUrl(req, res);
-  res.redirect(url);
 }
 
 export async function getGoogleAuthUrlApi(req: Request, res: Response): Promise<void> {
-  const serverConfig = await getServerConfig();
-  if (!serverConfig.allow_google_login) {
-    sendBadRequest(res, 'El inicio de sesión con Google está temporalmente deshabilitado.');
-    return;
+  try {
+    const serverConfig = await getServerConfig();
+    if (!serverConfig.allow_google_login) {
+      sendBadRequest(res, 'El inicio de sesión con Google está temporalmente deshabilitado.');
+      return;
+    }
+    const url = getGoogleAuthUrl(req, res);
+    sendSuccess(res, { url });
+  } catch (err) {
+    sendInternalError(res, 'Error al generar URL de autenticación con Google', err);
   }
-  const url = getGoogleAuthUrl(req, res);
-  sendSuccess(res, { url });
 }
 
 export function redirectToGoogleLink(req: Request, res: Response): void {
-  const currentUser = getCurrentUser(req);
-  if (!currentUser) {
-    sendUnauthorized(res, 'Sesión no válida o expirada.');
-    return;
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+    const url = getGoogleLinkAuthUrl(req, res, currentUser.id);
+    res.redirect(url);
+  } catch (err) {
+    logger.app.error('Error al redirigir a vinculación con Google', err);
+    res.redirect('/settings/security?error=' + encodeURIComponent('Error al conectar con Google.'));
   }
-  const url = getGoogleLinkAuthUrl(req, res, currentUser.id);
-  res.redirect(url);
 }
 
 export function redirectToGoogleVerify(req: Request, res: Response): void {
-  const url = getGoogleVerifyAuthUrl(req, res);
-  res.redirect(url);
+  try {
+    const url = getGoogleVerifyAuthUrl(req, res);
+    res.redirect(url);
+  } catch (err) {
+    logger.app.error('Error al redirigir a verificación con Google', err);
+    res.redirect('/login?error=' + encodeURIComponent('Error inesperado al verificar con Google.'));
+  }
 }
 
 export async function googleCallback(req: Request, res: Response): Promise<void> {

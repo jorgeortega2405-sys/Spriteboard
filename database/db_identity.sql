@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS purchases (
     INDEX idx_purchases_user (user_id),
     INDEX idx_purchases_session (stripe_session_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -909,6 +909,73 @@ CREATE TABLE IF NOT EXISTS sales_inquiries (
     INDEX idx_sales_inquiries_status (status),
     INDEX idx_sales_inquiries_created (created_at DESC),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_sanctions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    type ENUM('warning', 'suspension', 'ban') NOT NULL,
+    reason TEXT NOT NULL,
+    duration_days INT NULL,
+    expires_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_sanctions_user (user_id),
+    INDEX idx_user_sanctions_admin (admin_id),
+    INDEX idx_user_sanctions_expires (expires_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS backups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(512) NULL,
+    file_size_bytes BIGINT NOT NULL DEFAULT 0,
+    format VARCHAR(20) NOT NULL DEFAULT 'zip',
+    status ENUM('pending', 'in_progress', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+    progress_percent INT NOT NULL DEFAULT 0,
+    current_step VARCHAR(255) NULL,
+    databases_included JSON NULL,
+    include_s3 BOOLEAN NOT NULL DEFAULT FALSE,
+    s3_buckets_included JSON NULL,
+    include_redis BOOLEAN NOT NULL DEFAULT FALSE,
+    include_cassandra BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT NULL,
+    error_message TEXT NULL,
+    created_by_user_id INT NULL,
+    created_by_username VARCHAR(50) NULL,
+    duration_seconds INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    INDEX idx_backups_status (status),
+    INDEX idx_backups_created_at (created_at),
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS backup_schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL DEFAULT 'Copia Automática Programada',
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    interval_type ENUM('hourly', 'every_6_hours', 'every_12_hours', 'daily', 'weekly', 'monthly', 'custom_hours') NOT NULL DEFAULT 'daily',
+    interval_hours INT NOT NULL DEFAULT 24,
+    time_of_day VARCHAR(5) NOT NULL DEFAULT '02:00',
+    day_of_week INT NOT NULL DEFAULT 1,
+    day_of_month INT NOT NULL DEFAULT 1,
+    databases_included JSON NULL,
+    include_s3 BOOLEAN NOT NULL DEFAULT TRUE,
+    s3_buckets_included JSON NULL,
+    include_redis BOOLEAN NOT NULL DEFAULT TRUE,
+    include_cassandra BOOLEAN NOT NULL DEFAULT FALSE,
+    format VARCHAR(20) NOT NULL DEFAULT 'zip',
+    retention_count INT NOT NULL DEFAULT 7,
+    description TEXT NULL,
+    last_run_at TIMESTAMP NULL DEFAULT NULL,
+    next_run_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';

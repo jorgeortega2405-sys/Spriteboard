@@ -9,7 +9,7 @@ services:
       MYSQL_USER: sprite_user
       MYSQL_PASSWORD: sprite_password
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/db_identity.sql:/docker-entrypoint-initdb.d/01_db_identity.sql:ro
@@ -26,7 +26,7 @@ services:
     container_name: spriteboard-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,7 +40,7 @@ services:
     container_name: spriteboard-cassandra
     restart: unless-stopped
     ports:
-      - "9042:9042"
+      - "127.0.0.1:9042:9042"
     environment:
       - CASSANDRA_CLUSTER_NAME=SpriteboardCluster
       - CASSANDRA_DC=datacenter1
@@ -63,8 +63,8 @@ services:
     container_name: spriteboard-minio
     restart: unless-stopped
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-spriteboard_admin}
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-spriteboard_secret_key}
@@ -125,7 +125,7 @@ services:
     container_name: spriteboard-admin
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     env_file:
       - .env
     environment:

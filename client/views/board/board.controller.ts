@@ -1321,7 +1321,7 @@ export class BoardController {
     const btnBoardAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai"]');
     if (this.aiWrapperEl && btnBoardAi) {
       this.aiDropdownController = setupBoardAiDropdown({
-        canvasTitle: this.boardName || this.canvasTitle || 'Pizarrón',
+        canvasTitle: this.boardName || 'Pizarrón',
         canvasType: 'board',
         canvasUuid: this.canvasUuid,
         signal,

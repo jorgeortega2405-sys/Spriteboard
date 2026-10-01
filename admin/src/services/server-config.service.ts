@@ -128,32 +128,7 @@ function stringifyValue(value: any, type: 'boolean' | 'json' | 'number' | 'strin
   return String(value ?? '');
 }
 
-export async function ensureServerConfigTable(): Promise<void> {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS server_config (
-        \`key\` VARCHAR(100) PRIMARY KEY,
-        \`value\` TEXT NOT NULL,
-        \`category\` VARCHAR(50) NOT NULL DEFAULT 'general',
-        \`type\` ENUM('string', 'number', 'boolean', 'json') NOT NULL DEFAULT 'string',
-        \`description\` VARCHAR(255) NULL,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_server_config_category (category)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    for (const item of DEFAULT_SERVER_CONFIG_ITEMS) {
-      await pool.query(
-        `INSERT INTO server_config (\`key\`, \`value\`, \`category\`, \`type\`, \`description\`)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE description = VALUES(description)`,
-        [item.key, item.value, item.category, item.type, item.description]
-      );
-    }
-  } catch (error) {
-    logger.db.error('Error al asegurar tabla e inicializar server_config en MySQL desde Admin', error);
-  }
-}
+export async function ensureServerConfigTable(): Promise<void> {}
 
 export async function getAllServerConfigs(): Promise<{ categories: Record<string, ServerConfigItem[]>; items: ServerConfigItem[]; map: Record<string, any> }> {
   await ensureServerConfigTable();

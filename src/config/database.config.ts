@@ -78,16 +78,16 @@ export const canvasPool = dbManager.registerMySql('canvas', canvasDbOptions);
 
 export async function checkDbConnection(retries = 15, delayMs = 2000): Promise<void> {
   for (let i = 1; i <= retries; i++) {
+    let conn: mysql.PoolConnection | null = null;
+    let canvasConn: mysql.PoolConnection | null = null;
     try {
-      const conn = await pool.getConnection();
+      conn = await pool.getConnection();
       await conn.ping();
       logger.db.info('Conexión establecida exitosamente con MySQL (db_identity).');
-      conn.release();
 
-      const canvasConn = await canvasPool.getConnection();
+      canvasConn = await canvasPool.getConnection();
       await canvasConn.ping();
       logger.db.info('Conexión establecida exitosamente con MySQL (db_canvas).');
-      canvasConn.release();
       return;
     } catch (err) {
       logger.db.warn(`Esperando a MySQL en ${process.env.DB_HOST || 'mysql'}:3306 (intento ${i}/${retries})...`);
@@ -96,6 +96,13 @@ export async function checkDbConnection(retries = 15, delayMs = 2000): Promise<v
         throw err;
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));
+    } finally {
+      if (conn) {
+        conn.release();
+      }
+      if (canvasConn) {
+        canvasConn.release();
+      }
     }
   }
 }

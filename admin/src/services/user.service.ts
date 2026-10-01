@@ -76,46 +76,9 @@ export interface ListUsersResult {
   }>;
 }
 
-let isSanctionsTableEnsured = false;
-let isUserUuidEnsured = false;
+export async function ensureUserUuidColumn(): Promise<void> {}
 
-export async function ensureUserUuidColumn(): Promise<void> {
-  if (isUserUuidEnsured) return;
-  try {
-    const [cols] = await pool.query<RowDataPacket[]>("SHOW COLUMNS FROM users LIKE 'uuid'");
-    if (cols.length === 0) {
-      await pool.query('ALTER TABLE users ADD COLUMN uuid VARCHAR(36) NULL UNIQUE AFTER id');
-      await pool.query("UPDATE users SET uuid = UUID() WHERE uuid IS NULL OR uuid = ''");
-      logger.db.info('Columna uuid añadida a users y backfill completado desde Admin.');
-    }
-    isUserUuidEnsured = true;
-  } catch (error) {
-    logger.db.error('Error al verificar columna uuid en users', error);
-  }
-}
-
-export async function ensureSanctionsTable(): Promise<void> {
-  if (isSanctionsTableEnsured) return;
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS user_sanctions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        admin_id INT NOT NULL,
-        type ENUM('warning', 'suspension', 'ban') NOT NULL,
-        reason TEXT NOT NULL,
-        duration_days INT NULL,
-        expires_at DATETIME NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id),
-        INDEX idx_admin_id (admin_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    isSanctionsTableEnsured = true;
-  } catch (error) {
-    logger.db.error('Error al inicializar tabla user_sanctions', error);
-  }
-}
+export async function ensureSanctionsTable(): Promise<void> {}
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   await ensureUserUuidColumn();
