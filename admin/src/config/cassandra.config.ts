@@ -45,3 +45,15 @@ export async function checkCassandraConnection(retries = 10, delayMs = 2000): Pr
 export function isCassandraReady(): boolean {
   return isConnected;
 }
+
+export async function closeCassandraConnection(): Promise<void> {
+  try {
+    if (isConnected) {
+      await cassandraClient.shutdown();
+      isConnected = false;
+      logger.db.info('Conexión con Apache Cassandra de Admin cerrada correctamente.');
+    }
+  } catch (err) {
+    logger.db.error('Error al cerrar conexión con Cassandra desde Admin', err);
+  }
+}

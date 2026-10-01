@@ -37,3 +37,13 @@ export async function checkDbConnection(): Promise<void> {
     throw error;
   }
 }
+
+export async function closeDbPools(): Promise<void> {
+  try {
+    await pool.end();
+    await canvasPool.end();
+    logger.db.info('Pools de conexiones MySQL de Admin cerrados correctamente.');
+  } catch (error) {
+    logger.db.error('Error al cerrar pools de MySQL desde Admin', error);
+  }
+}

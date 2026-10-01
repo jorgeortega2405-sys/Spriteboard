@@ -4,10 +4,10 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import net from 'net';
 import path from 'path';
-import { checkCassandraConnection } from './config/cassandra.config.js';
-import { checkDbConnection } from './config/database.config.js';
+import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
+import { checkDbConnection, closeDbPools } from './config/database.config.js';
 import { config } from './config/env.config.js';
-import { checkRedisConnection } from './config/redis.config.js';
+import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
 import apiRouter from './routes/api.routes.js';
 import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './services/auth.service.js';
@@ -209,9 +209,33 @@ async function startServer() {
     });
 
     const handleShutdown = async (signal: string) => {
-      logger.app.info(`Señal ${signal} recibida en Admin. Cerrando servidor...`);
-      server.close();
-      process.exit(0);
+      logger.app.info(`Señal ${signal} recibida en Admin. Iniciando apagado ordenado...`);
+
+      const forceTimeout = setTimeout(() => {
+        logger.app.error('El apagado de Admin excedió el tiempo límite de seguridad (10s). Forzando cierre.');
+        process.exit(1);
+      }, 10000);
+      forceTimeout.unref();
+
+      try {
+        await new Promise<void>((resolve) => {
+          server.close((err) => {
+            if (err) logger.app.warn('Advertencia al cerrar servidor Admin:', err);
+            resolve();
+          });
+        });
+
+        await closeCassandraConnection();
+        await closeRedisConnection();
+        await closeDbPools();
+
+        clearTimeout(forceTimeout);
+        logger.app.info('Apagado ordenado de Admin completado.');
+        process.exit(0);
+      } catch (err) {
+        logger.app.error('Error durante el apagado ordenado de Admin:', err);
+        process.exit(1);
+      }
     };
 
     process.on('SIGTERM', () => void handleShutdown('SIGTERM'));

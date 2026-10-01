@@ -40,4 +40,15 @@ export async function checkRedisConnection(retries = 10, delayMs = 1500): Promis
   }
 }
 
+export async function closeRedisConnection(): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connecting') {
+      await redis.quit();
+      logger.db.info('Conexión con Redis de Admin cerrada correctamente.');
+    }
+  } catch (err) {
+    logger.db.error('Error al cerrar conexión con Redis desde Admin', err);
+  }
+}
+
 export default redis;

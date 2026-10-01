@@ -1,8 +1,8 @@
-import { checkCassandraConnection } from './config/cassandra.config.js';
-import { checkDbConnection } from './config/database.config.js';
+import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
+import { checkDbConnection, closeDbPools } from './config/database.config.js';
 import { config } from './config/env.config.js';
-import { checkRedisConnection } from './config/redis.config.js';
-import { getHealth } from './controllers/config.controller.js';
+import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
+import { getHealth, getLiveness, getMetrics, getReadiness } from './controllers/config.controller.js';
 import { compressionMiddleware } from './middlewares/compression.middleware.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import apiRouter from './routes/api.routes.js';
@@ -77,6 +77,9 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 app.use(telemetryMiddleware);
 app.get('/health', getHealth);
+app.get('/health/live', getLiveness);
+app.get('/health/ready', getReadiness);
+app.get('/metrics', getMetrics);
 app.use('/api', apiRouter);
 app.use(uploadRouter);
 app.use(
@@ -266,10 +269,34 @@ async function startServer() {
     });
 
     const handleShutdown = async (signal: string) => {
-      logger.app.info(`Señal ${signal} recibida. Vaciando buffers de telemetría y cerrando...`);
-      server.close();
-      await telemetryService.flush();
-      process.exit(0);
+      logger.app.info(`Señal ${signal} recibida. Iniciando apagado ordenado (graceful shutdown)...`);
+
+      const forceTimeout = setTimeout(() => {
+        logger.app.error('El apagado ordenado excedió los 10 segundos de seguridad. Forzando cierre.');
+        process.exit(1);
+      }, 10000);
+      forceTimeout.unref();
+
+      try {
+        await new Promise<void>((resolve) => {
+          server.close((err) => {
+            if (err) logger.app.warn('Advertencia al cerrar servidor HTTP:', err);
+            resolve();
+          });
+        });
+
+        await telemetryService.flush();
+        await closeCassandraConnection();
+        await closeRedisConnection();
+        await closeDbPools();
+
+        clearTimeout(forceTimeout);
+        logger.app.info('Apagado ordenado finalizado exitosamente.');
+        process.exit(0);
+      } catch (err) {
+        logger.app.error('Error durante el apagado ordenado:', err);
+        process.exit(1);
+      }
     };
 
     process.on('SIGTERM', () => void handleShutdown('SIGTERM'));

@@ -1,0 +1,67 @@
+name: Spriteboard CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  typecheck-and-lint:
+    name: TypeScript Strict Typecheck & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootsecret
+          MYSQL_DATABASE: db_identity
+          MYSQL_USER: sprite_user
+          MYSQL_PASSWORD: sprite_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Main Dependencies
+        run: npm ci || npm install
+
+      - name: Typecheck Backend & Client SPA
+        run: npm run typecheck
+
+      - name: Install Admin Dependencies
+        run: |
+          cd admin
+          npm ci || npm install
+
+      - name: Typecheck Admin Application
+        run: |
+          cd admin
+          npm run typecheck
+
+      - name: Database Schema Integrity Check
+        run: |
+          python3 -c "
+          import re
+          with open('database/db_identity.sql') as f: content = f.read()
+          assert 'CREATE TABLE IF NOT EXISTS user_sanctions' in content, 'Missing user_sanctions'
+          assert 'CREATE TABLE IF NOT EXISTS backups' in content, 'Missing backups'
+          assert 'CREATE TABLE IF NOT EXISTS backup_schedules' in content, 'Missing backup_schedules'
+          print('Database schema check PASSED.')
+          "

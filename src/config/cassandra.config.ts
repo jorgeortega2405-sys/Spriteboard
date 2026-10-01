@@ -76,4 +76,16 @@ export function isCassandraReady(): boolean {
   return isConnected;
 }
 
+export async function closeCassandraConnection(): Promise<void> {
+  try {
+    if (isConnected) {
+      await cassandraClient.shutdown();
+      isConnected = false;
+      logger.db.info('Conexión con Apache Cassandra cerrada correctamente.');
+    }
+  } catch (err) {
+    logger.db.error('Error al cerrar conexión con Apache Cassandra', err);
+  }
+}
+
 export default cassandraClient;

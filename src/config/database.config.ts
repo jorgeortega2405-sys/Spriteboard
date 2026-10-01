@@ -107,4 +107,14 @@ export async function checkDbConnection(retries = 15, delayMs = 2000): Promise<v
   }
 }
 
+export async function closeDbPools(): Promise<void> {
+  try {
+    await pool.end();
+    await canvasPool.end();
+    logger.db.info('Pools de conexiones MySQL cerrados correctamente.');
+  } catch (err) {
+    logger.db.error('Error al cerrar pools de conexiones MySQL', err);
+  }
+}
+
 export default pool;
