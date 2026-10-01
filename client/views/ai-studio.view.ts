@@ -1,4 +1,6 @@
 import { updateDynamicDrawer, updateSidebarActiveState } from '../components/layout.component.js';
+import { openUpgradeModal } from '../components/upgrade-modal.component.js';
+import { getTierLimits, getUserTier } from '../config/plans.config.js';
 import { convertDiagramToBoardElements } from '../engine-2d/elements.manager.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { createCanvasRecord } from '../services/canvas-creator.service.js';
@@ -60,10 +62,12 @@ const AGENT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3
 
 export class AiStudioController implements ViewController {
   private abortController: AbortController = new AbortController();
+  private backdrop: HTMLElement | null = null;
   private btnClosePreview: HTMLElement | null = null;
   private btnHeaderOpenCanvas: HTMLButtonElement | null = null;
   private btnOpenInCanvas: HTMLElement | null = null;
   private btnSend: HTMLButtonElement | null = null;
+  private chatInputBox: HTMLElement | null = null;
   private container: HTMLElement | null = null;
   private currentArtifact: StudioArtifact | null = null;
   private currentCanvasUuid: string | null = null;
@@ -87,10 +91,12 @@ export class AiStudioController implements ViewController {
       this.sessionUuid = initialSessionUuid;
     }
 
+    this.backdrop = this.container.querySelector<HTMLElement>('[data-ref="ai-gradient-backdrop"]');
     this.workspaceContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-workspace"]');
     this.heroContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-hero"]');
     this.heroUsername = this.container.querySelector<HTMLElement>('[data-ref="hero-username"]');
     this.messagesContainer = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-messages"]');
+    this.chatInputBox = this.container.querySelector<HTMLElement>('[data-ref="chat-input-box"]');
     this.textarea = this.container.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
     this.btnSend = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
     this.previewPanel = this.container.querySelector<HTMLElement>('[data-ref="ai-studio-preview-panel"]');
@@ -100,6 +106,7 @@ export class AiStudioController implements ViewController {
     this.btnHeaderOpenCanvas = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-header-open-canvas"]');
 
     this.setupGreeting();
+    this.updateBackdropVisibility();
     this.bindEvents();
     renderIcons(this.container);
 
@@ -114,6 +121,50 @@ export class AiStudioController implements ViewController {
         window.history.replaceState({}, '', '/ai');
         void this.executePrompt(promptParam);
       }
+    }
+  }
+
+  private updateBackdropVisibility(): void {
+    if (this.backdrop) {
+      this.backdrop.style.display = this.history.length > 0 ? 'none' : 'block';
+    }
+  }
+
+  private autoResizeTextarea(): void {
+    if (!this.textarea) return;
+    const text = this.textarea.value;
+
+    if (!text || text.trim().length === 0) {
+      this.chatInputBox?.classList.remove('is-multiline');
+      this.textarea.style.height = '';
+      return;
+    }
+
+    if (text.includes('\n')) {
+      this.chatInputBox?.classList.add('is-multiline');
+      this.textarea.style.height = 'auto';
+      const nextH = Math.min(Math.max(this.textarea.scrollHeight, 24), 120);
+      this.textarea.style.height = `${nextH}px`;
+      if (this.messagesContainer) this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+      return;
+    }
+
+    const wasMultiline = this.chatInputBox?.classList.contains('is-multiline');
+    if (wasMultiline) {
+      this.chatInputBox?.classList.remove('is-multiline');
+    }
+    this.textarea.style.height = 'auto';
+    const singleRowScrollH = this.textarea.scrollHeight;
+
+    if (singleRowScrollH > 24) {
+      this.chatInputBox?.classList.add('is-multiline');
+      this.textarea.style.height = 'auto';
+      const nextH = Math.min(Math.max(this.textarea.scrollHeight, 24), 120);
+      this.textarea.style.height = `${nextH}px`;
+      if (this.messagesContainer) this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    } else {
+      this.chatInputBox?.classList.remove('is-multiline');
+      this.textarea.style.height = '';
     }
   }
 
@@ -152,21 +203,8 @@ export class AiStudioController implements ViewController {
     }, { signal });
 
     this.textarea?.addEventListener('input', () => {
-      if (this.textarea) {
-        this.textarea.style.height = 'auto';
-        this.textarea.style.height = `${Math.min(this.textarea.scrollHeight, 160)}px`;
-      }
+      this.autoResizeTextarea();
     }, { signal });
-
-    const starterCards = this.container?.querySelectorAll<HTMLElement>('[data-ref^="starter-"]');
-    starterCards?.forEach((card) => {
-      card.addEventListener('click', () => {
-        const prompt = card.getAttribute('data-prompt');
-        if (prompt && !this.isLoading) {
-          void this.executePrompt(prompt);
-        }
-      }, { signal });
-    });
 
     this.btnOpenInCanvas?.addEventListener('click', () => {
       this.handleOpenInCanvas();
@@ -256,6 +294,7 @@ export class AiStudioController implements ViewController {
     }
 
     this.updateHeaderCanvasButton();
+    this.updateBackdropVisibility();
 
     if (this.currentCanvasUuid && this.previewPanel && this.workspaceContainer && this.previewBody) {
       this.workspaceContainer.classList.add('has-preview');
@@ -288,7 +327,7 @@ export class AiStudioController implements ViewController {
     if (!text) return;
 
     this.textarea.value = '';
-    this.textarea.style.height = 'auto';
+    this.autoResizeTextarea();
     await this.executePrompt(text);
   }
 
@@ -299,11 +338,22 @@ export class AiStudioController implements ViewController {
     proposalData?: StudioOutlineProposal
   ): Promise<void> {
     if (this.isLoading) return;
+
+    const isExistingSession = this.sessions.some((s) => s.uuid === this.sessionUuid);
+    const limits = getTierLimits(currentUser?.subscription_tier);
+    if (!isExistingSession && this.sessions.length >= limits.maxAiStudioSessions) {
+      showToast(`Has alcanzado el límite de ${limits.maxAiStudioSessions} conversaciones de tu plan.`, 'warning');
+      const userTier = getUserTier(currentUser);
+      openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+      return;
+    }
+
     this.isLoading = true;
 
     if (this.btnSend) this.btnSend.disabled = true;
     if (this.heroContainer) this.heroContainer.style.display = 'none';
     if (this.messagesContainer) this.messagesContainer.style.display = 'flex';
+    this.updateBackdropVisibility();
 
     if (window.location.pathname !== `/ai/${this.sessionUuid}`) {
       window.history.pushState({}, '', `/ai/${this.sessionUuid}`);
@@ -384,12 +434,21 @@ export class AiStudioController implements ViewController {
     const sessionTitle = this.history[0]?.text ? this.history[0].text.slice(0, 45) : 'Conversación';
 
     try {
-      await postApi('/api/ai/studio-sessions', {
+      const response = await postApi('/api/ai/studio-sessions', {
         canvasUuid: this.currentCanvasUuid,
         messages: this.history,
         title: sessionTitle,
         uuid: this.sessionUuid,
       });
+      if (response.status === 403) {
+        const body = await response.json().catch(() => ({}));
+        if (body?.limitReached) {
+          const limits = getTierLimits(currentUser?.subscription_tier);
+          showToast(body.error || `Has alcanzado el límite de ${limits.maxAiStudioSessions} conversaciones de tu plan.`, 'warning');
+          const userTier = getUserTier(currentUser);
+          openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+        }
+      }
       void this.loadSessions();
       void updateDynamicDrawer();
     } catch {}
@@ -1297,9 +1356,10 @@ export class AiStudioController implements ViewController {
     }
     if (this.textarea) {
       this.textarea.value = '';
-      this.textarea.style.height = 'auto';
+      this.autoResizeTextarea();
       this.textarea.focus();
     }
+    this.updateBackdropVisibility();
     void updateDynamicDrawer();
   }
 

@@ -886,12 +886,12 @@ export class DocController implements ViewController {
     const btnDocAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-magic-ai"]');
     if (this.aiWrapperEl && btnDocAi) {
       this.aiDropdownController = setupDocAiDropdown({
+        canvasTitle: this.canvasTitle || this.currentProject?.name || 'Documento',
+        canvasType: 'doc',
+        canvasUuid: this.canvasUuid,
         getContextText: () => {
           const sel = window.getSelection();
           return sel ? sel.toString().trim() : null;
-        },
-        onSuccess: ({ html }) => {
-          this.insertAiGeneratedHtml(html);
         },
         signal,
         trigger: btnDocAi,

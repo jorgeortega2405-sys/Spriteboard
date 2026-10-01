@@ -1,12 +1,8 @@
-import { API_ROUTES } from '../config/api-routes.js';
-import { escapeHtml, postApi } from '../services/api.service.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
+import { getTierLimits, getUserTier } from '../config/plans.config.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
-import { DiagramSubtype } from '../types/mindmap.types.js';
-import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
-import { BoardAiType } from '../views/board/board-ai-modal.component.js';
-import { BackgroundType, BoardElement } from '../views/board/board.types.js';
-import { DocAiAction, DocAiTone } from '../views/doc/doc-ai-modal.component.js';
 
 export interface CanvasAiDropdownController {
   close: () => void;
@@ -16,1551 +12,504 @@ export interface CanvasAiDropdownController {
   update: () => void;
 }
 
-export type PresentationAiTone = 'creative' | 'educational' | 'minimal' | 'pitch' | 'professional';
-
-export interface PresentationAiDropdownOptions {
-  onSuccess: (result: {
-    mode: 'append' | 'replace';
-    slides: Array<{
-      background?: { color: string; dotColor?: string; type: BackgroundType };
-      elements: BoardElement[];
-      name: string;
-    }>;
-    title: string;
-  }) => void;
+export interface CanvasAiChatDropdownOptions {
+  canvasTitle?: string;
+  canvasType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
+  canvasUuid?: string;
+  getContextText?: () => string | null;
+  onSuccess?: (result: any) => void;
   signal?: AbortSignal;
   slideHeight?: number;
   slideWidth?: number;
   trigger: HTMLElement;
-  wrapper: HTMLElement;
+  wrapper?: HTMLElement;
 }
 
-export interface BoardAiDropdownOptions {
-  onSuccess: (result: {
-    boardType: BoardAiType;
-    elements: BoardElement[];
-    title: string;
-  }) => void;
-  signal?: AbortSignal;
-  trigger: HTMLElement;
-  wrapper: HTMLElement;
-}
+export type BoardAiDropdownOptions = CanvasAiChatDropdownOptions;
+export type DocAiDropdownOptions = CanvasAiChatDropdownOptions;
+export type PresentationAiDropdownOptions = CanvasAiChatDropdownOptions;
+export type MindMapAiDropdownOptions = CanvasAiChatDropdownOptions;
 
+const AGENT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="sb-canvas-bright-ai" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="sb-canvas-subtle-ai" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#CBD5E1"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#161619"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" stroke="rgba(255,255,255,0.15)"/>
+  <rect x="7" y="7" width="8" height="8" rx="2.5" fill="url(#sb-canvas-bright-ai)"/>
+  <rect x="17" y="7" width="8" height="8" rx="2.5" fill="url(#sb-canvas-subtle-ai)"/>
+  <rect x="7" y="17" width="8" height="8" rx="2.5" fill="url(#sb-canvas-subtle-ai)"/>
+  <rect x="17" y="17" width="8" height="8" rx="2.5" fill="url(#sb-canvas-bright-ai)"/>
+</svg>`;
 
-export interface DocAiDropdownOptions {
-  getContextText?: () => string | null;
-  onSuccess: (result: {
-    action: DocAiAction;
-    html: string;
-    text: string;
-  }) => void;
-  signal?: AbortSignal;
-  trigger: HTMLElement;
-  wrapper: HTMLElement;
-}
+export function setupCanvasAiChatDropdown(options: CanvasAiChatDropdownOptions): CanvasAiDropdownController {
+  const { canvasTitle, canvasType = 'board', canvasUuid, signal, trigger } = options;
 
-export interface MindMapAiDropdownOptions {
-  getContextNode?: () => { id: string | null; text: string | null };
-  getDiagramType?: () => DiagramSubtype;
-  onSuccess: (result: {
-    mode: 'checklist' | 'expand' | 'full';
-    nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>;
-    rootText: string;
-    targetParentId?: string | null;
-    title: string;
-  }) => void;
-  signal?: AbortSignal;
-  trigger: HTMLElement;
-  wrapper: HTMLElement;
-}
+  let sidebarElement: HTMLElement | null = null;
+  let isOpen = false;
+  let history: Array<{ role: 'model' | 'user'; text: string }> = [];
+  let currentSessionUuid: string = crypto.randomUUID();
+  let isLoading = false;
+  let hasLoadedSession = false;
 
-function setIconUse(el: HTMLElement | null, iconName: string): void {
-  if (!el) return;
-  const use = el.querySelector('use');
-  if (use) {
-    use.setAttribute('href', `/icons.svg#${iconName}`);
-    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/icons.svg#${iconName}`);
-  } else {
-    el.textContent = iconName;
-  }
-}
+  const createSidebarElement = (): HTMLElement => {
+    const el = document.createElement('div');
+    el.className = 'chat-sidebar canvas-ai-sidebar';
+    el.setAttribute('data-ref', 'canvas-ai-sidebar');
+    el.innerHTML = `
+      <div class="chat-panel is-empty" data-ref="canvas-ai-panel">
+        <div class="chat-gradient-backdrop" data-ref="chat-gradient-backdrop"></div>
 
-const BOARD_TYPE_MAP: Record<BoardAiType, { desc: string; icon: string; placeholder: string; text: string }> = {
-  brainstorm: {
-    desc: 'Lluvia de ideas con notas adhesivas organizadas por temas y colores.',
-    icon: 'lightbulb',
-    placeholder: '¿Qué tema o proyecto deseas explorar en lluvia de ideas?',
-    text: 'Lluvia de Ideas',
-  },
-  conceptmap: {
-    desc: 'Estructura conceptos jerárquicos de arriba a abajo con palabras y frases de enlace.',
-    icon: 'hub',
-    placeholder: '¿Sobre qué conceptos o tema deseas estructurar tu mapa conceptual?',
-    text: 'Mapa Conceptual',
-  },
-  custom: {
-    desc: 'Estructura libre personalizada según tus especificaciones.',
-    icon: 'dashboard_customize',
-    placeholder: 'Describe el esquema o contenido visual que deseas generar...',
-    text: 'Personalizado',
-  },
-  decisiontree: {
-    desc: 'Bifurca alternativas, probabilidades de éxito y nodos de resultado final.',
-    icon: 'call_split',
-    placeholder: '¿Qué decisión estratégica o dilema deseas evaluar?',
-    text: 'Árbol de Decisiones',
-  },
-  fishbone: {
-    desc: 'Diagrama Ishikawa de causa-efecto con espina central y categorías 6M.',
-    icon: 'pest_control',
-    placeholder: '¿Cuál es el problema o falla que deseas analizar?',
-    text: 'Diagrama Ishikawa',
-  },
-  flowchart: {
-    desc: 'Diseña procesos paso a paso, decisiones Sí/No y algoritmos conectados.',
-    icon: 'account_tree',
-    placeholder: '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?',
-    text: 'Diagrama de Flujo',
-  },
-  kanban: {
-    desc: 'Columnas de estado ágil (Por Hacer, En Progreso, Completado) con tarjetas.',
-    icon: 'view_kanban',
-    placeholder: '¿Qué proyecto o sprint deseas organizar en tu tablero?',
-    text: 'Tablero Kanban',
-  },
-  matrix: {
-    desc: 'Clasifica ideas en cuadrantes estratégicos 2x2 (FODA o Impacto/Esfuerzo).',
-    icon: 'grid_view',
-    placeholder: '¿Qué empresa, producto o situación deseas analizar en matriz?',
-    text: 'Matriz 2x2 / FODA',
-  },
-  mindmap: {
-    desc: 'Ramas radiales multicolores conectadas alrededor de una idea central.',
-    icon: 'psychology',
-    placeholder: '¿Qué tema o concepto deseas plasmar en tu mapa mental?',
-    text: 'Mapa Mental',
-  },
-  orgchart: {
-    desc: 'Estructura jerárquica corporativa con roles de mando y áreas.',
-    icon: 'lan',
-    placeholder: '¿Qué tipo de organización o empresa deseas estructurar?',
-    text: 'Organigrama',
-  },
-  retro: {
-    desc: 'Retrospectiva ágil en 3 columnas (¿Qué salió bien?, ¿Qué mejorar?, Acciones).',
-    icon: 'cached',
-    placeholder: '¿Sobre qué sprint o proyecto deseas hacer la retrospectiva?',
-    text: 'Retrospectiva',
-  },
-  swot: {
-    desc: 'Matriz FODA estratégica (Fortalezas, Oportunidades, Debilidades, Amenazas).',
-    icon: 'grid_view',
-    placeholder: '¿Qué negocio o producto deseas evaluar en análisis FODA?',
-    text: 'Matriz FODA',
-  },
-  timeline: {
-    desc: 'Hitos cronológicos horizontales, fases temporales y entregables.',
-    icon: 'timeline',
-    placeholder: '¿Qué roadmap o cronograma de proyecto deseas planificar?',
-    text: 'Línea de Tiempo',
-  },
-};
+        <div class="chat-panel__top" data-ref="canvas-ai-top">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-canvas-ai-studio" data-tooltip="Abrir en Spritebot Studio" aria-label="Abrir en Spritebot Studio">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+          </button>
 
-const DOC_ACTION_MAP: Record<DocAiAction, { icon: string; text: string }> = {
-  change_tone: { icon: 'theater_comedy', text: 'Cambiar tono' },
-  continue: { icon: 'fast_forward', text: 'Continuar redacción' },
-  fix_grammar: { icon: 'spellcheck', text: 'Corregir ortografía' },
-  generate: { icon: 'edit_note', text: 'Redactar contenido' },
-  improve: { icon: 'auto_fix_high', text: 'Mejorar redacción' },
-  summarize: { icon: 'summarize', text: 'Resumir texto' },
-  translate: { icon: 'translate', text: 'Traducir texto' },
-};
+          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-canvas-ai-close" data-tooltip="Cerrar chat" aria-label="Cerrar chat">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
 
-const DOC_TONE_MAP: Record<DocAiTone, { icon: string; text: string }> = {
-  casual: { icon: 'chat', text: 'Casual' },
-  concise: { icon: 'short_text', text: 'Conciso' },
-  creative: { icon: 'palette', text: 'Creativo' },
-  formal: { icon: 'verified', text: 'Formal' },
-  inspiring: { icon: 'emoji_objects', text: 'Inspirador' },
-  professional: { icon: 'business_center', text: 'Profesional' },
-};
-
-const DIAGRAM_METADATA: Record<string, { desc: string; placeholder: string; title: string }> = {
-  conceptmap: {
-    desc: 'Describe el tema y la IA estructurará los conceptos jerárquicos con sus palabras y frases de enlace.',
-    placeholder: '¿Sobre qué tema o conceptos deseas estructurar tu mapa?',
-    title: 'Generador de Mapas Conceptuales con IA',
-  },
-  decisiontree: {
-    desc: 'Describe el escenario de decisión y la IA bifurcará las alternativas, probabilidades y resultados.',
-    placeholder: '¿Qué decisión estratégica o dilema de opciones deseas evaluar?',
-    title: 'Generador de Árboles de Decisión con IA',
-  },
-  fishbone: {
-    desc: 'Describe el problema y la IA categorizará las posibles causas raíz (Método, Máquina, Personal, etc.).',
-    placeholder: '¿Cuál es el problema o falla que deseas analizar?',
-    title: 'Generador de Diagramas Ishikawa con IA',
-  },
-  flowchart: {
-    desc: 'Describe el proceso o algoritmo y la IA estructurará las decisiones lógicas y pasos de acción.',
-    placeholder: '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?',
-    title: 'Generador de Flujogramas con IA',
-  },
-  kanban: {
-    desc: 'Describe tu proyecto o sprint y la IA estructurará las columnas de flujo de trabajo y tarjetas de tareas.',
-    placeholder: '¿Qué proyecto o sprint deseas organizar en tu tablero?',
-    title: 'Generador de Tableros Kanban con IA',
-  },
-  matrix: {
-    desc: 'Describe tu negocio o dilema y la IA clasificará las ideas en cuadrantes estratégicos.',
-    placeholder: '¿Qué empresa, producto o situación deseas analizar en matriz?',
-    title: 'Generador de Matrices Estratégicas con IA',
-  },
-  mindmap: {
-    desc: 'Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores y formas.',
-    placeholder: '¿Qué quieres plasmar en tu mapa mental?',
-    title: 'Generador de Mapas con IA',
-  },
-  orgchart: {
-    desc: 'Describe la estructura de tu empresa y la IA definirá las direcciones, roles y áreas.',
-    placeholder: '¿Qué tipo de organización o empresa deseas estructurar?',
-    title: 'Generador de Organigramas con IA',
-  },
-  timeline: {
-    desc: 'Describe tu proyecto y la IA creará los hitos cronológicos, fases temporales y entregables.',
-    placeholder: '¿Qué roadmap o cronograma de proyecto deseas planificar?',
-    title: 'Generador de Líneas de Tiempo con IA',
-  },
-};
-
-export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiDropdownController {
-  const { onSuccess, signal, trigger, wrapper } = options;
-  let selectedType: BoardAiType = 'brainstorm';
-
-  let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-board-ai"]');
-  let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-board-ai"]');
-
-  if (!backdrop || !menu) {
-    const markup = `
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-board-ai">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-board-ai">
-          <div class="menu-panel__drag-zone" data-ref="board-ai-drag-zone" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
-          </div>
-          <div class="design-share-stage" data-ref="board-ai-stage-main">
-            <div class="design-share-menu__header">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="component-icon">auto_awesome</span>
-                <h2 class="design-share-menu__title">Generador de Pizarrón con IA</h2>
-              </div>
-            </div>
-            <p class="settings-item__desc" data-ref="board-ai-desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
-              Crea diagramas de flujo, mapas mentales, organigramas, tableros Kanban, matrices FODA y líneas de tiempo conectados visualmente con IA.
-            </p>
-            <div class="design-share-menu__content">
-              <div class="design-share-section" data-ref="board-ai-section-type">
-                <span class="design-share-section__label">Tipo de estructura o diagrama</span>
-                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-board-type">
-                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-board-type" aria-label="Tipo de estructura">
-                    <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="board-type-selected-icon">account_tree</span>
-                      <span class="dropdown-trigger__text" data-ref="board-type-selected-text">Diagrama de Flujo</span>
-                    </div>
-                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                  </button>
-                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-board-type">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-board-type" style="max-height: 280px; overflow-y: auto;">
-                      <div class="menu-panel__drag-zone" data-ref="board-type-drag-zone" aria-hidden="true">
-                        <div class="menu-panel__drag-handle"></div>
-                      </div>
-                      <div class="menu-panel__list" data-ref="list-board-type">
-                        <button type="button" class="menu-item is-active" data-ref="btn-type-flowchart" data-type="flowchart">
-                          <span class="component-icon menu-item__icon">account_tree</span>
-                          <span class="menu-item__text">Diagrama de Flujo</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-mindmap" data-type="mindmap">
-                          <span class="component-icon menu-item__icon">psychology</span>
-                          <span class="menu-item__text">Mapa Mental</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-conceptmap" data-type="conceptmap">
-                          <span class="component-icon menu-item__icon">hub</span>
-                          <span class="menu-item__text">Mapa Conceptual</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-orgchart" data-type="orgchart">
-                          <span class="component-icon menu-item__icon">lan</span>
-                          <span class="menu-item__text">Organigrama</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-decisiontree" data-type="decisiontree">
-                          <span class="component-icon menu-item__icon">call_split</span>
-                          <span class="menu-item__text">Árbol de Decisiones</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-timeline" data-type="timeline">
-                          <span class="component-icon menu-item__icon">timeline</span>
-                          <span class="menu-item__text">Línea de Tiempo (Roadmap)</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-fishbone" data-type="fishbone">
-                          <span class="component-icon menu-item__icon">pest_control</span>
-                          <span class="menu-item__text">Diagrama Ishikawa</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-swot" data-type="swot">
-                          <span class="component-icon menu-item__icon">grid_view</span>
-                          <span class="menu-item__text">Matriz FODA (2x2)</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-kanban" data-type="kanban">
-                          <span class="component-icon menu-item__icon">view_kanban</span>
-                          <span class="menu-item__text">Tablero Kanban</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-brainstorm" data-type="brainstorm">
-                          <span class="component-icon menu-item__icon">lightbulb</span>
-                          <span class="menu-item__text">Lluvia de Ideas</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-retro" data-type="retro">
-                          <span class="component-icon menu-item__icon">cached</span>
-                          <span class="menu-item__text">Retrospectiva</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-custom" data-type="custom">
-                          <span class="component-icon menu-item__icon">dashboard_customize</span>
-                          <span class="menu-item__text">Personalizado</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="board-ai-section-prompt">
-                <span class="design-share-section__label">Tema o instrucciones</span>
-                <label class="field" data-ref="field-board-ai-prompt" style="display: block;">
-                  <textarea class="field__input" data-ref="input-board-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
-                  <span class="field__label" data-ref="lbl-board-ai-prompt">¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?</span>
-                </label>
-              </div>
-
-              <div class="design-share-section" data-ref="board-ai-section-actions">
-                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-board-ai-submit">
-                  <span class="component-icon">auto_awesome</span>
-                  <span>Generar en Pizarrón</span>
-                </button>
-                <div class="banner banner--danger" data-ref="board-ai-error" style="display: none; margin-top: 8px;"></div>
-              </div>
+        <div class="chat-panel__center layout-scrollable" data-ref="canvas-ai-center">
+          <div class="chat-messages" data-ref="canvas-ai-messages">
+            <div class="chat-empty-state" data-ref="canvas-ai-empty">
+              <h3 class="chat-empty-state__title">Diseña y consulta con Spritebot en este lienzo</h3>
+              <p class="chat-empty-state__desc">Respuestas rápidas y sugerencias con IA</p>
             </div>
           </div>
         </div>
+
+        <div class="chat-panel__bottom" data-ref="canvas-ai-bottom">
+          <div class="chat-pill-input" data-ref="canvas-ai-input-box">
+            <textarea class="chat-pill-input__field" data-ref="canvas-ai-input" placeholder="Escribe un mensaje..." rows="1" maxlength="2500"></textarea>
+            <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-canvas-ai-send" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
+            </button>
+          </div>
+          <p class="chat-disclaimer" data-ref="canvas-ai-disclaimer">Las respuestas son procesadas por Inteligencia Artificial.</p>
+        </div>
       </div>
     `;
-
-    const temp = document.createElement('div');
-    temp.innerHTML = markup.trim();
-    backdrop = temp.firstElementChild as HTMLElement;
-    wrapper.appendChild(backdrop);
-    menu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-board-ai"]');
-    renderIcons(backdrop);
-  }
-
-  const dropdownWrapperType = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-board-type"]');
-  const typeSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="board-type-selected-icon"]');
-  const typeSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="board-type-selected-text"]');
-  const descEl = wrapper.querySelector<HTMLElement>('[data-ref="board-ai-desc"]');
-  const lblPrompt = wrapper.querySelector<HTMLElement>('[data-ref="lbl-board-ai-prompt"]');
-  const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-board-ai-prompt"]');
-  const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai-submit"]');
-  const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="board-ai-error"]');
-
-  let typeDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  if (dropdownWrapperType) {
-    typeDropdownCtrl = setupDropdown(dropdownWrapperType, {});
-  }
-
-  const updateTypeUI = () => {
-    const info = BOARD_TYPE_MAP[selectedType] || BOARD_TYPE_MAP.flowchart;
-    if (typeSelectedIcon) {
-      setIconUse(typeSelectedIcon, info.icon);
-    }
-    if (typeSelectedText) {
-      typeSelectedText.textContent = info.text;
-    }
-    if (descEl) {
-      descEl.textContent = info.desc;
-    }
-    if (lblPrompt) {
-      lblPrompt.textContent = info.placeholder;
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-type]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-type') === selectedType);
-    });
+    renderIcons(el);
+    return el;
   };
 
-  wrapper.querySelectorAll<HTMLElement>('[data-type]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const type = btn.getAttribute('data-type') as BoardAiType;
-      if (type) {
-        selectedType = type;
-        updateTypeUI();
-        typeDropdownCtrl?.close();
+  const getEmptyTitle = (): string => {
+    if (canvasType === 'doc') return 'Redacta y consulta con Spritebot en este documento';
+    if (canvasType === 'presentation') return 'Estructura diapositivas y contenido con Spritebot';
+    return 'Diseña y consulta con Spritebot en este lienzo';
+  };
+
+  const formatAiMessage = (rawText: string): string => {
+    if (!rawText) return '';
+    return escapeHtml(rawText)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n\n/g, '<br/><br/>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  const createAgentBadge = (): HTMLElement => {
+    const badge = document.createElement('div');
+    badge.className = 'chat-agent-badge';
+    const icon = document.createElement('span');
+    icon.className = 'chat-agent-badge__icon';
+    icon.innerHTML = AGENT_AVATAR_SVG;
+    const label = document.createElement('span');
+    label.textContent = 'Spritebot';
+    badge.appendChild(icon);
+    badge.appendChild(label);
+    return badge;
+  };
+
+  const scrollToBottom = () => {
+    if (sidebarElement) {
+      const centerEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-center"]');
+      if (centerEl) {
+        centerEl.scrollTop = centerEl.scrollHeight;
       }
-    });
-  });
+    }
+  };
 
-  const dropdownController = setupDropdown(wrapper, {
-    backdrop,
-    isSelect: false,
-    matchWidth: false,
-    menu,
-    placement: 'bottom-end',
-    trigger,
-  });
+  const autoResize = (textarea: HTMLTextAreaElement, inputBox: HTMLElement | null) => {
+    const text = textarea.value;
+    if (!text || text.trim().length === 0) {
+      inputBox?.classList.remove('is-multiline');
+      textarea.style.height = '';
+      return;
+    }
+    if (text.includes('\n')) {
+      inputBox?.classList.add('is-multiline');
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 24), 120)}px`;
+      scrollToBottom();
+      return;
+    }
+    textarea.style.height = 'auto';
+    if (textarea.scrollHeight > 24) {
+      inputBox?.classList.add('is-multiline');
+      textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 24), 120)}px`;
+    } else {
+      inputBox?.classList.remove('is-multiline');
+      textarea.style.height = '';
+    }
+  };
 
-  btnSubmit?.addEventListener('click', async () => {
-    if (!inputPrompt) return;
-    const promptText = inputPrompt.value.trim();
+  const appendUserMessage = (text: string) => {
+    if (!sidebarElement) return;
+    const messagesEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-messages"]');
+    const panelEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-panel"]');
+    const emptyEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-empty"]');
+    if (!messagesEl) return;
 
-    if (!promptText) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor escribe un tema o descripción para el pizarrón.';
-        errorBanner.style.display = 'block';
-      }
-      inputPrompt.focus();
+    if (emptyEl) emptyEl.style.display = 'none';
+    panelEl?.classList.remove('is-empty');
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'chat-message chat-message--user';
+    msgEl.setAttribute('data-ref', 'canvas-ai-msg-user');
+    msgEl.textContent = text;
+    messagesEl.appendChild(msgEl);
+    scrollToBottom();
+  };
+
+  const appendAssistantMessage = (text: string) => {
+    if (!sidebarElement) return;
+    const messagesEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-messages"]');
+    const panelEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-panel"]');
+    const emptyEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-empty"]');
+    if (!messagesEl) return;
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    panelEl?.classList.remove('is-empty');
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'chat-message chat-message--model';
+    msgEl.setAttribute('data-ref', 'canvas-ai-msg-model');
+    msgEl.appendChild(createAgentBadge());
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-agent-bubble';
+    bubble.innerHTML = formatAiMessage(text);
+    msgEl.appendChild(bubble);
+
+    messagesEl.appendChild(msgEl);
+    scrollToBottom();
+  };
+
+  const appendTypingIndicator = (): HTMLElement | null => {
+    if (!sidebarElement) return null;
+    const messagesEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-messages"]');
+    const panelEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-panel"]');
+    const emptyEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-empty"]');
+    if (!messagesEl) return null;
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    panelEl?.classList.remove('is-empty');
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'chat-message chat-message--model';
+    msgEl.setAttribute('data-ref', 'canvas-ai-msg-typing');
+    msgEl.appendChild(createAgentBadge());
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-agent-bubble';
+    bubble.innerHTML = `
+      <div class="ai-studio-typing">
+        <div class="ai-studio-typing__dot"></div>
+        <div class="ai-studio-typing__dot"></div>
+        <div class="ai-studio-typing__dot"></div>
+      </div>
+    `;
+    msgEl.appendChild(bubble);
+    messagesEl.appendChild(msgEl);
+    scrollToBottom();
+    return msgEl;
+  };
+
+  const renderHistory = () => {
+    if (!sidebarElement) return;
+    const messagesEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-messages"]');
+    const panelEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-panel"]');
+    const emptyEl = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-empty"]');
+    const emptyTitleEl = sidebarElement.querySelector<HTMLElement>('.chat-empty-state__title');
+    if (!messagesEl) return;
+
+    if (emptyTitleEl) {
+      emptyTitleEl.textContent = getEmptyTitle();
+    }
+
+    messagesEl.querySelectorAll('.chat-message').forEach((el) => el.remove());
+
+    if (history.length === 0) {
+      panelEl?.classList.add('is-empty');
+      if (emptyEl) emptyEl.style.display = 'flex';
+    } else {
+      panelEl?.classList.remove('is-empty');
+      if (emptyEl) emptyEl.style.display = 'none';
+      history.forEach((msg) => {
+        if (msg.role === 'user') {
+          appendUserMessage(msg.text);
+        } else {
+          appendAssistantMessage(msg.text);
+        }
+      });
+    }
+  };
+
+  const loadCanvasSession = async () => {
+    if (hasLoadedSession) return;
+    hasLoadedSession = true;
+
+    if (!currentUser) {
+      renderHistory();
       return;
     }
 
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
+    try {
+      const res = await getApi('/api/ai/studio-sessions');
+      if (res.ok) {
+        const body = await res.json();
+        const sessions: Array<{ canvas_uuid: string | null; uuid: string }> = Array.isArray(body?.sessions) ? body.sessions : [];
+        const found = canvasUuid ? sessions.find((s) => s.canvas_uuid === canvasUuid) : null;
+
+        if (found) {
+          const detailRes = await getApi(`/api/ai/studio-sessions/${encodeURIComponent(found.uuid)}`);
+          if (detailRes.ok) {
+            const detailBody = await detailRes.json();
+            if (detailBody?.session) {
+              currentSessionUuid = detailBody.session.uuid;
+              history = Array.isArray(detailBody.session.messages) ? detailBody.session.messages : [];
+              renderHistory();
+              return;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    renderHistory();
+  };
+
+  const handleSendMessage = async () => {
+    if (!sidebarElement || isLoading) return;
+    const textarea = sidebarElement.querySelector<HTMLTextAreaElement>('[data-ref="canvas-ai-input"]');
+    const inputBox = sidebarElement.querySelector<HTMLElement>('[data-ref="canvas-ai-input-box"]');
+    const btnSend = sidebarElement.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-ai-send"]');
+    if (!textarea) return;
+
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    if (!currentUser) {
+      showToast('Inicia sesión para chatear con Spritebot IA.', 'warning');
+      return;
     }
 
-    await withButtonLoading(btnSubmit, 'Generando...', async () => {
+    const limits = getTierLimits(currentUser.subscription_tier);
+    if (history.length === 0) {
       try {
-        const res = await postApi(API_ROUTES.ai.board, {
-          boardType: selectedType,
-          prompt: promptText,
+        const sessionCountRes = await getApi('/api/ai/studio-sessions');
+        if (sessionCountRes.ok) {
+          const data = await sessionCountRes.json();
+          const count = Array.isArray(data?.sessions) ? data.sessions.length : 0;
+          if (count >= limits.maxAiStudioSessions) {
+            showToast(`Has alcanzado el límite de ${limits.maxAiStudioSessions} conversaciones de tu plan.`, 'warning');
+            const userTier = getUserTier(currentUser);
+            openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    isLoading = true;
+    textarea.value = '';
+    autoResize(textarea, inputBox);
+    if (btnSend) btnSend.disabled = true;
+
+    appendUserMessage(text);
+    const typingEl = appendTypingIndicator();
+
+    try {
+      const response = await postApi('/api/ai/studio-chat', {
+        history,
+        prompt: text,
+        targetCanvasType: canvasType,
+      });
+
+      const res = await response.json().catch(() => ({}));
+      typingEl?.remove();
+
+      if (response.ok && res && res.success) {
+        history.push({ role: 'user', text });
+        history.push({ role: 'model', text: res.reply || '' });
+        appendAssistantMessage(res.reply || '');
+
+        const sessionTitle = canvasTitle || history[0]?.text?.slice(0, 45) || 'Conversación de lienzo';
+        await postApi('/api/ai/studio-sessions', {
+          canvasUuid: canvasUuid || null,
+          messages: history,
+          title: sessionTitle,
+          uuid: currentSessionUuid,
         });
+      } else {
+        const errorMsg = res?.error || 'No se pudo generar la respuesta.';
+        appendAssistantMessage(errorMsg);
+        showToast(errorMsg, 'danger');
+      }
+    } catch {
+      typingEl?.remove();
+      const networkError = 'Error de conexión con el servicio de IA.';
+      appendAssistantMessage(networkError);
+      showToast(networkError, 'danger');
+    } finally {
+      isLoading = false;
+      if (btnSend) btnSend.disabled = false;
+      scrollToBottom();
+    }
+  };
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'No se pudieron generar los elementos del pizarrón.');
-        }
+  const bindEvents = (el: HTMLElement) => {
+    const btnClose = el.querySelector<HTMLElement>('[data-ref="btn-canvas-ai-close"]');
+    const btnStudio = el.querySelector<HTMLElement>('[data-ref="btn-canvas-ai-studio"]');
+    const btnSend = el.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-ai-send"]');
+    const textarea = el.querySelector<HTMLTextAreaElement>('[data-ref="canvas-ai-input"]');
+    const inputBox = el.querySelector<HTMLElement>('[data-ref="canvas-ai-input-box"]');
 
-        const data = await res.json();
-        if (!data.board || !Array.isArray(data.board.elements)) {
-          throw new Error('La respuesta de la IA no contiene una lista válida de elementos.');
-        }
+    btnClose?.addEventListener('click', (e) => {
+      e.preventDefault();
+      close();
+    });
 
-        onSuccess({
-          boardType: selectedType,
-          elements: data.board.elements,
-          title: data.board.title || promptText,
-        });
+    btnStudio?.addEventListener('click', (e) => {
+      e.preventDefault();
+      close();
+      window.open(`/ai/${currentSessionUuid}`, '_blank');
+    });
 
-        dropdownController.close();
-        showToast('✨ Pizarrón generado con IA con éxito', 'success');
-      } catch (err: any) {
-        if (errorBanner) {
-          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
-          errorBanner.style.display = 'block';
-        }
+    btnSend?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void handleSendMessage();
+    });
+
+    textarea?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void handleSendMessage();
       }
     });
-  });
 
-  trigger.addEventListener('click', () => {
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
+    textarea?.addEventListener('input', () => {
+      if (textarea) autoResize(textarea, inputBox);
+    });
+  };
+
+  const open = () => {
+    if (isOpen) return;
+    isOpen = true;
+
+    trigger.classList.add('is-active');
+
+    if (!sidebarElement) {
+      sidebarElement = createSidebarElement();
+      bindEvents(sidebarElement);
     }
-    setTimeout(() => inputPrompt?.focus(), 50);
+
+    const host = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content') || document.body;
+    if (sidebarElement.parentNode !== host) {
+      host.appendChild(sidebarElement);
+    }
+
+    sidebarElement.classList.add('is-active');
+    void loadCanvasSession();
+
+    const textarea = sidebarElement.querySelector<HTMLTextAreaElement>('[data-ref="canvas-ai-input"]');
+    setTimeout(() => textarea?.focus(), 80);
+  };
+
+  const close = () => {
+    if (!isOpen) return;
+    isOpen = false;
+
+    trigger.classList.remove('is-active');
+
+    if (sidebarElement) {
+      sidebarElement.classList.remove('is-active');
+      sidebarElement.remove();
+    }
+  };
+
+  const toggle = () => {
+    if (isOpen) {
+      close();
+    } else {
+      open();
+    }
+  };
+
+  const handleDocumentClick = (e: MouseEvent) => {
+    if (!isOpen || !sidebarElement) return;
+    const target = e.target as Node | null;
+    const isInsideSidebar = target && sidebarElement.contains(target);
+    const isInsideTrigger = target && trigger.contains(target);
+    if (!isInsideSidebar && !isInsideTrigger) {
+      close();
+    }
+  };
+
+  const handleDocumentKeydown = (e: KeyboardEvent) => {
+    if (!isOpen) return;
+    if (e.key === 'Escape') {
+      close();
+    }
+  };
+
+  document.addEventListener('click', handleDocumentClick);
+  document.addEventListener('keydown', handleDocumentKeydown);
+
+  trigger.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
   }, { signal });
 
-  return {
-    close: () => dropdownController.close(),
-    destroy: () => {
-      typeDropdownCtrl?.destroy();
-      dropdownController.destroy();
-    },
-    open: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      dropdownController.open();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    toggle: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      dropdownController.toggle();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    update: () => dropdownController.update(),
+  const destroy = () => {
+    close();
+    document.removeEventListener('click', handleDocumentClick);
+    document.removeEventListener('keydown', handleDocumentKeydown);
+    if (sidebarElement) {
+      sidebarElement.remove();
+      sidebarElement = null;
+    }
   };
+
+  return {
+    close,
+    destroy,
+    open,
+    toggle,
+    update: () => {},
+  };
+}
+
+export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiDropdownController {
+  return setupCanvasAiChatDropdown({ ...options, canvasType: 'board' });
 }
 
 export function setupDocAiDropdown(options: DocAiDropdownOptions): CanvasAiDropdownController {
-  const { getContextText, onSuccess, signal, trigger, wrapper } = options;
-
-  let selectedAction: DocAiAction = 'generate';
-  let selectedTone: DocAiTone = 'professional';
-  let activeContextText: string | null = null;
-
-  let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-doc-ai"]');
-  let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-doc-ai"]');
-
-  if (!backdrop || !menu) {
-    const markup = `
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-doc-ai">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-doc-ai">
-          <div class="menu-panel__drag-zone" data-ref="doc-ai-drag-zone" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
-          </div>
-          <div class="design-share-stage" data-ref="doc-ai-stage-main">
-            <div class="design-share-menu__header">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="component-icon">auto_awesome</span>
-                <h2 class="design-share-menu__title">Texto Mágico con IA</h2>
-              </div>
-            </div>
-            <p class="settings-item__desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
-              Genera, expande, resume o perfecciona el contenido de tu documento con asistencia de inteligencia artificial.
-            </p>
-            <div class="design-share-menu__content">
-              <div class="design-share-section is-hidden" data-ref="doc-ai-context-container">
-                <div class="template-category-badge" data-ref="doc-ai-context-badge" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(99, 102, 241, 0.08); color: #6366f1; border-radius: var(--radius-md, 8px); font-size: 12px; font-weight: 500; width: 100%; box-sizing: border-box; border: 1px solid rgba(99, 102, 241, 0.2);">
-                  <span class="component-icon" style="font-size: 16px; flex-shrink: 0;">format_quote</span>
-                  <span data-ref="doc-ai-context-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="doc-ai-section-action">
-                <span class="design-share-section__label">¿Qué deseas hacer?</span>
-                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-doc-action">
-                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-doc-action" aria-label="Acción de IA">
-                    <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="doc-action-selected-icon">edit_note</span>
-                      <span class="dropdown-trigger__text" data-ref="doc-action-selected-text">Redactar contenido</span>
-                    </div>
-                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                  </button>
-                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-doc-action">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-doc-action">
-                      <div class="menu-panel__drag-zone" data-ref="doc-action-drag-zone" aria-hidden="true">
-                        <div class="menu-panel__drag-handle"></div>
-                      </div>
-                      <div class="menu-panel__list" data-ref="list-doc-action">
-                        <button type="button" class="menu-item is-active" data-ref="btn-action-generate" data-action="generate">
-                          <span class="component-icon menu-item__icon">edit_note</span>
-                          <span class="menu-item__text">Redactar contenido</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-continue" data-action="continue">
-                          <span class="component-icon menu-item__icon">fast_forward</span>
-                          <span class="menu-item__text">Continuar redacción</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-summarize" data-action="summarize">
-                          <span class="component-icon menu-item__icon">summarize</span>
-                          <span class="menu-item__text">Resumir texto</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-improve" data-action="improve">
-                          <span class="component-icon menu-item__icon">auto_fix_high</span>
-                          <span class="menu-item__text">Mejorar redacción</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-tone" data-action="change_tone">
-                          <span class="component-icon menu-item__icon">theater_comedy</span>
-                          <span class="menu-item__text">Cambiar tono</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-grammar" data-action="fix_grammar">
-                          <span class="component-icon menu-item__icon">spellcheck</span>
-                          <span class="menu-item__text">Corregir ortografía</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-action-translate" data-action="translate">
-                          <span class="component-icon menu-item__icon">translate</span>
-                          <span class="menu-item__text">Traducir texto</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="doc-ai-tone-group" style="display: none;">
-                <span class="design-share-section__label">Tono deseado</span>
-                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-doc-tone">
-                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-doc-tone" aria-label="Tono deseado">
-                    <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="doc-tone-selected-icon">business_center</span>
-                      <span class="dropdown-trigger__text" data-ref="doc-tone-selected-text">Profesional</span>
-                    </div>
-                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                  </button>
-                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-doc-tone">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-doc-tone">
-                      <div class="menu-panel__drag-zone" data-ref="doc-tone-drag-zone" aria-hidden="true">
-                        <div class="menu-panel__drag-handle"></div>
-                      </div>
-                      <div class="menu-panel__list" data-ref="list-doc-tone">
-                        <button type="button" class="menu-item is-active" data-ref="btn-tone-professional" data-tone="professional">
-                          <span class="component-icon menu-item__icon">business_center</span>
-                          <span class="menu-item__text">Profesional</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-formal" data-tone="formal">
-                          <span class="component-icon menu-item__icon">verified</span>
-                          <span class="menu-item__text">Formal</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-creative" data-tone="creative">
-                          <span class="component-icon menu-item__icon">palette</span>
-                          <span class="menu-item__text">Creativo</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-casual" data-tone="casual">
-                          <span class="component-icon menu-item__icon">chat</span>
-                          <span class="menu-item__text">Casual</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-concise" data-tone="concise">
-                          <span class="component-icon menu-item__icon">short_text</span>
-                          <span class="menu-item__text">Conciso</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-inspiring" data-tone="inspiring">
-                          <span class="component-icon menu-item__icon">emoji_objects</span>
-                          <span class="menu-item__text">Inspirador</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="doc-ai-section-prompt">
-                <span class="design-share-section__label">Instrucciones o descripción</span>
-                <label class="field" data-ref="field-doc-ai-prompt" style="display: block;">
-                  <textarea class="field__input" data-ref="input-doc-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
-                  <span class="field__label" data-ref="lbl-doc-ai-prompt">¿Qué deseas redactar o desarrollar en tu documento?</span>
-                </label>
-              </div>
-
-              <div class="design-share-section" data-ref="doc-ai-section-actions">
-                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-doc-ai-submit">
-                  <span class="component-icon">auto_awesome</span>
-                  <span>Generar e Insertar</span>
-                </button>
-                <div class="banner banner--danger" data-ref="doc-ai-error" style="display: none; margin-top: 8px;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const temp = document.createElement('div');
-    temp.innerHTML = markup.trim();
-    backdrop = temp.firstElementChild as HTMLElement;
-    wrapper.appendChild(backdrop);
-    menu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-doc-ai"]');
-    renderIcons(backdrop);
-  }
-
-  const dropdownWrapperAction = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-doc-action"]');
-  const actionSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="doc-action-selected-icon"]');
-  const actionSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="doc-action-selected-text"]');
-
-  const dropdownWrapperTone = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-doc-tone"]');
-  const toneSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="doc-tone-selected-icon"]');
-  const toneSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="doc-tone-selected-text"]');
-
-  const contextContainer = wrapper.querySelector<HTMLElement>('[data-ref="doc-ai-context-container"]');
-  const contextTextEl = wrapper.querySelector<HTMLElement>('[data-ref="doc-ai-context-text"]');
-  const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-doc-ai-prompt"]');
-  const lblPrompt = wrapper.querySelector<HTMLElement>('[data-ref="lbl-doc-ai-prompt"]');
-  const toneGroup = wrapper.querySelector<HTMLElement>('[data-ref="doc-ai-tone-group"]');
-  const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-ai-submit"]');
-  const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="doc-ai-error"]');
-
-  let actionDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  let toneDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-
-  if (dropdownWrapperAction) {
-    actionDropdownCtrl = setupDropdown(dropdownWrapperAction, {});
-  }
-  if (dropdownWrapperTone) {
-    toneDropdownCtrl = setupDropdown(dropdownWrapperTone, {});
-  }
-
-  const updateActionUI = () => {
-    const actInfo = DOC_ACTION_MAP[selectedAction] || DOC_ACTION_MAP.generate;
-    if (actionSelectedIcon) {
-      setIconUse(actionSelectedIcon, actInfo.icon);
-    }
-    if (actionSelectedText) {
-      actionSelectedText.textContent = actInfo.text;
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-action]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-action') === selectedAction);
-    });
-
-    if (toneGroup) {
-      toneGroup.style.display = selectedAction === 'change_tone' ? 'block' : 'none';
-    }
-
-    if (lblPrompt) {
-      if (selectedAction === 'continue') {
-        lblPrompt.textContent = '¿Hacia qué dirección o temática deseas continuar el texto?';
-      } else if (selectedAction === 'summarize') {
-        lblPrompt.textContent = 'Instrucciones adicionales para el resumen (opcional):';
-      } else if (selectedAction === 'improve') {
-        lblPrompt.textContent = '¿Qué aspectos específicos deseas priorizar al mejorar?';
-      } else if (selectedAction === 'change_tone') {
-        lblPrompt.textContent = 'Instrucciones adicionales de estilo y tono (opcional):';
-      } else if (selectedAction === 'fix_grammar') {
-        lblPrompt.textContent = 'Instrucciones para la corrección ortográfica (opcional):';
-      } else if (selectedAction === 'translate') {
-        lblPrompt.textContent = '¿A qué idioma o estilo deseas traducir el texto? (opcional):';
-      } else {
-        lblPrompt.textContent = '¿Qué deseas redactar o desarrollar en tu documento?';
-      }
-    }
-  };
-
-  const updateToneUI = () => {
-    const toneInfo = DOC_TONE_MAP[selectedTone] || DOC_TONE_MAP.professional;
-    if (toneSelectedIcon) {
-      setIconUse(toneSelectedIcon, toneInfo.icon);
-    }
-    if (toneSelectedText) {
-      toneSelectedText.textContent = toneInfo.text;
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-tone') === selectedTone);
-    });
-  };
-
-  const updateContextUI = () => {
-    const rawContext = getContextText ? getContextText() : null;
-    activeContextText = rawContext && rawContext.trim().length > 0 ? rawContext.trim() : null;
-
-    if (activeContextText && contextContainer && contextTextEl) {
-      const snippet = activeContextText.length > 100 ? `${activeContextText.slice(0, 100)}...` : activeContextText;
-      contextTextEl.innerHTML = `Texto seleccionado: <strong>${escapeHtml(snippet)}</strong>`;
-      contextContainer.classList.remove('is-hidden');
-      if (selectedAction === 'generate') {
-        selectedAction = 'improve';
-      }
-    } else {
-      contextContainer?.classList.add('is-hidden');
-      if (selectedAction === 'improve' && !activeContextText) {
-        selectedAction = 'generate';
-      }
-    }
-
-    updateActionUI();
-    updateToneUI();
-  };
-
-  wrapper.querySelectorAll<HTMLElement>('[data-action]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const act = btn.getAttribute('data-action') as DocAiAction;
-      if (act) {
-        selectedAction = act;
-        updateActionUI();
-        actionDropdownCtrl?.close();
-      }
-    });
-  });
-
-  wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tone = btn.getAttribute('data-tone') as DocAiTone;
-      if (tone) {
-        selectedTone = tone;
-        updateToneUI();
-        toneDropdownCtrl?.close();
-      }
-    });
-  });
-
-  const dropdownController = setupDropdown(wrapper, {
-    backdrop,
-    isSelect: false,
-    matchWidth: false,
-    menu,
-    placement: 'bottom-end',
-    trigger,
-  });
-
-  btnSubmit?.addEventListener('click', async () => {
-    if (!inputPrompt) return;
-    const promptText = inputPrompt.value.trim();
-    const hasContext = Boolean(activeContextText);
-    const isContextOnlyAction = (selectedAction === 'summarize' || selectedAction === 'improve' || selectedAction === 'fix_grammar' || selectedAction === 'change_tone' || selectedAction === 'continue' || selectedAction === 'translate') && hasContext;
-
-    if (!promptText && !isContextOnlyAction) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor escribe un tema o instrucción para generar el texto.';
-        errorBanner.style.display = 'block';
-      }
-      inputPrompt.focus();
-      return;
-    }
-
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-
-    const effectivePrompt = promptText || (hasContext ? activeContextText! : 'Redactar documento');
-
-    await withButtonLoading(btnSubmit, 'Generando...', async () => {
-      try {
-        const res = await postApi(API_ROUTES.ai.doc, {
-          action: selectedAction,
-          contextText: hasContext ? activeContextText : undefined,
-          prompt: effectivePrompt,
-          tone: selectedAction === 'change_tone' ? selectedTone : undefined,
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'No se pudo generar el texto.');
-        }
-
-        const data = await res.json();
-        if (!data.doc || typeof data.doc.html !== 'string') {
-          throw new Error('La respuesta de la IA no contiene un formato HTML válido.');
-        }
-
-        onSuccess({
-          action: selectedAction,
-          html: data.doc.html,
-          text: data.doc.text || '',
-        });
-
-        dropdownController.close();
-        showToast('✨ Contenido generado con IA insertado', 'success');
-      } catch (err: any) {
-        if (errorBanner) {
-          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
-          errorBanner.style.display = 'block';
-        }
-      }
-    });
-  });
-
-  trigger.addEventListener('click', () => {
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-    updateContextUI();
-    setTimeout(() => inputPrompt?.focus(), 50);
-  }, { signal });
-
-  return {
-    close: () => dropdownController.close(),
-    destroy: () => {
-      actionDropdownCtrl?.destroy();
-      toneDropdownCtrl?.destroy();
-      dropdownController.destroy();
-    },
-    open: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      updateContextUI();
-      dropdownController.open();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    toggle: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      updateContextUI();
-      dropdownController.toggle();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    update: () => dropdownController.update(),
-  };
+  return setupCanvasAiChatDropdown({ ...options, canvasType: 'doc' });
 }
-
-export function setupMindMapAiDropdown(options: MindMapAiDropdownOptions): CanvasAiDropdownController {
-  const { getContextNode, getDiagramType, onSuccess, signal, trigger, wrapper } = options;
-
-  let selectedMode: 'checklist' | 'expand' | 'full' = 'full';
-  let currentDiagramType: DiagramSubtype = 'mindmap';
-  let activeContextNode: { id: string | null; text: string | null } | null = null;
-
-  let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-mindmap-ai"]');
-  let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-mindmap-ai"]');
-
-  if (!backdrop || !menu) {
-    const markup = `
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-mindmap-ai">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-mindmap-ai">
-          <div class="menu-panel__drag-zone" data-ref="mindmap-ai-drag-zone" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
-          </div>
-          <div class="design-share-stage" data-ref="mindmap-ai-stage-main">
-            <div class="design-share-menu__header">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="component-icon">auto_awesome</span>
-                <h2 class="design-share-menu__title" data-ref="mindmap-ai-title">Generador de Esquemas con IA</h2>
-              </div>
-            </div>
-            <p class="settings-item__desc" data-ref="mindmap-ai-desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
-              Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores y formas en tu canvas.
-            </p>
-            <div class="design-share-menu__content">
-              <div class="design-share-section is-hidden" data-ref="mindmap-ai-context-container">
-                <div class="template-category-badge" data-ref="mindmap-ai-context-badge" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(99, 102, 241, 0.08); color: #6366f1; border-radius: var(--radius-md, 8px); font-size: 12px; font-weight: 500; width: 100%; box-sizing: border-box; border: 1px solid rgba(99, 102, 241, 0.2);">
-                  <span class="component-icon" style="font-size: 16px; flex-shrink: 0;">format_quote</span>
-                  <span data-ref="mindmap-ai-context-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="mindmap-ai-section-mode">
-                <span class="design-share-section__label">Modalidad de generación</span>
-                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-mindmap-mode">
-                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-mindmap-mode" aria-label="Modalidad de generación">
-                    <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="mindmap-mode-selected-icon">hub</span>
-                      <span class="dropdown-trigger__text" data-ref="mindmap-mode-selected-text">Esquema Completo</span>
-                    </div>
-                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                  </button>
-                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-mindmap-mode">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-mindmap-mode">
-                      <div class="menu-panel__drag-zone" data-ref="mindmap-mode-drag-zone" aria-hidden="true">
-                        <div class="menu-panel__drag-handle"></div>
-                      </div>
-                      <div class="menu-panel__list" data-ref="list-mindmap-mode">
-                        <button type="button" class="menu-item is-active" data-ref="btn-mode-full" data-mode="full">
-                          <span class="component-icon menu-item__icon">hub</span>
-                          <span class="menu-item__text" data-ref="lbl-mode-full">Esquema Completo</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-mode-expand" data-mode="expand">
-                          <span class="component-icon menu-item__icon">account_tree</span>
-                          <span class="menu-item__text" data-ref="lbl-mode-expand">Expandir Idea</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-mode-checklist" data-mode="checklist">
-                          <span class="component-icon menu-item__icon">checklist</span>
-                          <span class="menu-item__text" data-ref="lbl-mode-checklist">Plan de Acción / Tareas</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="mindmap-ai-section-prompt">
-                <span class="design-share-section__label">Tema o instrucciones</span>
-                <label class="field" data-ref="field-mindmap-ai-prompt" style="display: block;">
-                  <textarea class="field__input" data-ref="input-mindmap-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
-                  <span class="field__label" data-ref="lbl-mindmap-ai-prompt">¿Qué quieres plasmar en tu mapa mental?</span>
-                </label>
-              </div>
-
-              <div class="design-share-section" data-ref="mindmap-ai-section-actions">
-                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-mindmap-ai-submit">
-                  <span class="component-icon">auto_awesome</span>
-                  <span>Generar con IA</span>
-                </button>
-                <div class="banner banner--danger" data-ref="mindmap-ai-error" style="display: none; margin-top: 8px;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const temp = document.createElement('div');
-    temp.innerHTML = markup.trim();
-    backdrop = temp.firstElementChild as HTMLElement;
-    wrapper.appendChild(backdrop);
-    menu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-mindmap-ai"]');
-    renderIcons(backdrop);
-  }
-
-  const dropdownWrapperMode = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-mindmap-mode"]');
-  const modeSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-mode-selected-icon"]');
-  const modeSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-mode-selected-text"]');
-
-  const titleEl = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-ai-title"]');
-  const descEl = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-ai-desc"]');
-  const contextContainer = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-ai-context-container"]');
-  const contextTextEl = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-ai-context-text"]');
-  const lblModeFull = wrapper.querySelector<HTMLElement>('[data-ref="lbl-mode-full"]');
-  const lblModeExpand = wrapper.querySelector<HTMLElement>('[data-ref="lbl-mode-expand"]');
-  const lblModeChecklist = wrapper.querySelector<HTMLElement>('[data-ref="lbl-mode-checklist"]');
-  const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-mindmap-ai-prompt"]');
-  const lblPrompt = wrapper.querySelector<HTMLElement>('[data-ref="lbl-mindmap-ai-prompt"]');
-  const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-mindmap-ai-submit"]');
-  const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="mindmap-ai-error"]');
-
-  let modeDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  if (dropdownWrapperMode) {
-    modeDropdownCtrl = setupDropdown(dropdownWrapperMode, {});
-  }
-
-  const updateModeUI = () => {
-    const isKanban = currentDiagramType === 'kanban';
-    const isOrgChart = currentDiagramType === 'orgchart';
-    const isFlowchart = currentDiagramType === 'flowchart';
-
-    const fullText = isKanban ? 'Tablero Completo' : (isOrgChart ? 'Estructura Completa' : (isFlowchart ? 'Flujo Completo' : 'Esquema Completo'));
-    const expandText = isKanban ? 'Añadir a Columna' : (isOrgChart ? 'Desglosar Área' : (isFlowchart ? 'Desglosar Paso' : 'Expandir Idea'));
-    const checklistText = isKanban ? 'Lista de Tareas' : (isOrgChart ? 'Responsabilidades / Tareas' : 'Plan de Acción / Tareas');
-
-    if (lblModeFull) lblModeFull.textContent = fullText;
-    if (lblModeExpand) lblModeExpand.textContent = expandText;
-    if (lblModeChecklist) lblModeChecklist.textContent = checklistText;
-
-    let activeText = fullText;
-    let activeIcon = 'hub';
-    if (selectedMode === 'expand') {
-      activeText = expandText;
-      activeIcon = 'account_tree';
-    } else if (selectedMode === 'checklist') {
-      activeText = checklistText;
-      activeIcon = 'checklist';
-    }
-
-    if (modeSelectedIcon) {
-      setIconUse(modeSelectedIcon, activeIcon);
-    }
-    if (modeSelectedText) {
-      modeSelectedText.textContent = activeText;
-    }
-
-    wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-mode') === selectedMode);
-    });
-  };
-
-  const updateDiagramUI = () => {
-    currentDiagramType = getDiagramType ? getDiagramType() : 'mindmap';
-    activeContextNode = getContextNode ? getContextNode() : null;
-    const hasContext = Boolean(activeContextNode && activeContextNode.id && activeContextNode.text);
-
-    const meta = DIAGRAM_METADATA[currentDiagramType] || DIAGRAM_METADATA.mindmap;
-
-    if (titleEl) titleEl.textContent = meta.title;
-    if (descEl) descEl.textContent = meta.desc;
-    if (lblPrompt) lblPrompt.textContent = meta.placeholder;
-
-    if (hasContext && contextContainer && contextTextEl) {
-      contextTextEl.innerHTML = `Elemento seleccionado: <strong>${escapeHtml(activeContextNode!.text || '')}</strong>`;
-      contextContainer.classList.remove('is-hidden');
-      selectedMode = 'expand';
-    } else {
-      contextContainer?.classList.add('is-hidden');
-      selectedMode = 'full';
-    }
-
-    updateModeUI();
-  };
-
-  wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mode = btn.getAttribute('data-mode') as 'checklist' | 'expand' | 'full';
-      if (mode) {
-        selectedMode = mode;
-        updateModeUI();
-        modeDropdownCtrl?.close();
-      }
-    });
-  });
-
-  const dropdownController = setupDropdown(wrapper, {
-    backdrop,
-    isSelect: false,
-    matchWidth: false,
-    menu,
-    placement: 'bottom-end',
-    trigger,
-  });
-
-  btnSubmit?.addEventListener('click', async () => {
-    if (!inputPrompt) return;
-    const promptText = inputPrompt.value.trim();
-
-    if (!promptText) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor escribe una descripción o tema para generar el esquema.';
-        errorBanner.style.display = 'block';
-      }
-      inputPrompt.focus();
-      return;
-    }
-
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-
-    const hasContext = Boolean(activeContextNode && activeContextNode.id && activeContextNode.text);
-
-    await withButtonLoading(btnSubmit, 'Generando...', async () => {
-      try {
-        const res = await postApi(API_ROUTES.ai.mindmap, {
-          contextNodeText: hasContext ? activeContextNode!.text : undefined,
-          diagramType: currentDiagramType || 'mindmap',
-          mode: selectedMode,
-          prompt: promptText,
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'No se pudo generar el esquema.');
-        }
-
-        const data = await res.json();
-        if (!data.mindmap || !Array.isArray(data.mindmap.nodes)) {
-          throw new Error('La respuesta de la IA no contiene una estructura válida.');
-        }
-
-        onSuccess({
-          mode: selectedMode,
-          nodes: data.mindmap.nodes,
-          rootText: data.mindmap.rootText || promptText,
-          targetParentId: selectedMode === 'expand' ? (activeContextNode?.id || null) : null,
-          title: data.mindmap.title || promptText,
-        });
-
-        dropdownController.close();
-        showToast('✨ Esquema generado con IA con éxito', 'success');
-      } catch (err: any) {
-        if (errorBanner) {
-          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
-          errorBanner.style.display = 'block';
-        }
-      }
-    });
-  });
-
-  trigger.addEventListener('click', () => {
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-    updateDiagramUI();
-    setTimeout(() => inputPrompt?.focus(), 50);
-  }, { signal });
-
-  return {
-    close: () => dropdownController.close(),
-    destroy: () => {
-      modeDropdownCtrl?.destroy();
-      dropdownController.destroy();
-    },
-    open: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      updateDiagramUI();
-      dropdownController.open();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    toggle: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      updateDiagramUI();
-      dropdownController.toggle();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    update: () => dropdownController.update(),
-  };
-}
-
-const PRESENTATION_TONE_MAP: Record<PresentationAiTone, { desc: string; icon: string; text: string }> = {
-  creative: {
-    desc: 'Estilo moderno de alto impacto con acentos cálidos y corales.',
-    icon: 'palette',
-    text: 'Creativo & Innovación',
-  },
-  educational: {
-    desc: 'Presentación didáctica y clara con acentos verdes y esmeralda.',
-    icon: 'school',
-    text: 'Educativo & Taller',
-  },
-  minimal: {
-    desc: 'Diseño minimalista, tipografía limpia y estética monocromática.',
-    icon: 'crop_free',
-    text: 'Minimalista & Elegante',
-  },
-  pitch: {
-    desc: 'Pitch deck de negocios e inversores con acentos índigo y morado.',
-    icon: 'rocket_launch',
-    text: 'Pitch Deck & Negocios',
-  },
-  professional: {
-    desc: 'Diseño corporativo y ejecutivo con contrastes azul y slate.',
-    icon: 'business_center',
-    text: 'Profesional Ejecutivo',
-  },
-};
 
 export function setupPresentationAiDropdown(options: PresentationAiDropdownOptions): CanvasAiDropdownController {
-  const { onSuccess, signal, slideHeight = 720, slideWidth = 1280, trigger, wrapper } = options;
-  let selectedTone: PresentationAiTone = 'professional';
-  let selectedSlideCount = 5;
-  let selectedMode: 'append' | 'replace' = 'replace';
-
-  let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-presentation-ai"]');
-  let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-presentation-ai"]');
-
-  if (!backdrop || !menu) {
-    const markup = `
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-ai">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-presentation-ai">
-          <div class="menu-panel__drag-zone" data-ref="presentation-ai-drag-zone" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
-          </div>
-          <div class="design-share-stage" data-ref="presentation-ai-stage-main">
-            <div class="design-share-menu__header">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="component-icon">auto_awesome</span>
-                <h2 class="design-share-menu__title">Generador de Presentación con IA</h2>
-              </div>
-            </div>
-            <p class="settings-item__desc" data-ref="presentation-ai-desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
-              Crea una secuencia completa de diapositivas con portada, desarrollo estructurado, métricas y conclusiones con IA.
-            </p>
-            <div class="design-share-menu__content">
-              <div class="design-share-section" data-ref="presentation-ai-section-tone">
-                <span class="design-share-section__label">Estilo y Tono</span>
-                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-tone">
-                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-tone" aria-label="Estilo y Tono">
-                    <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="presentation-tone-selected-icon">business_center</span>
-                      <span class="dropdown-trigger__text" data-ref="presentation-tone-selected-text">Profesional Ejecutivo</span>
-                    </div>
-                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                  </button>
-                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-tone">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-tone" style="max-height: 260px; overflow-y: auto;">
-                      <div class="menu-panel__drag-zone" data-ref="presentation-tone-drag-zone" aria-hidden="true">
-                        <div class="menu-panel__drag-handle"></div>
-                      </div>
-                      <div class="menu-panel__list" data-ref="list-presentation-tone">
-                        <button type="button" class="menu-item is-active" data-ref="btn-tone-professional" data-tone="professional">
-                          <span class="component-icon menu-item__icon">business_center</span>
-                          <span class="menu-item__text">Profesional Ejecutivo</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-pitch" data-tone="pitch">
-                          <span class="component-icon menu-item__icon">rocket_launch</span>
-                          <span class="menu-item__text">Pitch Deck & Negocios</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-educational" data-tone="educational">
-                          <span class="component-icon menu-item__icon">school</span>
-                          <span class="menu-item__text">Educativo & Taller</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-creative" data-tone="creative">
-                          <span class="component-icon menu-item__icon">palette</span>
-                          <span class="menu-item__text">Creativo & Innovación</span>
-                        </button>
-                        <button type="button" class="menu-item" data-ref="btn-tone-minimal" data-tone="minimal">
-                          <span class="component-icon menu-item__icon">crop_free</span>
-                          <span class="menu-item__text">Minimalista & Elegante</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="presentation-ai-section-options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div data-ref="col-slide-count">
-                  <span class="design-share-section__label">Diapositivas</span>
-                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-count">
-                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-count" aria-label="Cantidad de diapositivas">
-                      <div class="dropdown-trigger__left">
-                        <span class="component-icon dropdown-trigger__icon">filter_5</span>
-                        <span class="dropdown-trigger__text" data-ref="presentation-count-selected-text">5 diapositivas</span>
-                      </div>
-                      <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                    </button>
-                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-count">
-                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-count">
-                        <div class="menu-panel__list" data-ref="list-presentation-count">
-                          <button type="button" class="menu-item" data-ref="btn-count-3" data-count="3">
-                            <span class="component-icon menu-item__icon">filter_3</span>
-                            <span class="menu-item__text">3 diapositivas (Rápida)</span>
-                          </button>
-                          <button type="button" class="menu-item is-active" data-ref="btn-count-5" data-count="5">
-                            <span class="component-icon menu-item__icon">filter_5</span>
-                            <span class="menu-item__text">5 diapositivas (Estándar)</span>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="btn-count-7" data-count="7">
-                            <span class="component-icon menu-item__icon">filter_7</span>
-                            <span class="menu-item__text">7 diapositivas (Detallada)</span>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="btn-count-10" data-count="10">
-                            <span class="component-icon menu-item__icon">filter_9_plus</span>
-                            <span class="menu-item__text">10 diapositivas (Completa)</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div data-ref="col-slide-mode">
-                  <span class="design-share-section__label">Acción de inserción</span>
-                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-mode">
-                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-mode" aria-label="Acción de inserción">
-                      <div class="dropdown-trigger__left">
-                        <span class="component-icon dropdown-trigger__icon" data-ref="presentation-mode-selected-icon">autorenew</span>
-                        <span class="dropdown-trigger__text" data-ref="presentation-mode-selected-text">Reemplazar actual</span>
-                      </div>
-                      <span class="component-icon dropdown-trigger__chevron">expand_more</span>
-                    </button>
-                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-mode">
-                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-mode">
-                        <div class="menu-panel__list" data-ref="list-presentation-mode">
-                          <button type="button" class="menu-item is-active" data-ref="btn-mode-replace" data-mode="replace">
-                            <span class="component-icon menu-item__icon">autorenew</span>
-                            <span class="menu-item__text">Reemplazar actual</span>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="btn-mode-append" data-mode="append">
-                            <span class="component-icon menu-item__icon">add_to_photos</span>
-                            <span class="menu-item__text">Añadir al final</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="design-share-section" data-ref="presentation-ai-section-prompt">
-                <span class="design-share-section__label">Tema o contenido de la presentación</span>
-                <label class="field" data-ref="field-presentation-ai-prompt" style="display: block;">
-                  <textarea class="field__input" data-ref="input-presentation-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
-                  <span class="field__label" data-ref="lbl-presentation-ai-prompt">¿De qué trata tu presentación? (ej. Pitch de SaaS, Clase de IA, Estrategia Q3)...</span>
-                </label>
-              </div>
-
-              <div class="design-share-section" data-ref="presentation-ai-section-actions">
-                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-presentation-ai-submit">
-                  <span class="component-icon">auto_awesome</span>
-                  <span>Generar Diapositivas con IA</span>
-                </button>
-                <div class="banner banner--danger" data-ref="presentation-ai-error" style="display: none; margin-top: 8px;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const temp = document.createElement('div');
-    temp.innerHTML = markup.trim();
-    backdrop = temp.firstElementChild as HTMLElement;
-    wrapper.appendChild(backdrop);
-    menu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-presentation-ai"]');
-    renderIcons(backdrop);
-  }
-
-  const dropdownWrapperTone = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-tone"]');
-  const toneSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="presentation-tone-selected-icon"]');
-  const toneSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-tone-selected-text"]');
-  const descEl = wrapper.querySelector<HTMLElement>('[data-ref="presentation-ai-desc"]');
-
-  const dropdownWrapperCount = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-count"]');
-  const countSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-count-selected-text"]');
-
-  const dropdownWrapperMode = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-mode"]');
-  const modeSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="presentation-mode-selected-icon"]');
-  const modeSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-mode-selected-text"]');
-
-  const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-presentation-ai-prompt"]');
-  const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-presentation-ai-submit"]');
-  const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="presentation-ai-error"]');
-
-  let toneDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  if (dropdownWrapperTone) {
-    toneDropdownCtrl = setupDropdown(dropdownWrapperTone, {});
-  }
-
-  let countDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  if (dropdownWrapperCount) {
-    countDropdownCtrl = setupDropdown(dropdownWrapperCount, {});
-  }
-
-  let modeDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
-  if (dropdownWrapperMode) {
-    modeDropdownCtrl = setupDropdown(dropdownWrapperMode, {});
-  }
-
-  const updateToneUI = () => {
-    const info = PRESENTATION_TONE_MAP[selectedTone] || PRESENTATION_TONE_MAP.professional;
-    if (toneSelectedIcon) {
-      setIconUse(toneSelectedIcon, info.icon);
-    }
-    if (toneSelectedText) {
-      toneSelectedText.textContent = info.text;
-    }
-    if (descEl) {
-      descEl.textContent = info.desc;
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-tone') === selectedTone);
-    });
-  };
-
-  const updateCountUI = () => {
-    if (countSelectedText) {
-      countSelectedText.textContent = `${selectedSlideCount} diapositivas`;
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-count]').forEach((b) => {
-      const c = parseInt(b.getAttribute('data-count') || '5', 10);
-      b.classList.toggle('is-active', c === selectedSlideCount);
-    });
-  };
-
-  const updateModeUI = () => {
-    if (modeSelectedIcon) {
-      setIconUse(modeSelectedIcon, selectedMode === 'replace' ? 'autorenew' : 'add_to_photos');
-    }
-    if (modeSelectedText) {
-      modeSelectedText.textContent = selectedMode === 'replace' ? 'Reemplazar actual' : 'Añadir al final';
-    }
-    wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-mode') === selectedMode);
-    });
-  };
-
-  wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tone = btn.getAttribute('data-tone') as PresentationAiTone;
-      if (tone) {
-        selectedTone = tone;
-        updateToneUI();
-        toneDropdownCtrl?.close();
-      }
-    });
-  });
-
-  wrapper.querySelectorAll<HTMLElement>('[data-count]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const cnt = parseInt(btn.getAttribute('data-count') || '5', 10);
-      if (cnt) {
-        selectedSlideCount = cnt;
-        updateCountUI();
-        countDropdownCtrl?.close();
-      }
-    });
-  });
-
-  wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const m = btn.getAttribute('data-mode') as 'append' | 'replace';
-      if (m) {
-        selectedMode = m;
-        updateModeUI();
-        modeDropdownCtrl?.close();
-      }
-    });
-  });
-
-  const dropdownController = setupDropdown(wrapper, {
-    backdrop,
-    isSelect: false,
-    matchWidth: false,
-    menu,
-    placement: 'bottom-end',
-    trigger,
-  });
-
-  btnSubmit?.addEventListener('click', async () => {
-    if (!inputPrompt) return;
-    const promptText = inputPrompt.value.trim();
-
-    if (!promptText) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor escribe un tema o descripción para tu presentación.';
-        errorBanner.style.display = 'block';
-      }
-      inputPrompt.focus();
-      return;
-    }
-
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-
-    await withButtonLoading(btnSubmit, 'Generando...', async () => {
-      try {
-        const res = await postApi(API_ROUTES.ai.presentation, {
-          prompt: promptText,
-          slideCount: selectedSlideCount,
-          slideHeight,
-          slideWidth,
-          tone: selectedTone,
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'No se pudo generar la presentación con IA.');
-        }
-
-        const data = await res.json();
-        if (!data.presentation || !Array.isArray(data.presentation.slides) || data.presentation.slides.length === 0) {
-          throw new Error('La respuesta de la IA no contiene diapositivas válidas.');
-        }
-
-        onSuccess({
-          mode: selectedMode,
-          slides: data.presentation.slides,
-          title: data.presentation.title || promptText,
-        });
-
-        dropdownController.close();
-        showToast(`✨ Presentación de ${data.presentation.slides.length} diapositivas generada con éxito`, 'success');
-      } catch (err: any) {
-        if (errorBanner) {
-          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
-          errorBanner.style.display = 'block';
-        }
-      }
-    });
-  });
-
-  trigger.addEventListener('click', () => {
-    if (errorBanner) {
-      errorBanner.style.display = 'none';
-      errorBanner.textContent = '';
-    }
-    setTimeout(() => inputPrompt?.focus(), 50);
-  }, { signal });
-
-  return {
-    close: () => dropdownController.close(),
-    destroy: () => {
-      toneDropdownCtrl?.destroy();
-      countDropdownCtrl?.destroy();
-      modeDropdownCtrl?.destroy();
-      dropdownController.destroy();
-    },
-    open: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      dropdownController.open();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    toggle: () => {
-      if (errorBanner) {
-        errorBanner.style.display = 'none';
-        errorBanner.textContent = '';
-      }
-      dropdownController.toggle();
-      setTimeout(() => inputPrompt?.focus(), 50);
-    },
-    update: () => dropdownController.update(),
-  };
+  return setupCanvasAiChatDropdown({ ...options, canvasType: 'presentation' });
 }
-
-

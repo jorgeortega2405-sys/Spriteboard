@@ -1,54 +1,11 @@
 <div class="component-wrapper component-wrapper--full view-wrapper ai-studio-wrapper" data-ref="ai-studio-container">
-  <header class="view-header ai-studio-header" data-ref="ai-studio-header">
-    <div class="view-header__left" data-ref="ai-studio-header-left"></div>
-
-    <div class="view-header__right" data-ref="ai-studio-header-right">
-      <button type="button" class="component-button component-button--h36 component-button--black ai-studio-header-canvas-btn" data-ref="btn-header-open-canvas" style="display: none;" aria-label="Abrir en lienzo">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
-        <span>Abrir en lienzo</span>
-      </button>
-    </div>
-  </header>
+  <div class="view-backdrop" data-ref="ai-gradient-backdrop"></div>
 
   <div class="ai-studio-workspace" data-ref="ai-studio-workspace">
     <section class="ai-studio-chat-panel" data-ref="ai-studio-chat-panel">
       <div class="ai-studio-hero" data-ref="ai-studio-hero">
         <h2 class="ai-studio-hero__title" data-ref="ai-studio-hero-title">¿Qué vamos a diseñar hoy, <span data-ref="hero-username"></span>?</h2>
         <p class="ai-studio-hero__subtitle">Describe tu idea y Spritebot diseñará presentaciones, mapas conceptuales, documentos o posts listos para editar.</p>
-
-        <div class="ai-studio-starters" data-ref="ai-studio-starters">
-          <button type="button" class="ai-studio-starter-card" data-ref="starter-mindmap" data-prompt="Crea un mapa mental sobre energías renovables y sostenibilidad">
-            <span class="ai-studio-starter-card__icon" aria-hidden="true">🧠</span>
-            <div class="ai-studio-starter-card__content">
-              <h3 class="ai-studio-starter-card__title">Mapa Mental o Conceptual</h3>
-              <p class="ai-studio-starter-card__desc">Estructura ramas, ideas y conceptos conectados</p>
-            </div>
-          </button>
-
-          <button type="button" class="ai-studio-starter-card" data-ref="starter-presentation" data-prompt="Crea una presentación de 5 diapositivas para lanzar una startup de inteligencia artificial">
-            <span class="ai-studio-starter-card__icon" aria-hidden="true">📊</span>
-            <div class="ai-studio-starter-card__content">
-              <h3 class="ai-studio-starter-card__title">Presentación Ejecutiva</h3>
-              <p class="ai-studio-starter-card__desc">Diapositivas 16:9 con portada, métricas y contenido</p>
-            </div>
-          </button>
-
-          <button type="button" class="ai-studio-starter-card" data-ref="starter-doc" data-prompt="Redacta un documento con las políticas de trabajo remoto y mejores prácticas para el equipo">
-            <span class="ai-studio-starter-card__icon" aria-hidden="true">📄</span>
-            <div class="ai-studio-starter-card__content">
-              <h3 class="ai-studio-starter-card__title">Documento o Reporte</h3>
-              <p class="ai-studio-starter-card__desc">Artículos, especificaciones y contratos organizados</p>
-            </div>
-          </button>
-
-          <button type="button" class="ai-studio-starter-card" data-ref="starter-social" data-prompt="Diseña un post para Instagram promocionando una semana de descuentos en cursos digitales">
-            <span class="ai-studio-starter-card__icon" aria-hidden="true">📱</span>
-            <div class="ai-studio-starter-card__content">
-              <h3 class="ai-studio-starter-card__title">Publicación para Redes</h3>
-              <p class="ai-studio-starter-card__desc">Copies de impacto, hashtags y estructura visual</p>
-            </div>
-          </button>
-        </div>
       </div>
 
       <div class="chat-messages ai-studio-messages" data-ref="ai-studio-messages" style="display: none;"></div>
@@ -56,7 +13,7 @@
       <div class="chat-panel__bottom ai-studio-chat-bottom" data-ref="chat-panel-bottom">
         <div class="chat-pill-input" data-ref="chat-input-box">
           <textarea class="chat-pill-input__field" data-ref="chat-input" placeholder="Escribe un mensaje..." rows="1" maxlength="2500"></textarea>
-          <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" aria-label="Enviar mensaje" data-tooltip="Enviar mensaje">
+          <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
           </button>
         </div>

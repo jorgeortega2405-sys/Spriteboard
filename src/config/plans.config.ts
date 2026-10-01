@@ -13,6 +13,7 @@ export interface PlanLimits {
   allowedExportTypes: string[];
   allowedImageFormats: string[];
   allowedVideoFormats: string[];
+  maxAiStudioSessions: number;
   maxAiTokensFormatted: string;
   maxAiTokensPerCycle: number;
   maxBatchUploadCount: number;
@@ -54,6 +55,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
       allowedVideoFormats: ['video/mp4', 'video/webm'],
+      maxAiStudioSessions: 5,
       maxAiTokensFormatted: '50,000 tokens',
       maxAiTokensPerCycle: 50000,
       maxBatchUploadCount: 10,
@@ -89,6 +91,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
       allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'],
+      maxAiStudioSessions: 100,
       maxAiTokensFormatted: '300,000 tokens',
       maxAiTokensPerCycle: 300000,
       maxBatchUploadCount: 25,
@@ -126,6 +129,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
       allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'],
+      maxAiStudioSessions: 500,
       maxAiTokensFormatted: '1,500,000 tokens',
       maxAiTokensPerCycle: 1500000,
       maxBatchUploadCount: 50,
@@ -164,6 +168,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
       allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'],
+      maxAiStudioSessions: 1000,
       maxAiTokensFormatted: 'Ilimitado',
       maxAiTokensPerCycle: 10000000,
       maxBatchUploadCount: 100,

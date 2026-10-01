@@ -894,9 +894,9 @@ export class StageCanvasController {
     const aiWrapper = this.container.querySelector<HTMLElement>('[data-ref="presentation-ai-wrapper"]');
     if (btnAi && aiWrapper) {
       this.aiDropdownController = setupPresentationAiDropdown({
-        onSuccess: ({ mode, slides, title }) => {
-          this.insertAiGeneratedSlides(slides, mode, title);
-        },
+        canvasTitle: this.canvasRecord?.name || 'Presentación',
+        canvasType: 'presentation',
+        canvasUuid: this.canvasUuid,
         signal,
         slideHeight: this.slideHeight,
         slideWidth: this.slideWidth,

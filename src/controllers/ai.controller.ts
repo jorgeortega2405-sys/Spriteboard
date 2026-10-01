@@ -1,3 +1,4 @@
+import { getTierLimits } from '../config/plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiQuotaService } from '../services/ai-quota.service.js';
 import { AiSessionService } from '../services/ai-session.service.js';
@@ -688,12 +689,29 @@ export class AiController {
       }
 
       const { canvasUuid, messages, title, uuid } = req.body;
+      const targetUuid = uuid || crypto.randomUUID();
+
+      const exists = await AiSessionService.hasSessionUuid(targetUuid, currentUser.id);
+      if (!exists) {
+        const limits = getTierLimits(currentUser.subscription_tier);
+        const count = await AiSessionService.countUserSessions(currentUser.id);
+        if (count >= limits.maxAiStudioSessions) {
+          res.status(403).json({
+            error: `Has alcanzado el límite de ${limits.maxAiStudioSessions} conversaciones de tu plan. Elimina chats anteriores o mejora tu plan para continuar.`,
+            limit: limits.maxAiStudioSessions,
+            limitReached: true,
+            success: false,
+          });
+          return;
+        }
+      }
+
       const savedUuid = await AiSessionService.saveSession({
         canvasUuid,
         messages: Array.isArray(messages) ? messages : [],
         title,
         userId: currentUser.id,
-        uuid,
+        uuid: targetUuid,
       });
 
       res.status(200).json({ success: true, uuid: savedUuid });

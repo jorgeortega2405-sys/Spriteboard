@@ -14,20 +14,45 @@ export interface AiChatSessionRecord {
 }
 
 export class AiSessionService {
-  static async listUserSessions(userId: number): Promise<Array<Omit<AiChatSessionRecord, 'messages'>>> {
+  static async listUserSessions(userId: number, limit = 1000): Promise<Array<Omit<AiChatSessionRecord, 'messages'>>> {
     try {
       const [rows] = await canvasPool.query<any[]>(
         `SELECT uuid, user_id, title, canvas_uuid, created_at, updated_at
          FROM ai_chat_sessions
          WHERE user_id = ?
          ORDER BY updated_at DESC
-         LIMIT 50`,
-        [userId]
+         LIMIT ?`,
+        [userId, limit]
       );
       return rows || [];
     } catch (error) {
       logger.db.error('AiSessionService: Error al listar sesiones de chat', error);
       return [];
+    }
+  }
+
+  static async countUserSessions(userId: number): Promise<number> {
+    try {
+      const [rows] = await canvasPool.query<any[]>(
+        `SELECT COUNT(*) AS total FROM ai_chat_sessions WHERE user_id = ?`,
+        [userId]
+      );
+      return Number(rows?.[0]?.total || 0);
+    } catch (error) {
+      logger.db.error('AiSessionService: Error al contar sesiones de chat', error);
+      return 0;
+    }
+  }
+
+  static async hasSessionUuid(uuid: string, userId: number): Promise<boolean> {
+    try {
+      const [rows] = await canvasPool.query<any[]>(
+        `SELECT 1 FROM ai_chat_sessions WHERE uuid = ? AND user_id = ? LIMIT 1`,
+        [uuid, userId]
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    } catch {
+      return false;
     }
   }
 

@@ -4,7 +4,7 @@ import { APP_CATEGORIES, SPRITEBOARD_APPS, getAppById, getAppsByCategory, search
 import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../config/diagram-components.data.js';
 import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_CATEGORIES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../config/mockups.config.js';
-import { hasFeature, protectRoute } from '../config/plans.config.js';
+import { getTierLimits, getUserTier, hasFeature, protectRoute } from '../config/plans.config.js';
 import { STICKY_NOTE_PRESETS } from '../config/sticky-notes.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploadsApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi, uploadFilesApi } from '../services/api.service.js';
@@ -3787,28 +3787,6 @@ async function renderAiDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       <span class="menu-item__text" data-i18n="ai.new_chat">${t('ai.new_chat') || 'Nueva conversación'}</span>
     </button>
 
-    <div class="drawer-section" data-ref="drawer-section-ai-tools">
-      <div class="drawer-section__header" data-ref="drawer-header-ai-tools">
-        <span class="drawer-section__title">Herramientas IA</span>
-      </div>
-      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-presentation" data-prompt="Crea una presentación de 5 diapositivas para lanzar una startup de inteligencia artificial">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-        <span class="menu-item__text">Presentación Ejecutiva</span>
-      </button>
-      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-mindmap" data-prompt="Crea un mapa mental sobre energías renovables y sostenibilidad">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#psychology"></use></svg>
-        <span class="menu-item__text">Mapa Mental</span>
-      </button>
-      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-doc" data-prompt="Redacta un documento con las políticas de trabajo remoto y mejores prácticas para el equipo">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-        <span class="menu-item__text">Documento o Reporte</span>
-      </button>
-      <button type="button" class="menu-item" data-ref="btn-nav-ai-tool-social" data-prompt="Diseña un post para Instagram promocionando una semana de descuentos en cursos digitales">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-        <span class="menu-item__text">Post para Redes</span>
-      </button>
-    </div>
-
     <div class="drawer-section" data-ref="drawer-section-ai-chats">
       <div class="drawer-section__header" data-ref="drawer-header-ai-chats">
         <span class="drawer-section__title">Conversaciones</span>
@@ -3827,11 +3805,19 @@ async function renderAiDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
 
   translateElement(drawerBody);
 
+  let sessionsCount = 0;
   const btnNewChat = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-ai-new-chat"]');
   btnNewChat?.addEventListener('click', (e) => {
     e.preventDefault();
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
+    }
+    const limits = getTierLimits(currentUser?.subscription_tier);
+    if (currentUser && sessionsCount >= limits.maxAiStudioSessions) {
+      showToast(`Has alcanzado el límite de ${limits.maxAiStudioSessions} conversaciones de tu plan.`, 'warning');
+      const userTier = getUserTier(currentUser);
+      openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+      return;
     }
     const currentP = window.location.pathname;
     if (currentP === '/ai' || currentP === '/ia') {
@@ -3844,32 +3830,6 @@ async function renderAiDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     navigate('/ai');
   });
 
-  const toolBtns = drawerBody.querySelectorAll<HTMLElement>('[data-ref^="btn-nav-ai-tool-"]');
-  toolBtns.forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const prompt = btn.getAttribute('data-prompt');
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
-      }
-      const currentP = window.location.pathname;
-      if (currentP.startsWith('/ai') || currentP.startsWith('/ia')) {
-        const textarea = document.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
-        const sendBtn = document.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
-        if (textarea && sendBtn && prompt) {
-          textarea.value = prompt;
-          sendBtn.click();
-          return;
-        }
-      }
-      if (prompt) {
-        navigate(`/ai?prompt=${encodeURIComponent(prompt)}`);
-      } else {
-        navigate('/ai');
-      }
-    });
-  });
-
   const chatsList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-ai-chats-list"]');
   const chatsEmpty = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-ai-chats-empty"]');
 
@@ -3879,6 +3839,12 @@ async function renderAiDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       if (res.ok) {
         const data = await res.json();
         const sessions: Array<{ uuid: string; title: string; updated_at: string }> = Array.isArray(data?.sessions) ? data.sessions : [];
+        sessionsCount = sessions.length;
+        const limits = getTierLimits(currentUser?.subscription_tier);
+        const sectionTitleEl = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-header-ai-chats"] .drawer-section__title');
+        if (sectionTitleEl) {
+          sectionTitleEl.textContent = `Conversaciones (${sessions.length}/${limits.maxAiStudioSessions})`;
+        }
         if (chatsList && chatsEmpty) {
           if (sessions.length === 0) {
             chatsList.style.display = 'none';
