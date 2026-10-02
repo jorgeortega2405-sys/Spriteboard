@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@spriteboard/shared": "*",
+    "@spriteboard/shared": "file:../packages/shared",
     "@types/multer": "^2.2.0",
     "bcryptjs": "^2.4.3",
     "cassandra-driver": "^4.7.2",

@@ -1,9 +1,12 @@
-node_modules
-npm-debug.log
+**/node_modules
+**/dist
+**/build
+**/target
 .git
 .gitignore
 .env
 .DS_Store
-dist
-build
+logs
+data
 README.md
+

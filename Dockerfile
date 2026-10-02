@@ -7,8 +7,9 @@ WORKDIR /app
 # Instalar ffmpeg para renderizado y procesamiento multimedia
 RUN apk add --no-cache ffmpeg
 
-# Copiar manifiestos de dependencias
+# Copiar manifiestos de dependencias y paquetes compartidos
 COPY package*.json ./
+COPY packages ./packages
 
 # Instalar dependencias
 RUN npm install

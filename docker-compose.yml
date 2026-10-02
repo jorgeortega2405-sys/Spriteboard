@@ -59,7 +59,7 @@ services:
       start_period: 60s
 
   minio:
-    image: quay.io/minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: spriteboard-minio
     restart: unless-stopped
     ports:
@@ -121,7 +121,9 @@ services:
     command: npm run dev
 
   admin:
-    build: ./admin
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
     container_name: spriteboard-admin
     restart: unless-stopped
     ports:
@@ -154,7 +156,7 @@ services:
     volumes:
       - ./admin:/app
       - /app/node_modules
-      - ./packages/shared:/app/packages/shared:ro
+      - ./packages/shared:/packages/shared:ro
       - ./logs:/app/main_logs:ro
       - ./public/uploads:/app/public/uploads:ro
     command: npm run dev
