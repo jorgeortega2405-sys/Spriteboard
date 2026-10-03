@@ -44,6 +44,138 @@ export interface CreateCanvasOptions {
   width?: number;
 }
 
+function generatePresentationInitialThumbnail(isSocial: boolean = false): string {
+  try {
+    const canvas = document.createElement('canvas');
+    const width = 320;
+    const height = 180;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, width, height);
+
+    const slideW = isSocial ? 140 : 210;
+    const slideH = isSocial ? 140 : 118;
+    const slideX = (width - slideW) / 2;
+    const slideY = (height - slideH) / 2;
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(slideX, slideY, slideW, slideH);
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(slideX, slideY, slideW, slideH);
+
+    ctx.fillStyle = isSocial ? '#ec4899' : '#ea580c';
+    ctx.fillRect(slideX + 16, slideY + 16, isSocial ? 28 : 36, isSocial ? 28 : 18);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(slideX + (isSocial ? 52 : 60), slideY + 18, slideW - (isSocial ? 68 : 76), 4);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(slideX + (isSocial ? 52 : 60), slideY + 26, slideW - (isSocial ? 84 : 96), 3);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(slideX + 16, slideY + (isSocial ? 54 : 46), slideW - 32, 2.5);
+    ctx.fillRect(slideX + 16, slideY + (isSocial ? 64 : 54), slideW - 48, 2.5);
+    ctx.fillRect(slideX + 16, slideY + (isSocial ? 74 : 62), slideW - 64, 2.5);
+
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
+}
+
+function generateBoardInitialThumbnail(): string {
+  try {
+    const canvas = document.createElement('canvas');
+    const width = 320;
+    const height = 180;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#cbd5e1';
+    for (let x = 16; x < width; x += 16) {
+      for (let y = 16; y < height; y += 16) {
+        ctx.fillRect(x, y, 1.5, 1.5);
+      }
+    }
+
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(40, 40, 56, 56);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(40, 40, 56, 56);
+    ctx.fillStyle = '#854d0e';
+    ctx.fillRect(48, 52, 36, 3);
+    ctx.fillRect(48, 60, 28, 3);
+
+    ctx.fillStyle = '#bae6fd';
+    ctx.fillRect(130, 48, 70, 44);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.strokeRect(130, 48, 70, 44);
+
+    ctx.fillStyle = '#dcfce7';
+    ctx.beginPath();
+    ctx.arc(250, 70, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#4ade80';
+    ctx.stroke();
+
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
+}
+
+function generateVideoInitialThumbnail(): string {
+  try {
+    const canvas = document.createElement('canvas');
+    const width = 320;
+    const height = 180;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2 - 8, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 6, height / 2 - 20);
+    ctx.lineTo(width / 2 + 12, height / 2 - 8);
+    ctx.lineTo(width / 2 - 6, height / 2 + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(20, height - 24, width - 40, 6);
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fillRect(20, height - 24, 80, 6);
+
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
+}
+
 export async function createCanvasRecord(options: CreateCanvasOptions): Promise<string> {
   const isPresentation = options.canvasType === 'presentation';
   const isDoc = options.canvasType === 'doc';
@@ -266,7 +398,17 @@ export async function createCanvasRecord(options: CreateCanvasOptions): Promise<
   }
 
   const initialData = JSON.stringify(initialProject);
-  const previewThumbnail: string | null = isDoc ? generateDocThumbnail(initialProject) : (isSheet ? generateSheetThumbnail(initialProject) : templateDataUrl);
+  const previewThumbnail: string | null = templateDataUrl
+    ? templateDataUrl
+    : (isDoc
+      ? generateDocThumbnail(initialProject)
+      : (isSheet
+        ? generateSheetThumbnail(initialProject)
+        : (isPresentation || isSocial
+          ? generatePresentationInitialThumbnail(isSocial)
+          : (isVideo
+            ? generateVideoInitialThumbnail()
+            : generateBoardInitialThumbnail()))));
 
   const unit: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
   const canvasType: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));

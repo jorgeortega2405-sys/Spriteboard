@@ -486,17 +486,6 @@ class FolderController {
           <span class="material-symbols-rounded">check</span>
         </button>
 
-        ${
-          canSync
-            ? `
-          <button type="button" class="component-button component-button--h28 component-button--white canvas-card__btn-sync" data-ref="btn-sync-cloud">
-            <span class="material-symbols-rounded">cloud_upload</span>
-            <span>${t('canvas.btn_sync')}</span>
-          </button>
-        `
-            : ''
-        }
-
         <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
           <div class="canvas-card__actions" data-ref="card-actions">
             ${
@@ -522,6 +511,16 @@ class FolderController {
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.menu_open_new_tab">${t('canvas.menu_open_new_tab')}</span>
               </button>
+              ${
+                canSync
+                  ? `
+              <button type="button" class="menu-item" data-ref="action-sync-cloud">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.btn_sync">${t('canvas.btn_sync')}</span>
+              </button>
+              `
+                  : ''
+              }
               <button type="button" class="menu-item" data-ref="action-duplicate">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#filter_none"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.menu_duplicate">${t('canvas.menu_duplicate')}</span>
@@ -726,10 +725,11 @@ class FolderController {
       this.handleDeleteCanvas(canvas);
     });
 
-    const btnSync = card.querySelector<HTMLButtonElement>('[data-ref="btn-sync-cloud"]');
-    btnSync?.addEventListener('click', async (e) => {
+    const actionSync = card.querySelector<HTMLButtonElement>('[data-ref="action-sync-cloud"]');
+    actionSync?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      await this.handleSyncCanvas(canvas, card, btnSync);
+      this.closeAllDropdowns();
+      await this.handleSyncCanvas(canvas, card, actionSync);
     });
 
     card.setAttribute('draggable', 'true');

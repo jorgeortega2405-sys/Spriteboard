@@ -5335,6 +5335,7 @@ export class StageCanvasController {
   private async saveToStorage(): Promise<void> {
     const project = this.getProjectData();
     const initialData = JSON.stringify(project);
+    const thumb = generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el));
 
     await saveLocalCanvas({
       canvas_type: this.canvasType || 'presentation',
@@ -5343,6 +5344,7 @@ export class StageCanvasController {
       height: this.slideHeight,
       is_local: !currentUser,
       name: this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título'),
+      preview_thumbnail: thumb,
       unit: this.canvasType || 'presentation',
       updated_at: new Date().toISOString(),
       uuid: this.canvasUuid,
@@ -5357,6 +5359,7 @@ export class StageCanvasController {
           height: this.slideHeight,
           id: this.canvasServerId || undefined,
           name: this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título'),
+          preview_thumbnail: thumb,
           unit: this.canvasType || 'presentation',
           uuid: this.canvasUuid,
           width: this.slideWidth,
