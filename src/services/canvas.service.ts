@@ -373,7 +373,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
-              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
+              COALESCE(JSON_EXTRACT(c.data, '$.pages[*].pageType'), JSON_EXTRACT(c.data, '$.slides[*].pageType'), JSON_EXTRACT(c.data, '$.sheets[*].pageType')) AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               f.uuid AS folder_uuid, f.name AS folder_name,
@@ -473,7 +473,7 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
-              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
+              COALESCE(JSON_EXTRACT(c.data, '$.pages[*].pageType'), JSON_EXTRACT(c.data, '$.slides[*].pageType'), JSON_EXTRACT(c.data, '$.sheets[*].pageType')) AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               f.uuid AS folder_uuid, f.name AS folder_name,
@@ -529,7 +529,7 @@ export async function getSharedCanvases(userId: number): Promise<any[]> {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
-              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
+              COALESCE(JSON_EXTRACT(c.data, '$.pages[*].pageType'), JSON_EXTRACT(c.data, '$.slides[*].pageType'), JSON_EXTRACT(c.data, '$.sheets[*].pageType')) AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier,
@@ -1371,7 +1371,7 @@ export async function getUserTrashCanvases(userId: number): Promise<Canvas[]> {
 
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, JSON_EXTRACT(data, \'$.pages[*].pageType\') AS page_types, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, COALESCE(JSON_EXTRACT(data, \'$.pages[*].pageType\'), JSON_EXTRACT(data, \'$.slides[*].pageType\'), JSON_EXTRACT(data, \'$.sheets[*].pageType\')) AS page_types, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
       [userId]
     );
     const result = rows.map((r) => ({

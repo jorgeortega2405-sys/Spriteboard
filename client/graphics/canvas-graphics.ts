@@ -753,8 +753,9 @@ export function resolveCanvasDistinctTypes(canvas: Partial<CanvasItem> | null | 
   if (canvas?.data) {
     try {
       const parsed = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
-      if (parsed && Array.isArray(parsed.pages)) {
-        for (const p of parsed.pages) {
+      const pageItems = Array.isArray(parsed?.pages) ? parsed.pages : (Array.isArray(parsed?.slides) ? parsed.slides : (Array.isArray(parsed?.sheets) ? parsed.sheets : []));
+      if (Array.isArray(pageItems)) {
+        for (const p of pageItems) {
           const pt = (p?.pageType || p?.type || '').toLowerCase().trim() as CanvasType;
           if (VALID_CANVAS_TYPES.has(pt)) {
             typesSet.add(pt);

@@ -1,11 +1,13 @@
 import { generateThumbnail } from '../../engine-2d/export.service.js';
 import { escapeHtml } from '../../services/api.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { CanvasPageType } from '../../types/stage.types.js';
 import { CarouselController, initCarouselScroll } from '../../utils/dom.util.js';
 import { BoardPageItem } from './board.types.js';
 
 export interface BoardPagesTrayCallbacks {
   onAddPage: () => void;
+  onAddPageWithType?: (type: CanvasPageType) => void;
   onDeletePage?: () => void;
   onDrawElement?: (ctx: CanvasRenderingContext2D, el: any) => void;
   onDuplicatePage?: () => void;
@@ -209,14 +211,101 @@ export class BoardPagesTrayComponent {
         <button type="button" class="canva-page-card--add-btn${isLimitReached ? ' is-disabled' : ''}" data-ref="btn-tray-add-page-main" data-tooltip="${isLimitReached ? `Límite máximo de ${MAX_BOARD_PAGES} páginas` : 'Añadir página'}" aria-label="Añadir página">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
         </button>
+        <button type="button" class="canva-page-card--add-dropdown${isLimitReached ? ' is-disabled' : ''}" data-ref="btn-tray-add-page-dropdown" data-tooltip="Tipos de lienzo" aria-label="Tipos de lienzo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-page-types-popup is-hidden" data-ref="tray-board-page-types-popup">
+        <div class="canvas-page-types-grid" data-ref="tray-board-page-types-grid">
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-board" data-type="board">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--board">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Pizarrón online</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-doc" data-type="doc">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Doc</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-sheet" data-type="sheet">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--sheet">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Hoja de cálculo</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-presentation" data-type="presentation">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--presentation">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Presentación</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-social" data-type="social">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--social">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Redes sociales</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-video" data-type="video">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--video">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Video</span>
+          </button>
+        </div>
       </div>
     `;
 
     const btnMain = addCardContainer.querySelector<HTMLButtonElement>('[data-ref="btn-tray-add-page-main"]');
+    const btnDropdown = addCardContainer.querySelector<HTMLButtonElement>('[data-ref="btn-tray-add-page-dropdown"]');
+    const popup = addCardContainer.querySelector<HTMLElement>('[data-ref="tray-board-page-types-popup"]');
+
+    const closeTrayPopup = () => {
+      popup?.classList.add('is-hidden');
+      btnDropdown?.classList.remove('is-active');
+    };
+
     btnMain?.addEventListener('click', (e) => {
       e.stopPropagation();
+      closeTrayPopup();
       if (!isLimitReached) {
         this.callbacks.onAddPage();
+      }
+    });
+
+    btnDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isLimitReached) return;
+      const isHidden = popup?.classList.contains('is-hidden');
+      if (isHidden) {
+        popup?.classList.remove('is-hidden');
+        btnDropdown.classList.add('is-active');
+      } else {
+        closeTrayPopup();
+      }
+    });
+
+    const typeCards = addCardContainer.querySelectorAll<HTMLButtonElement>('.canvas-page-type-card');
+    typeCards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTrayPopup();
+        if (isLimitReached) return;
+        const pageType = card.getAttribute('data-type') as CanvasPageType;
+        if (pageType) {
+          if (this.callbacks.onAddPageWithType) {
+            this.callbacks.onAddPageWithType(pageType);
+          } else {
+            this.callbacks.onAddPage();
+          }
+        }
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!addCardContainer.contains(e.target as Node)) {
+        closeTrayPopup();
       }
     });
 

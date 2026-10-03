@@ -110,10 +110,13 @@ export class StageCanvasController {
   private pageViewMode: CanvasPageViewMode = 'scroll';
   private previousPageViewMode: CanvasPageViewMode = 'scroll';
   private isBoardEditActive: boolean = false;
+  private isDocEditActive: boolean = false;
   private isSheetEditActive: boolean = false;
   private boardEditBarEl: HTMLElement | null = null;
+  private docWorkspaceEl: HTMLElement | null = null;
   private sheetWorkspaceEl: HTMLElement | null = null;
   private sheetGridManager: SheetGridManager | null = null;
+  private currentEditingDocSlideId: string | null = null;
   private currentEditingSheetData: SheetData | null = null;
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
@@ -1242,39 +1245,74 @@ export class StageCanvasController {
     return this.pageViewMode === 'single-page' || this.pageViewMode === 'thumbnails';
   }
 
-  public getSlideCy(idx: number): number {
-    if (this.isSingleSlideView()) {
-      return 0;
+  public getSlideDimensions(slide?: PresentationSlideItem | null): { height: number; width: number } {
+    if (!slide) {
+      return { height: this.slideHeight || 720, width: this.slideWidth || 1280 };
     }
+    if (typeof slide.width === 'number' && slide.width > 0 && typeof slide.height === 'number' && slide.height > 0) {
+      return { height: slide.height, width: slide.width };
+    }
+    const pageType = slide.pageType || (this.canvasType === 'social' ? 'social' : 'presentation');
+    if (pageType === 'doc') {
+      return { height: 1056, width: 816 };
+    }
+    if (pageType === 'social') {
+      return { height: this.slideHeight || 788, width: 1080 };
+    }
+    return { height: this.slideHeight || 720, width: this.slideWidth || 1280 };
+  }
+
+  public getSlideLayout(index: number): { cy: number; height: number; top: number; width: number } {
+    const isSingle = this.isSingleSlideView();
     const slideGap = 80;
-    return idx * (this.slideHeight + slideGap);
+    if (isSingle) {
+      const slide = this.slides[index] || this.getActiveSlide();
+      const dims = this.getSlideDimensions(slide);
+      return { cy: 0, height: dims.height, top: -dims.height / 2, width: dims.width };
+    }
+    let currentTop = 0;
+    for (let i = 0; i < this.slides.length; i++) {
+      const dims = this.getSlideDimensions(this.slides[i]);
+      if (i === index) {
+        return {
+          cy: currentTop + dims.height / 2,
+          height: dims.height,
+          top: currentTop,
+          width: dims.width,
+        };
+      }
+      currentTop += dims.height + slideGap;
+    }
+    const fallbackDims = this.getSlideDimensions(this.slides[index]);
+    return { cy: currentTop + fallbackDims.height / 2, height: fallbackDims.height, top: currentTop, width: fallbackDims.width };
+  }
+
+  public getSlideCy(idx: number): number {
+    return this.getSlideLayout(idx).cy;
   }
 
   public getActiveSlideCy(): number {
-    if (this.isSingleSlideView()) {
-      return 0;
-    }
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    return activeIdx * (this.slideHeight + slideGap);
+    return this.getSlideLayout(this.getActiveSlideIndex()).cy;
   }
 
   public getClickedSlideIndex(wp: { x: number; y: number }): number {
-    if (this.isBoardEditActive || this.isSheetEditActive) {
+    if (this.isBoardEditActive || this.isSheetEditActive || this.isDocEditActive) {
       return this.getActiveSlideIndex();
     }
-    const halfW = this.slideWidth / 2;
-    const halfH = this.slideHeight / 2;
     if (this.isSingleSlideView()) {
+      const dims = this.getSlideDimensions(this.getActiveSlide());
+      const halfW = dims.width / 2;
+      const halfH = dims.height / 2;
       if (wp.x >= -halfW && wp.x <= halfW && wp.y >= -halfH && wp.y <= halfH) {
         return this.getActiveSlideIndex();
       }
       return -1;
     }
-    const slideGap = 80;
     for (let i = 0; i < this.slides.length; i++) {
-      const cy = i * (this.slideHeight + slideGap);
-      if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+      const layout = this.getSlideLayout(i);
+      const halfW = layout.width / 2;
+      const halfH = layout.height / 2;
+      if (wp.x >= -halfW && wp.x <= halfW && wp.y >= layout.cy - halfH && wp.y <= layout.cy + halfH) {
         return i;
       }
     }
@@ -1282,20 +1320,27 @@ export class StageCanvasController {
   }
 
   public clampPan(): void {
-    if (this.isBoardEditActive || this.isSheetEditActive) return;
+    if (this.isBoardEditActive || this.isSheetEditActive || this.isDocEditActive) return;
     const viewport = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]');
     const vWidth = viewport && viewport.clientWidth > 0 ? viewport.clientWidth : (this.canvas && this.canvas.width > 0 ? this.canvas.width / (window.devicePixelRatio || 1) : 1000);
     const vHeight = viewport && viewport.clientHeight > 0 ? viewport.clientHeight : (this.canvas && this.canvas.height > 0 ? this.canvas.height / (window.devicePixelRatio || 1) : 800);
 
-    const halfW = this.slideWidth / 2;
-    const halfH = this.slideHeight / 2;
-    const slideGap = 80;
     const isSingle = this.isSingleSlideView();
-    const numSlides = Math.max(1, this.slides.length);
-    const lastCy = isSingle ? 0 : (numSlides - 1) * (this.slideHeight + slideGap);
+    let maxSlideWidth = 0;
+    if (isSingle) {
+      maxSlideWidth = this.getSlideDimensions(this.getActiveSlide()).width;
+    } else {
+      for (const slide of this.slides) {
+        maxSlideWidth = Math.max(maxSlideWidth, this.getSlideDimensions(slide).width);
+      }
+    }
+    const halfW = maxSlideWidth / 2;
 
-    const slide0TopY = -halfH - 40;
-    const addBtnBottomY = isSingle ? halfH + 40 : lastCy + halfH + 80;
+    const firstLayout = this.getSlideLayout(0);
+    const lastLayout = this.getSlideLayout(Math.max(0, this.slides.length - 1));
+
+    const slide0TopY = firstLayout.cy - firstLayout.height / 2 - 40;
+    const addBtnBottomY = lastLayout.cy + lastLayout.height / 2 + 80;
 
     let minX = Math.min(0, -halfW + (vWidth / 2 - 40) / this.zoom);
     let maxX = Math.max(0, halfW - (vWidth / 2 - 40) / this.zoom);
@@ -1355,8 +1400,10 @@ export class StageCanvasController {
     if (rect.width <= 0 || rect.height <= 0) return;
     const padW = 70;
     const padH = 70;
-    const scaleX = (rect.width - padW * 2) / this.slideWidth;
-    const scaleY = (rect.height - padH * 2) / this.slideHeight;
+    const activeSlide = this.getActiveSlide();
+    const dims = this.getSlideDimensions(activeSlide);
+    const scaleX = (rect.width - padW * 2) / dims.width;
+    const scaleY = (rect.height - padH * 2) / dims.height;
     const bestZoom = Math.min(scaleX, scaleY, 1.2);
 
     this.zoom = Math.max(0.2, Math.min(2.0, bestZoom));
@@ -5050,7 +5097,178 @@ export class StageCanvasController {
     showToast('Modo diapositiva restaurado', 'info');
   }
 
-  private updateTopHeaderForEditMode(type: 'board' | 'sheet', slideName: string): void {
+  public enterDocEditMode(slideId?: string): void {
+    const targetId = slideId || this.activeSlideId;
+    const slide = this.slides.find((s) => s.id === targetId);
+    if (!slide) return;
+
+    this.previousPageViewMode = this.pageViewMode;
+    this.selectSlide(targetId);
+    this.isDocEditActive = true;
+    this.currentEditingDocSlideId = targetId;
+    this.setPageViewMode('single-page');
+    this.selectedElementIds.clear();
+
+    if (this.docWorkspaceEl) {
+      this.docWorkspaceEl.remove();
+      this.docWorkspaceEl = null;
+    }
+
+    let existingHtml = '';
+    const textEls = slide.elements.filter((el) => el.type === 'text') as BoardTextElement[];
+    if (textEls.length > 0) {
+      existingHtml = textEls.map((el) => {
+        const text = this.escapeHtml(el.text || '');
+        if ((el.fontSize || 24) >= 28 || (el.fontWeight || 400) >= 700) {
+          return `<h1>${text.replace(/\n/g, '<br>')}</h1>`;
+        }
+        if ((el.fontSize || 24) >= 19 || (el.fontWeight || 400) >= 600) {
+          return `<h2>${text.replace(/\n/g, '<br>')}</h2>`;
+        }
+        if (el.fontStyle === 'italic') {
+          return `<blockquote>${text.replace(/\n/g, '<br>')}</blockquote>`;
+        }
+        return `<p>${text.replace(/\n/g, '<br>')}</p>`;
+      }).join('');
+    } else {
+      existingHtml = `
+        <h1>${this.escapeHtml(slide.name || 'Documento')}</h1>
+        <p class="doc-meta-line">Documento • ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
+        <p>«El secreto para salir adelante es simplemente comenzar.» — Mark Twain</p>
+        <h2>1. Introducción y Resumen General</h2>
+        <p>Este es un documento dentro de tu proyecto. Puedes redactar texto continuo con formato enriquecido directamente aquí.</p>
+        <h2>2. Puntos Clave</h2>
+        <p>• Formato vertical proporcional a Carta (816 × 1056 px).<br>• Guardado automático y sincronización en tiempo real.</p>
+      `;
+    }
+
+    const workspace = document.createElement('div');
+    workspace.className = 'stage-doc-workspace';
+    workspace.setAttribute('data-ref', 'stage-doc-workspace');
+    workspace.innerHTML = `
+      <div class="stage-doc-viewport" data-ref="stage-doc-viewport">
+        <div class="stage-doc-page" data-ref="stage-doc-page">
+          <div class="stage-doc-content" data-ref="stage-doc-content" contenteditable="true" spellcheck="true">${existingHtml}</div>
+        </div>
+      </div>
+    `;
+
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]');
+    if (viewport) {
+      viewport.appendChild(workspace);
+      this.docWorkspaceEl = workspace;
+      renderIcons(workspace);
+
+      const contentEl = workspace.querySelector<HTMLElement>('[data-ref="stage-doc-content"]');
+      contentEl?.focus();
+    }
+
+    this.updateTopHeaderForEditMode('doc', slide.name || 'Documento');
+    this.render();
+    this.renderSlidesTray();
+    showToast('Modo documento activado (100% interactivo)', 'info');
+  }
+
+  public exitDocEditMode(): void {
+    if (!this.isDocEditActive) return;
+
+    this.restoreTopHeaderAfterEditMode();
+
+    if (this.docWorkspaceEl && this.currentEditingDocSlideId) {
+      const slide = this.slides.find((s) => s.id === this.currentEditingDocSlideId);
+      const contentEl = this.docWorkspaceEl.querySelector<HTMLElement>('[data-ref="stage-doc-content"]');
+      if (slide && contentEl) {
+        slide.width = 816;
+        slide.height = 1056;
+        slide.pageType = 'doc';
+
+        const nodes = Array.from(contentEl.children) as HTMLElement[];
+        const newElements: BoardElement[] = [];
+        let currentY = -430;
+
+        if (nodes.length === 0 && contentEl.innerText.trim()) {
+          newElements.push(createTextElement(contentEl.innerText.trim(), {
+            color: '#0f172a',
+            fontSize: 16,
+            height: 200,
+            width: 620,
+            x: -310,
+            y: -430,
+          }));
+        } else {
+          for (const node of nodes) {
+            const tag = node.tagName.toLowerCase();
+            const text = (node.innerText || node.textContent || '').trim();
+            if (!text) continue;
+
+            let fontSize = 15;
+            let fontWeight = 400;
+            let fontStyle: 'italic' | 'normal' = 'normal';
+            let color = '#334155';
+            let h = 40;
+
+            if (tag === 'h1') {
+              fontSize = 30;
+              fontWeight = 700;
+              color = '#0f172a';
+              h = 44;
+            } else if (tag === 'h2') {
+              fontSize = 20;
+              fontWeight = 600;
+              color = '#1e293b';
+              h = 32;
+            } else if (tag === 'blockquote' || node.classList.contains('doc-meta-line')) {
+              fontSize = 14;
+              fontStyle = 'italic';
+              color = '#64748b';
+              h = 36;
+            } else {
+              fontSize = 15;
+              fontWeight = 400;
+              color = '#334155';
+              h = Math.max(32, Math.ceil(text.length / 55) * 24);
+            }
+
+            newElements.push(createTextElement(text, {
+              color,
+              fontFamily: 'Inter',
+              fontSize,
+              fontStyle,
+              fontWeight,
+              height: h,
+              width: 620,
+              x: -310,
+              y: currentY,
+            }));
+            currentY += h + 16;
+            if (currentY > 440) break;
+          }
+        }
+
+        if (newElements.length > 0) {
+          slide.elements = newElements;
+        }
+      }
+    }
+
+    if (this.docWorkspaceEl) {
+      this.docWorkspaceEl.remove();
+      this.docWorkspaceEl = null;
+    }
+
+    this.currentEditingDocSlideId = null;
+    this.isDocEditActive = false;
+
+    const returnMode = this.previousPageViewMode || 'scroll';
+    this.setPageViewMode(returnMode);
+    this.fitSlide();
+    this.render();
+    this.renderSlidesTray();
+    this.scheduleAutoSave();
+    showToast('Modo diapositiva restaurado', 'info');
+  }
+
+  private updateTopHeaderForEditMode(type: 'board' | 'doc' | 'sheet', slideName: string): void {
     const topLeft = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-left"]');
     const topRight = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-right"]');
 
@@ -5068,8 +5286,8 @@ export class StageCanvasController {
         topLeft.appendChild(editInfoEl);
       }
 
-      const iconName = type === 'board' ? 'draw' : 'table_chart';
-      const badgeLabel = type === 'board' ? 'Pizarrón' : 'Hoja de cálculo';
+      const iconName = type === 'board' ? 'draw' : (type === 'sheet' ? 'table_chart' : 'article');
+      const badgeLabel = type === 'board' ? 'Pizarrón' : (type === 'sheet' ? 'Hoja de cálculo' : 'Documento');
 
       editInfoEl.innerHTML = `
         <span class="slide-type-badge slide-type-badge--${type}">
@@ -5103,6 +5321,8 @@ export class StageCanvasController {
             this.exitBoardEditMode();
           } else if (this.isSheetEditActive) {
             this.exitSheetEditMode();
+          } else if (this.isDocEditActive) {
+            this.exitDocEditMode();
           }
         });
       }
@@ -5296,13 +5516,17 @@ export class StageCanvasController {
     const halfH = this.slideHeight / 2;
     const slideGap = 80;
     const isSingle = this.isSingleSlideView();
-
     const slidesToRender = isSingle
-      ? [{ cy: 0, idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
-      : this.slides.map((slide, idx) => ({ cy: idx * (this.slideHeight + slideGap), idx, slide }));
+      ? [{ cy: 0, dims: this.getSlideDimensions(this.getActiveSlide()), idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
+      : this.slides.map((slide, idx) => {
+          const layout = this.getSlideLayout(idx);
+          return { cy: layout.cy, dims: { height: layout.height, width: layout.width }, idx, slide };
+        });
 
-    slidesToRender.forEach(({ slide, idx, cy }) => {
+    slidesToRender.forEach(({ slide, idx, cy, dims }) => {
       const slideBg = slide.background?.color || (isDark ? '#18181b' : '#ffffff');
+      const halfW = dims.width / 2;
+      const halfH = dims.height / 2;
 
       ctx.save();
       ctx.translate(0, cy);
@@ -5311,7 +5535,7 @@ export class StageCanvasController {
       ctx.shadowBlur = 24;
       ctx.shadowOffsetY = 8;
       ctx.fillStyle = slideBg;
-      ctx.fillRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.fillRect(-halfW, -halfH, dims.width, dims.height);
 
       if (slide.background?.type === 'dots' || slide.pageType === 'board') {
         const dotColor = slide.background?.dotColor || (isDark ? '#334155' : '#cbd5e1');
@@ -5336,7 +5560,7 @@ export class StageCanvasController {
 
       ctx.strokeStyle = isDark ? '#27272a' : '#e2e8f0';
       ctx.lineWidth = 1;
-      ctx.strokeRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.strokeRect(-halfW, -halfH, dims.width, dims.height);
 
       const isSlideSelected = slide.id === this.selectedSlideId && this.selectedElementIds.size === 0;
       const isSlideHovered = slide.id === this.hoveredSlideId && !isSlideSelected && this.selectedElementIds.size === 0;
@@ -5347,13 +5571,23 @@ export class StageCanvasController {
           ? (isDark ? '#3b82f6' : '#2563eb')
           : (isDark ? 'rgba(59, 130, 246, 0.7)' : 'rgba(37, 99, 235, 0.7)');
         ctx.lineWidth = 2 / this.zoom;
-        ctx.strokeRect(-halfW - gap, -halfH - gap, this.slideWidth + gap * 2, this.slideHeight + gap * 2);
+        ctx.strokeRect(-halfW - gap, -halfH - gap, dims.width + gap * 2, dims.height + gap * 2);
       }
 
       ctx.save();
       ctx.beginPath();
-      ctx.rect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.rect(-halfW, -halfH, dims.width, dims.height);
       ctx.clip();
+
+      if (slide.pageType === 'doc' && slide.elements.length === 0) {
+        ctx.save();
+        ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+        ctx.font = 'italic 16px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('«El secreto para salir adelante es simplemente comenzar.» — Mark Twain', 0, -halfH + 80);
+        ctx.restore();
+      }
 
       slide.elements.forEach((el) => {
         if (!(el as any).hidden) {
@@ -5454,28 +5688,28 @@ export class StageCanvasController {
     const overlaysContainer = this.container.querySelector<HTMLElement>('[data-ref="presentation-canvas-overlays"]');
     if (!overlaysContainer || !this.canvas) return;
 
-    if (this.isBoardEditActive || this.isSheetEditActive) {
+    if (this.isBoardEditActive || this.isSheetEditActive || this.isDocEditActive) {
       overlaysContainer.innerHTML = '';
       return;
     }
 
     const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
-    const halfW = this.slideWidth / 2;
-    const halfH = this.slideHeight / 2;
-    const slideGap = 80;
     const isSingle = this.isSingleSlideView();
 
     const slidesToOverlay = isSingle
-      ? [{ cy: 0, idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
-      : this.slides.map((slide, idx) => ({ cy: idx * (this.slideHeight + slideGap), idx, slide }));
+      ? [{ cy: 0, dims: this.getSlideDimensions(this.getActiveSlide()), idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
+      : this.slides.map((slide, idx) => {
+          const layout = this.getSlideLayout(idx);
+          return { cy: layout.cy, dims: { height: layout.height, width: layout.width }, idx, slide };
+        });
 
     const lastIdx = this.slides.length - 1;
-    const lastCy = isSingle ? 0 : lastIdx * (this.slideHeight + slideGap);
-    const lastSlideTopPt = worldToScreen(-halfW, lastCy - halfH, this.canvas, camera);
-    const lastSlideBottomPt = worldToScreen(0, lastCy + halfH, this.canvas, camera);
+    const lastLayout = this.getSlideLayout(lastIdx);
+    const lastSlideTopPt = worldToScreen(-lastLayout.width / 2, lastLayout.cy - lastLayout.height / 2, this.canvas, camera);
+    const lastSlideBottomPt = worldToScreen(0, lastLayout.cy + lastLayout.height / 2, this.canvas, camera);
     const addBtnLeft = Math.round(lastSlideTopPt.x);
     const addBtnTop = Math.round(lastSlideBottomPt.y + 16);
-    const addBtnWidth = Math.round(this.slideWidth * this.zoom);
+    const addBtnWidth = Math.round(lastLayout.width * this.zoom);
 
     const existingHeaders = overlaysContainer.querySelectorAll<HTMLElement>('.presentation-slide-overlay-header');
     const addPageWrapper = overlaysContainer.querySelector<HTMLElement>('[data-ref="overlay-add-page-wrapper"]');
@@ -5488,11 +5722,11 @@ export class StageCanvasController {
         }
       }
       if (allMatch) {
-        slidesToOverlay.forEach(({ slide, idx, cy }, i) => {
-          const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
+        slidesToOverlay.forEach(({ slide, idx, cy, dims }, i) => {
+          const slideTopPt = worldToScreen(-dims.width / 2, cy - dims.height / 2, this.canvas, camera);
           const headerLeft = Math.round(slideTopPt.x);
           const headerTop = Math.round(slideTopPt.y - 36);
-          const headerWidth = Math.round(this.slideWidth * this.zoom);
+          const headerWidth = Math.round(dims.width * this.zoom);
 
           const overlayEl = existingHeaders[i];
           overlayEl.style.left = `${headerLeft}px`;
@@ -5514,11 +5748,11 @@ export class StageCanvasController {
     }
 
     let html = '';
-    slidesToOverlay.forEach(({ slide, idx, cy }) => {
-      const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
+    slidesToOverlay.forEach(({ slide, idx, cy, dims }) => {
+      const slideTopPt = worldToScreen(-dims.width / 2, cy - dims.height / 2, this.canvas, camera);
       const headerLeft = Math.round(slideTopPt.x);
       const headerTop = Math.round(slideTopPt.y - 36);
-      const headerWidth = Math.round(this.slideWidth * this.zoom);
+      const headerWidth = Math.round(dims.width * this.zoom);
       const pageType: CanvasPageType = slide.pageType || (this.canvasType === 'social' ? 'social' : 'presentation');
 
       const typeIcons: Record<CanvasPageType, string> = {
@@ -5549,8 +5783,8 @@ export class StageCanvasController {
       const iconName = typeIcons[pageType] || 'slideshow';
       const labelText = typeLabels[pageType] || 'Diapositiva';
       const actionLabel = typeActionLabels[pageType] || 'Editar';
-      const hasSpecializedEditor = pageType === 'board' || pageType === 'sheet';
-      const action = pageType === 'board' ? 'edit-board' : 'edit-sheet';
+      const hasSpecializedEditor = pageType === 'board' || pageType === 'sheet' || pageType === 'doc';
+      const action = pageType === 'board' ? 'edit-board' : (pageType === 'sheet' ? 'edit-sheet' : 'edit-doc');
 
       html += `
         <div class="presentation-slide-overlay-header" data-ref="slide-overlay-${slide.id}" style="left: ${headerLeft}px; top: ${headerTop}px; width: ${headerWidth}px;">
@@ -5703,10 +5937,14 @@ export class StageCanvasController {
           this.enterBoardEditMode(slideId);
         } else if (action === 'edit-sheet') {
           this.enterSheetEditMode(slideId);
+        } else if (action === 'edit-doc') {
+          this.enterDocEditMode(slideId);
         } else if (action === 'edit-native') {
           const slide = this.slides.find((s) => s.id === slideId);
           if (slide?.pageType === 'sheet') {
             this.enterSheetEditMode(slideId);
+          } else if (slide?.pageType === 'doc') {
+            this.enterDocEditMode(slideId);
           } else {
             this.enterBoardEditMode(slideId);
           }

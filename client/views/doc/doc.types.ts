@@ -1,3 +1,5 @@
+import { CanvasPageType } from '../../types/stage.types.js';
+
 export type DocPaperSize = 'a3' | 'a4' | 'a5' | 'digital' | 'legal' | 'letter' | 'tabloid';
 export type DocOrientation = 'landscape' | 'portrait';
 export type DocLineSpacing = 1.0 | 1.15 | 1.5 | 2.0;
@@ -81,9 +83,12 @@ export interface DocWatermark {
 
 export interface DocPage {
   contentHtml: string;
+  data?: any;
   footerHtml?: string;
   headerHtml?: string;
   id: string;
+  name?: string;
+  pageType?: CanvasPageType;
 }
 
 export interface DocSettings {

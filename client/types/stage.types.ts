@@ -25,11 +25,13 @@ export interface StagePageItem {
   createdAt: number;
   duration?: number;
   elements: BoardElement[];
+  height?: number;
   id: string;
   linkedCanvasUuid?: string;
   name: string;
   pageType?: CanvasPageType;
   previewThumbnail?: string;
+  width?: number;
 }
 
 export type PresentationSlideItem = StagePageItem;

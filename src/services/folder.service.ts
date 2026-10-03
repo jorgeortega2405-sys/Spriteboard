@@ -497,7 +497,7 @@ export async function getFolderCanvases(
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
                 COALESCE(c.canvas_type, 'board') AS canvas_type,
-                JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
+                COALESCE(JSON_EXTRACT(c.data, '$.pages[*].pageType'), JSON_EXTRACT(c.data, '$.slides[*].pageType'), JSON_EXTRACT(c.data, '$.sheets[*].pageType')) AS page_types,
                 c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
                 c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
                 (uf.id IS NOT NULL) AS is_favorite
@@ -534,7 +534,7 @@ export async function getFolderCanvases(
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
-              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
+              COALESCE(JSON_EXTRACT(c.data, '$.pages[*].pageType'), JSON_EXTRACT(c.data, '$.slides[*].pageType'), JSON_EXTRACT(c.data, '$.sheets[*].pageType')) AS page_types,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
               (uf.id IS NOT NULL) AS is_favorite

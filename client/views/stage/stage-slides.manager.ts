@@ -18,15 +18,20 @@ export interface StageSlidesHost {
   container: HTMLElement;
   drawElementOn(ctx: CanvasRenderingContext2D, el: any): void;
   enterBoardEditMode?(slideId?: string): void;
+  enterDocEditMode?(slideId?: string): void;
   enterSheetEditMode?(slideId?: string): void;
   escapeHtml(str: string): string;
   exitBoardEditMode?(): void;
+  exitDocEditMode?(): void;
   exitSheetEditMode?(): void;
   fileMenuController: any;
   getActiveSlide(): PresentationSlideItem;
   getActiveSlideIndex(): number;
+  getSlideDimensions?(slide?: PresentationSlideItem | null): { height: number; width: number };
+  getSlideLayout?(idx: number): { cy: number; height: number; top: number; width: number };
   gridViewModal: any;
   isBoardEditActive?: boolean;
+  isDocEditActive?: boolean;
   isSheetEditActive?: boolean;
   openPresentationGridView(): void;
   pageViewMode: CanvasPageViewMode;
@@ -126,62 +131,73 @@ export class StageSlidesManager {
         elements.push(createTextElement('Título del documento', {
           color: '#0f172a',
           fontFamily: 'Inter',
-          fontSize: 32,
+          fontSize: 30,
           fontWeight: 700,
-          height: 44,
-          width: 760,
-          x: -380,
-          y: -240,
+          height: 42,
+          width: 620,
+          x: -310,
+          y: -430,
         }));
-        elements.push(createTextElement(`Documento estructurado • ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`, {
+        elements.push(createTextElement(`Documento • ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`, {
           color: '#94a3b8',
           fontFamily: 'Inter',
           fontSize: 14,
           fontWeight: 500,
-          height: 24,
-          width: 760,
-          x: -380,
-          y: -190,
+          height: 22,
+          width: 620,
+          x: -310,
+          y: -380,
+        }));
+        elements.push(createTextElement('«El secreto para salir adelante es simplemente comenzar.» — Mark Twain', {
+          color: '#64748b',
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontStyle: 'italic',
+          fontWeight: 400,
+          height: 40,
+          width: 620,
+          x: -310,
+          y: -340,
         }));
         elements.push(createTextElement('1. Introducción y Resumen General', {
           color: '#1e293b',
           fontFamily: 'Inter',
-          fontSize: 20,
+          fontSize: 19,
           fontWeight: 600,
-          height: 32,
-          width: 760,
-          x: -380,
-          y: -150,
+          height: 30,
+          width: 620,
+          x: -310,
+          y: -280,
         }));
-        elements.push(createTextElement('Este es un documento dentro de tu proyecto. Puedes editar el texto directamente aquí, agregar encabezados, listas y notas sin necesidad de abrir ningún editor adicional.', {
+        elements.push(createTextElement('Este es un documento dentro de tu proyecto. Puedes editar el texto directamente aquí o hacer clic en "Editar documento" para la experiencia completa.', {
           color: '#334155',
           fontFamily: 'Inter',
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: 400,
-          height: 68,
-          width: 760,
-          x: -380,
-          y: -110,
+          height: 60,
+          width: 620,
+          x: -310,
+          y: -240,
         }));
         elements.push(createTextElement('2. Puntos Clave y Objetivos', {
           color: '#1e293b',
           fontFamily: 'Inter',
-          fontSize: 20,
+          fontSize: 19,
           fontWeight: 600,
-          height: 32,
-          width: 760,
-          x: -380,
-          y: -30,
+          height: 30,
+          width: 620,
+          x: -310,
+          y: -160,
         }));
-        elements.push(createTextElement('• Edición 100% nativa en el lienzo con doble clic.\n• Formato estructurado y exportación disponible en cualquier momento.', {
+        elements.push(createTextElement('• Orientación vertical proporcional al estándar de documento (816 × 1056 px).\n• Edición fluida y exportación disponible.', {
           color: '#475569',
           fontFamily: 'Inter',
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: 400,
-          height: 56,
-          width: 760,
-          x: -380,
-          y: 10,
+          height: 48,
+          width: 620,
+          x: -310,
+          y: -120,
         }));
         toastMessage = 'Página de documento agregada';
         break;
@@ -252,9 +268,11 @@ export class StageSlidesManager {
       createdAt: Date.now(),
       duration: this.controller.slideDuration,
       elements,
+      height: type === 'doc' ? 1056 : (type === 'social' ? 788 : undefined),
       id: `slide-${Date.now()}`,
       name,
       pageType: type,
+      width: type === 'doc' ? 816 : (type === 'social' ? 1080 : undefined),
     };
 
     this.controller.saveHistoryState();
@@ -269,9 +287,8 @@ export class StageSlidesManager {
 
     const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
-    const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : (this.controller.getSlideLayout ? this.controller.getSlideLayout(activeIdx).cy : activeIdx * (this.controller.slideHeight + 80));
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -291,9 +308,11 @@ export class StageSlidesManager {
       createdAt: Date.now(),
       duration: current.duration || this.controller.slideDuration,
       elements: clonedElements,
+      height: current.height,
       id: `slide-${Date.now()}`,
       name: `${current.name} (Copia)`,
       pageType: current.pageType,
+      width: current.width,
     };
     this.controller.saveHistoryState();
     const currentIdx = this.controller.getActiveSlideIndex();
@@ -303,9 +322,8 @@ export class StageSlidesManager {
     this.controller.selectedElementIds.clear();
     const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
-    const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : (this.controller.getSlideLayout ? this.controller.getSlideLayout(activeIdx).cy : activeIdx * (this.controller.slideHeight + 80));
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -331,9 +349,8 @@ export class StageSlidesManager {
     this.controller.selectedElementIds.clear();
     const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
-    const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : (this.controller.getSlideLayout ? this.controller.getSlideLayout(activeIdx).cy : activeIdx * (this.controller.slideHeight + 80));
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -367,11 +384,13 @@ export class StageSlidesManager {
     if (this.controller.isSheetEditActive && current.pageType !== 'sheet') {
       this.controller.exitSheetEditMode?.();
     }
+    if (this.controller.isDocEditActive && current.pageType !== 'doc') {
+      this.controller.exitDocEditMode?.();
+    }
     const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
-    const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : (this.controller.getSlideLayout ? this.controller.getSlideLayout(activeIdx).cy : activeIdx * (this.controller.slideHeight + 80));
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -426,6 +445,8 @@ export class StageSlidesManager {
           this.controller.enterBoardEditMode?.(slide.id);
         } else if (pageType === 'sheet') {
           this.controller.enterSheetEditMode?.(slide.id);
+        } else if (pageType === 'doc') {
+          this.controller.enterDocEditMode?.(slide.id);
         }
       });
       cardsList.appendChild(card);
