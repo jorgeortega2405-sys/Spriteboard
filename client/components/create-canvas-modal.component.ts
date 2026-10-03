@@ -1,10 +1,11 @@
 import { PresetVariant } from '../config/templates.config.js';
 import { getCategoryMenuSvg, getSocialPlatformBadgeIconSvg, getTemplateVariantSvg } from '../graphics/canvas-graphics.js';
 import { escapeHtml, uploadFilesApi } from '../services/api.service.js';
-import { CreateCanvasOptions, createAndOpenCanvas } from '../services/canvas-creator.service.js';
+import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { setupDropdown } from '../utils/dom.util.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
@@ -1443,13 +1444,29 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   const inputCustomW = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-w"]');
   const inputCustomH = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-h"]');
-  const selectCustomUnit = backdrop.querySelector<HTMLSelectElement>('[data-ref="select-custom-unit"]');
+  const dropdownWrapperUnit = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-custom-unit"]');
+  const unitSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="custom-unit-selected-text"]');
   const btnSubmitCustom = backdrop.querySelector<HTMLElement>('[data-ref="btn-submit-custom-size"]');
+  let selectedUnit = 'px';
+
+  if (dropdownWrapperUnit) {
+    setupDropdown(dropdownWrapperUnit, {
+      isSelect: true,
+      onSelect: (val) => {
+        if (typeof val === 'string') {
+          selectedUnit = val;
+          if (unitSelectedText) {
+            unitSelectedText.textContent = val;
+          }
+        }
+      },
+    });
+  }
 
   btnSubmitCustom?.addEventListener('click', () => {
     const rawW = parseFloat(inputCustomW?.value || '1920') || 1920;
     const rawH = parseFloat(inputCustomH?.value || '1080') || 1080;
-    const unit = selectCustomUnit?.value || 'px';
+    const unit = selectedUnit || unitSelectedText?.textContent?.trim() || 'px';
     const finalW = Math.max(10, Math.min(10000, convertToPixels(rawW, unit)));
     const finalH = Math.max(10, Math.min(10000, convertToPixels(rawH, unit)));
     void handleInstantCreation({
@@ -1468,7 +1485,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       const unit = badge.getAttribute('data-unit') || 'px';
       if (inputCustomW && w) inputCustomW.value = w;
       if (inputCustomH && h) inputCustomH.value = h;
-      if (selectCustomUnit && unit) selectCustomUnit.value = unit;
+      selectedUnit = unit;
+      if (unitSelectedText) unitSelectedText.textContent = unit;
     });
   });
 

@@ -822,3 +822,120 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
 
   return modalInstance;
 }
+
+export interface ConfirmModalOptions {
+  cancelText?: string;
+  confirmClass?: string;
+  confirmText?: string;
+  description?: string;
+  descriptionKey?: string;
+  title: string;
+  titleKey?: string;
+}
+
+export function showConfirmModal(options: ConfirmModalOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    openModal({
+      cancelText: options.cancelText || t('modal.cancel'),
+      confirmClass: options.confirmClass || 'component-button--black',
+      confirmText: options.confirmText || t('modal.continue'),
+      description: options.description || '',
+      descriptionKey: options.descriptionKey || '',
+      onCancel: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
+      },
+      onClose: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
+      },
+      onConfirm: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(true);
+        }
+      },
+      showCancel: true,
+      showConfirm: true,
+      size: 'sm',
+      title: options.title,
+      titleKey: options.titleKey || '',
+    });
+  });
+}
+
+export interface PromptModalOptions {
+  cancelText?: string;
+  confirmText?: string;
+  defaultValue?: string;
+  description?: string;
+  inputType?: string;
+  placeholder?: string;
+  title: string;
+}
+
+export function showPromptModal(options: PromptModalOptions): Promise<string | null> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const inputHtml = `
+      <div class="field-group" data-ref="prompt-field-group">
+        <label class="field" data-ref="prompt-field">
+          <input class="field__input" data-ref="input-prompt-value" type="${options.inputType || 'text'}" value="${options.defaultValue ? String(options.defaultValue).replace(/"/g, '&quot;') : ''}" placeholder="${options.placeholder || ' '}" />
+        </label>
+      </div>
+    `;
+
+    const modal = openModal({
+      bodyHtml: inputHtml,
+      cancelText: options.cancelText || t('modal.cancel'),
+      confirmClass: 'component-button--black',
+      confirmText: options.confirmText || t('modal.continue'),
+      description: options.description || '',
+      onCancel: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(null);
+        }
+      },
+      onClose: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(null);
+        }
+      },
+      onConfirm: () => {
+        if (!resolved) {
+          resolved = true;
+          const inputEl = modal.backdrop.querySelector<HTMLInputElement>('[data-ref="input-prompt-value"]');
+          resolve(inputEl ? inputEl.value : null);
+        }
+      },
+      showCancel: true,
+      showConfirm: true,
+      size: 'sm',
+      title: options.title,
+    });
+
+    const input = modal.backdrop.querySelector<HTMLInputElement>('[data-ref="input-prompt-value"]');
+    if (input) {
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 50);
+
+      input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (modal.confirmBtn) {
+            modal.confirmBtn.click();
+          }
+        }
+      });
+    }
+  });
+}

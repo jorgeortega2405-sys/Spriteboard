@@ -78,8 +78,7 @@ export class VideoExportService {
   public open(): void {
     if (!this._backdrop) return;
     this.resetModalState();
-    this._backdrop.style.display = 'flex';
-    requestAnimationFrame(() => this._backdrop?.classList.add('is-visible'));
+    this._backdrop.classList.add('is-visible');
   }
 
   public close(): void {
@@ -89,7 +88,6 @@ export class VideoExportService {
     }
     if (this._backdrop) {
       this._backdrop.classList.remove('is-visible');
-      this._backdrop.style.display = 'none';
     }
   }
 

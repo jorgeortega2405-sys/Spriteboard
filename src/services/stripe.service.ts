@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { updateUserSubscriptionInSessions } from './auth.service.js';
@@ -5,7 +6,6 @@ import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
 import { invalidateUserStorageCache } from './storage.service.js';
 import { normalizeTierKey, subscriptionService } from './subscription.service.js';
-import Stripe from 'stripe';
 
 export class StripeService {
   private static instance: StripeService;
@@ -120,7 +120,18 @@ export class StripeService {
   }
 
   public async handleWebhookEvent(event: Stripe.Event): Promise<void> {
-    logger.app.info('Procesando evento de Stripe Webhook', { type: event.type, id: event.id });
+    const eventKey = `webhook:stripe:processed:${event.id}`;
+    let isNew = false;
+    try {
+      isNew = Boolean(await redis.set(eventKey, '1', 'EX', 86400, 'NX'));
+    } catch {}
+
+    if (!isNew) {
+      logger.app.info('Evento de Stripe Webhook duplicado o ya procesado omitido', { id: event.id, type: event.type });
+      return;
+    }
+
+    logger.app.info('Procesando evento de Stripe Webhook', { id: event.id, type: event.type });
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -333,6 +344,11 @@ export class StripeService {
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
     if (userId && planId) {
+      const existingUser = await purchaseService.getUserByStripeSubscriptionId(subscription.id);
+      if (existingUser && existingUser.subscription_status === 'canceled' && status === 'active' && (subscription as any).cancel_at_period_end) {
+        logger.app.info('Omitiendo reactivación de suscripción ya cancelada', { userId, subId: subscription.id });
+        return;
+      }
       const tier = status === 'active' ? planId : 'free';
       await purchaseService.updateUserSubscription(
         userId,

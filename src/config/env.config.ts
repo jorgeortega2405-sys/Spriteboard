@@ -17,6 +17,14 @@ export const config = {
     host: process.env.REDIS_HOST || 'redis',
     port: Number(process.env.REDIS_PORT) || 6379,
   },
+  db: {
+    canvasName: process.env.DB_CANVAS_NAME || 'db_canvas',
+    host: process.env.DB_HOST || 'localhost',
+    identityName: process.env.DB_NAME || 'db_identity',
+    password: process.env.DB_PASSWORD || '',
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER || 'root',
+  },
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT) || 465,
@@ -63,7 +71,7 @@ export const config = {
     s3PublicUrl: process.env.AWS_S3_PUBLIC_URL || '',
   },
   photoroom: {
-    apiKey: process.env.PHOTOROOM_API_KEY || 'sandbox_sk_pr_default_745f71ad9846834f110efd4b34e5ae323b14ff43',
+    apiKey: process.env.PHOTOROOM_API_KEY || '',
     endpoint: process.env.PHOTOROOM_ENDPOINT || 'https://sdk.photoroom.com/v1/segment',
   },
 };

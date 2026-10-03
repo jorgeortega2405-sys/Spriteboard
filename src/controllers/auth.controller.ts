@@ -806,7 +806,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     let canReset = false;
     if (user) {
       const permissions = await getUserEffectivePermissions(user.id);
-      canReset = hasPermission(permissions, 'account:edit_security') && !user.roles?.includes('SYSTEM_ACCOUNT');
+      canReset = hasPermission(permissions, 'account:edit_security');
     }
 
     if (user && canReset) {

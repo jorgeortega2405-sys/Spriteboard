@@ -1580,8 +1580,7 @@ export class VideoTimelineManager {
     const curPreset = f.preset || 'none';
     presetBtns.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-preset') === curPreset));
 
-    backdrop.style.display = 'flex';
-    requestAnimationFrame(() => backdrop.classList.add('is-visible'));
+    backdrop.classList.add('is-visible');
   }
 
   private openTransitionsModal(): void {
@@ -1626,8 +1625,7 @@ export class VideoTimelineManager {
     if (inDuration) inDuration.value = String(trans.duration || 1.0);
     if (valDuration) valDuration.textContent = `${(trans.duration || 1.0).toFixed(1)}s`;
 
-    backdrop.style.display = 'flex';
-    requestAnimationFrame(() => backdrop.classList.add('is-visible'));
+    backdrop.classList.add('is-visible');
   }
 
   private openAudioFadeModal(): void {
@@ -1661,8 +1659,7 @@ export class VideoTimelineManager {
     if (valFadeIn) valFadeIn.textContent = `${(clip.audioFadeIn || 0).toFixed(1)}s`;
     if (valFadeOut) valFadeOut.textContent = `${(clip.audioFadeOut || 0).toFixed(1)}s`;
 
-    backdrop.style.display = 'flex';
-    requestAnimationFrame(() => backdrop.classList.add('is-visible'));
+    backdrop.classList.add('is-visible');
   }
 
   private openSubtitlesModal(): void {
@@ -1712,8 +1709,7 @@ export class VideoTimelineManager {
     }
 
     if (backdrop) {
-      backdrop.style.display = 'flex';
-      requestAnimationFrame(() => backdrop.classList.add('is-visible'));
+      backdrop.classList.add('is-visible');
     }
   }
 
@@ -1753,7 +1749,6 @@ export class VideoTimelineManager {
     const closeFilters = () => {
       if (filtersBackdrop) {
         filtersBackdrop.classList.remove('is-visible');
-        filtersBackdrop.style.display = 'none';
       }
     };
 
@@ -1825,7 +1820,6 @@ export class VideoTimelineManager {
     const closeTrans = () => {
       if (transBackdrop) {
         transBackdrop.classList.remove('is-visible');
-        transBackdrop.style.display = 'none';
       }
     };
 
@@ -1866,7 +1860,6 @@ export class VideoTimelineManager {
     const closeFade = () => {
       if (fadeBackdrop) {
         fadeBackdrop.classList.remove('is-visible');
-        fadeBackdrop.style.display = 'none';
       }
     };
 
@@ -1965,7 +1958,6 @@ export class VideoTimelineManager {
     const closeSub = () => {
       if (subBackdrop) {
         subBackdrop.classList.remove('is-visible');
-        subBackdrop.style.display = 'none';
       }
     };
 

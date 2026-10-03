@@ -195,21 +195,13 @@ export async function createDesignerElement(
   userId: number,
   input: ElementCreateInput,
   file?: Express.Multer.File,
-  userRoles: string[] = [],
   userPermissions: string[] = []
 ): Promise<ElementItem> {
   const canPublish = hasPermission(userPermissions, 'elements:publish') ||
     hasPermission(userPermissions, 'elements:create') ||
-    hasPermission(userPermissions, 'designer:dashboard') ||
-    userRoles.includes('DESIGNER') ||
-    userRoles.includes('SUPER_ADMIN') ||
-    userRoles.includes('PLATFORM_ADMIN');
-  const canManageAll = hasPermission(userPermissions, 'elements:manage_all') ||
-    userRoles.includes('SUPER_ADMIN') ||
-    userRoles.includes('PLATFORM_ADMIN');
-  const canPublishOfficial = hasPermission(userPermissions, 'elements:official_publish') ||
-    userRoles.includes('SUPER_ADMIN') ||
-    userRoles.includes('PLATFORM_ADMIN');
+    hasPermission(userPermissions, 'designer:dashboard');
+  const canManageAll = hasPermission(userPermissions, 'elements:manage_all');
+  const canPublishOfficial = hasPermission(userPermissions, 'elements:official_publish');
 
   if (!canPublish && !canManageAll) {
     throw new Error('Unauthorized role to create elements');

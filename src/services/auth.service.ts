@@ -4,6 +4,7 @@ import { redis } from '../config/redis.config.js';
 import { MultiAccountSessionPayload, SessionAccount, UserPayload } from '../types/auth.types.js';
 import { geoIpService } from './geoip.service.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions } from './permission.service.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
@@ -527,6 +528,14 @@ export async function updateUserSubscriptionInSessions(
           try {
             const parsed = JSON.parse(dataStr);
             parsed.subscription_tier = tier;
+            const updatedPerms = await getUserEffectivePermissions(
+              userId,
+              parsed.role,
+              parsed.roles,
+              tier,
+              'active'
+            );
+            parsed.permissions = updatedPerms;
             await redis.setex(sessionKey, SESSION_TTL_SECONDS, JSON.stringify(parsed));
           } catch (_) {}
         }

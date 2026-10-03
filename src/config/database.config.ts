@@ -1,3 +1,4 @@
+import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
 import mysql from 'mysql2/promise';
 
@@ -53,16 +54,16 @@ class DatabaseManager {
 export const dbManager = new DatabaseManager();
 
 const defaultDbOptions: mysql.PoolOptions = {
-  host: process.env.DB_HOST || 'mysql',
-  port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || 'sprite_user',
-  password: process.env.DB_PASSWORD || 'sprite_password',
-  database: process.env.DB_NAME || 'db_identity',
-  waitForConnections: true,
   connectionLimit: 30,
-  queueLimit: 150,
+  database: config.db.identityName,
   enableKeepAlive: true,
+  host: config.db.host,
   keepAliveInitialDelay: 10000,
+  password: config.db.password,
+  port: config.db.port,
+  queueLimit: 150,
+  user: config.db.user,
+  waitForConnections: true,
 };
 
 export const pool = dbManager.registerMySql('default', defaultDbOptions);
@@ -71,7 +72,7 @@ dbManager.registerExistingMySql('identity', pool);
 
 const canvasDbOptions: mysql.PoolOptions = {
   ...defaultDbOptions,
-  database: process.env.DB_CANVAS_NAME || 'db_canvas',
+  database: config.db.canvasName,
 };
 
 export const canvasPool = dbManager.registerMySql('canvas', canvasDbOptions);

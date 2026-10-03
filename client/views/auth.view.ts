@@ -839,7 +839,7 @@ export async function createResetPasswordView(): Promise<HTMLElement> {
     if (passwordInput) passwordInput.disabled = true;
     if (confirmInput) confirmInput.disabled = true;
   } else {
-    fetch(API_ROUTES.auth.resetPasswordValidate(token))
+    getApi(API_ROUTES.auth.resetPasswordValidate(token))
       .then((res) => res.json())
       .then((data) => {
         if (!data.valid) {

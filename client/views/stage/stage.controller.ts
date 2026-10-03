@@ -2905,9 +2905,11 @@ export class StageCanvasController {
     const btnRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-remove-bg"]');
     if (btnRemoveBg) {
       btnRemoveBg.addEventListener('click', async () => {
-        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
-        if (!isProOrBusiness) {
+        const userPermissions: string[] = (currentUser as any)?.permissions || [];
+        const hasAiBgRemoval = userPermissions.includes('*') ||
+          userPermissions.includes('subscription:feature:ai_bg_removal') ||
+          userPermissions.includes('subscription:feature:all');
+        if (!hasAiBgRemoval) {
           openUpgradeModal('pro');
           showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
           return;

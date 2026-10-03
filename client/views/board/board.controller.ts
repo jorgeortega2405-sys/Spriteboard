@@ -7,6 +7,7 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFontsDrawerOpen, isPixelAnimationDrawerOpen, isPositionDrawerOpen, openAnimationInDrawer, openChartInspectorInDrawer, openColorsInDrawer, openEffectsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPixelAnimationInDrawer, openPositionInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { showPromptModal } from '../../components/modal.component.js';
 import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
@@ -1757,19 +1758,19 @@ export class BoardController {
 
     this.btnColorEyedropper?.addEventListener('click', () => {
       this.toggleEyedropper();
-    });
+    }, { signal: this.abortController.signal });
 
     this.colorsCustomInputEl?.addEventListener('input', (e) => {
       const val = (e.target as HTMLInputElement).value;
       if (val) {
         this.handleColorPicked(val);
       }
-    });
+    }, { signal: this.abortController.signal });
 
     const transparentSwatch = drawerBody.querySelector<HTMLButtonElement>('[data-ref="color-swatch-transparent"]');
     transparentSwatch?.addEventListener('click', () => {
       this.handleColorPicked('transparent');
-    });
+    }, { signal: this.abortController.signal });
 
     this.loadRecentColors();
     this.renderDefaultPalette();
@@ -1820,7 +1821,7 @@ export class BoardController {
 
       swatch.addEventListener('click', () => {
         this.handleColorPicked(color);
-      });
+      }, { signal: this.abortController.signal });
 
       this.colorsPaletteGridEl.appendChild(swatch);
     }
@@ -1850,7 +1851,7 @@ export class BoardController {
 
       swatch.addEventListener('click', () => {
         this.handleColorPicked(color);
-      });
+      }, { signal: this.abortController.signal });
 
       this.colorsRampGridEl?.appendChild(swatch);
     });
@@ -1874,7 +1875,7 @@ export class BoardController {
 
       swatch.addEventListener('click', () => {
         this.handleColorPicked(color);
-      });
+      }, { signal: this.abortController.signal });
 
       this.colorsRecentGridEl.appendChild(swatch);
     }
@@ -2005,7 +2006,7 @@ export class BoardController {
             }, 50);
           },
         });
-      });
+      }, { signal: this.abortController.signal });
       return;
     }
 
@@ -2993,9 +2994,11 @@ export class BoardController {
     const btnRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-remove-bg"]');
     if (btnRemoveBg) {
       btnRemoveBg.addEventListener('click', async () => {
-        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
-        if (!isProOrBusiness) {
+        const userPermissions: string[] = (currentUser as any)?.permissions || [];
+        const hasAiBgRemoval = userPermissions.includes('*') ||
+          userPermissions.includes('subscription:feature:ai_bg_removal') ||
+          userPermissions.includes('subscription:feature:all');
+        if (!hasAiBgRemoval) {
           openUpgradeModal('pro');
           showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
           return;
@@ -4867,14 +4870,19 @@ export class BoardController {
     }
     if (hit.type === 'connector') {
       const current = hit.label || '';
-      const newLabel = window.prompt('Texto del conector:', current);
-      if (newLabel !== null) {
-        this.pushHistoryState();
-        hit.label = newLabel.trim();
-        this.collaborationManager.broadcastUpdateElement(hit);
-        this.scheduleAutoSave();
-        this.requestRedraw();
-      }
+      void (async () => {
+        const newLabel = await showPromptModal({
+          defaultValue: current,
+          title: 'Texto del conector:',
+        });
+        if (newLabel !== null) {
+          this.pushHistoryState();
+          hit.label = newLabel.trim();
+          this.collaborationManager.broadcastUpdateElement(hit);
+          this.scheduleAutoSave();
+          this.requestRedraw();
+        }
+      })();
       return;
     }
   }
@@ -4967,7 +4975,7 @@ export class BoardController {
         textarea.style.height = 'auto';
         textarea.style.width = `${Math.max(screenW, textarea.scrollWidth + 10)}px`;
         textarea.style.height = `${Math.max(screenH, textarea.scrollHeight)}px`;
-      });
+      }, { signal: this.abortController.signal });
     }
 
     container.appendChild(textarea);
@@ -4977,13 +4985,13 @@ export class BoardController {
 
     textarea.addEventListener('blur', () => {
       this.commitInlineEditor();
-    });
+    }, { signal: this.abortController.signal });
 
     textarea.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         this.commitInlineEditor();
       }
-    });
+    }, { signal: this.abortController.signal });
   }
 
   private commitInlineEditor(): void {
@@ -7230,7 +7238,7 @@ export class BoardController {
         swatch.classList.add('is-active');
         this.setColor(hex);
         this.updateColorPanelUI(hex);
-      });
+      }, { signal: this.abortController.signal });
       container.appendChild(swatch);
     }
   }
@@ -8312,7 +8320,7 @@ export class BoardController {
     btnClose?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.closeInlineVideo();
-    });
+    }, { signal: this.abortController.signal });
 
     const btnMaximize = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-maximize"]');
     btnMaximize?.addEventListener('click', (e) => {
@@ -8321,7 +8329,7 @@ export class BoardController {
       if (embed.videoId) {
         openYouTubePlayerModal(embed.videoId, embed.title);
       }
-    });
+    }, { signal: this.abortController.signal });
 
     viewport.appendChild(overlay);
     this.activeInlineVideoEl = overlay;

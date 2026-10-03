@@ -21,7 +21,7 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     [ownerId]
   );
   const userTier = uRows[0]?.subscription_tier || 'free';
-  const effectivePermissions = await getUserEffectivePermissions(ownerId);
+  const effectivePermissions = await getUserEffectivePermissions(ownerId, undefined, undefined, userTier, 'active');
 
   if (!hasSubscriptionFeature(effectivePermissions, 'teams') && !hasPermission(effectivePermissions, 'teams:manage')) {
     throw new Error('La creación de equipos de trabajo es exclusiva del plan Spriteboard Negocios.');

@@ -1,8 +1,8 @@
-import { createDesignerElement, deleteDesignerElement, getDesignerElementMetrics, getDesignerElements, getElementByUuid, getElementCategoriesAndTags, getPublishedElements, incrementElementUses, updateDesignerElement } from '../services/element.service.js';
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { createDesignerElement, deleteDesignerElement, getDesignerElementMetrics, getDesignerElements, getElementByUuid, getElementCategoriesAndTags, getPublishedElements, incrementElementUses, updateDesignerElement } from '../services/element.service.js';
 import { hasPermission } from '../services/permission.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
-import { Request, Response } from 'express';
 
 export async function getElementsHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -95,18 +95,12 @@ export async function createDesignerElementHandler(req: Request, res: Response):
       return;
     }
 
-    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
-      ? user.roles
-      : (user.role ? [user.role] : ['USER']);
     const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
 
     const canPublish = hasPermission(userPermissions, 'elements:publish') ||
       hasPermission(userPermissions, 'elements:create') ||
       hasPermission(userPermissions, 'elements:manage_all') ||
-      hasPermission(userPermissions, 'designer:dashboard') ||
-      userRoles.includes('DESIGNER') ||
-      userRoles.includes('SUPER_ADMIN') ||
-      userRoles.includes('PLATFORM_ADMIN');
+      hasPermission(userPermissions, 'designer:dashboard');
 
     if (!canPublish) {
       sendForbidden(res, 'No tienes permisos para subir elementos. Esta función está reservada para diseñadores.');
@@ -139,7 +133,6 @@ export async function createDesignerElementHandler(req: Request, res: Response):
         width: width ? Number(width) : undefined,
       },
       file,
-      userRoles,
       userPermissions
     );
 

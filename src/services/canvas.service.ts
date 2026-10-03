@@ -336,6 +336,14 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     void invalidateUserStorageCache(storageCheckUserId);
     return createdCanvas;
   } catch (err) {
+    if (dataStr) {
+      try {
+        await deleteCanvasBlob(uuid);
+        if (previewThumbnail) {
+          await deleteCanvasThumbnail(uuid);
+        }
+      } catch {}
+    }
     logger.db.error('Error al insertar registro en la base de datos de lienzos', err);
     throw new Error('No se pudo guardar el lienzo en la base de datos.');
   }

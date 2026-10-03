@@ -1,11 +1,11 @@
-import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, escapeHtml } from '../services/api.service.js';
 import { openModal } from './modal.component.js';
-import { renderIcons } from '../services/icon.service.js';
-import { setupDropdown } from '../utils/dom.util.js';
-import { showToast } from '../services/toast.service.js';
+import { API_ROUTES } from '../config/api-routes.js';
+import { currentUser, escapeHtml, postFormApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
+import { showToast } from '../services/toast.service.js';
 import { canPublishElements } from '../types/auth.types.js';
+import { setupDropdown } from '../utils/dom.util.js';
 
 export interface UploadElementModalOptions {
   onSuccess?: () => void;
@@ -216,13 +216,7 @@ export function openUploadElementModal(options?: UploadElementModalOptions): voi
         formData.append('is_premium', String(isPremium));
         formData.append('tags', JSON.stringify(tags));
 
-        const res = await fetch(API_ROUTES.designer.uploadElement, {
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          method: 'POST',
-        });
+        const res = await postFormApi(API_ROUTES.designer.uploadElement, formData);
 
         if (res.ok) {
           showToast('¡Elemento subido con éxito!', 'success');

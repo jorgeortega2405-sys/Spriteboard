@@ -1,4 +1,4 @@
-﻿import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
+import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../config/board-shapes.config.js';
 import { MockupFitMode, MockupTemplate } from '../types/mockups.types.js';
 import { hitTest3DRotationGizmo } from './renderers/3d-renderer.js';
@@ -21,7 +21,7 @@ export const TEXT_PRESETS = {
     fontSize: 36,
     fontWeight: 700,
     height: 56,
-    text: 'Agregar un tÃ­tulo',
+    text: 'Agregar un título',
     width: 480,
   },
   subheading: {
@@ -29,7 +29,7 @@ export const TEXT_PRESETS = {
     fontSize: 24,
     fontWeight: 600,
     height: 44,
-    text: 'Agregar un subtÃ­tulo',
+    text: 'Agregar un subtítulo',
     width: 380,
   },
 } as const;

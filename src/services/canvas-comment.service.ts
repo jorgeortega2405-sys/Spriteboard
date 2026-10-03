@@ -1,10 +1,10 @@
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { CanvasComment, CanvasCommentAuthor, CanvasCommentReply, CreateCommentDto, UpdateCommentDto } from '../types/canvas-comment.types.js';
 import { getCanvasUserRole } from './canvas.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 
 function getInitials(name: string): string {
   if (!name) return '??';
@@ -29,10 +29,8 @@ export async function listCanvasComments(
 
   let query = `
     SELECT cc.id, cc.uuid, cc.canvas_id, cc.user_id, cc.parent_id, cc.pos_x, cc.pos_y,
-           cc.frame_index, cc.content, cc.status, cc.created_at, cc.updated_at,
-           u.username, u.avatar_url
-    FROM db_canvas.canvas_comments cc
-    LEFT JOIN db_identity.users u ON u.id = cc.user_id
+           cc.frame_index, cc.content, cc.status, cc.created_at, cc.updated_at
+    FROM canvas_comments cc
     WHERE cc.canvas_id = ?
   `;
   const params: any[] = [canvasId];
@@ -46,15 +44,29 @@ export async function listCanvasComments(
 
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(query, params);
 
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id): id is number => typeof id === 'number' && id > 0)));
+  const userMap = new Map<number, { avatar_url: string | null; username: string }>();
+  if (userIds.length > 0) {
+    const placeholders = userIds.map(() => '?').join(',');
+    const [userRows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
+      userIds
+    );
+    for (const u of userRows) {
+      userMap.set(u.id, { avatar_url: u.avatar_url || null, username: u.username || 'Usuario' });
+    }
+  }
+
   const commentsMap = new Map<number, CanvasComment>();
   const repliesList: Array<{ parentId: number; reply: CanvasCommentReply }> = [];
 
   for (const r of rows) {
+    const userData = userMap.get(r.user_id);
     const author: CanvasCommentAuthor = {
-      avatar_url: r.avatar_url || null,
+      avatar_url: userData?.avatar_url || null,
       id: r.user_id,
-      initials: getInitials(r.username || 'Usuario'),
-      username: r.username || 'Usuario',
+      initials: getInitials(userData?.username || 'Usuario'),
+      username: userData?.username || 'Usuario',
     };
 
     if (r.parent_id) {

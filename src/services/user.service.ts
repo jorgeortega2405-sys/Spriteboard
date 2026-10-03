@@ -1,9 +1,13 @@
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
 import { SubscriptionTierId } from '../types/subscription.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
-import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
+import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, deleteCanvasThumbnail } from './canvas-storage-blob.service.js';
 import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
 import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
@@ -11,10 +15,6 @@ import { assignUserRole, getUserRoles, setUserRoles } from './role.service.js';
 import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -319,8 +319,8 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
   }
 
   const permissions = await getUserEffectivePermissions(userId);
-  if (!hasPermission(permissions, 'account:delete') || user.roles?.includes('SYSTEM_ACCOUNT')) {
-    logger.security.warn('Intento de eliminación de cuenta bloqueado para cuenta del sistema o por falta de permisos', { userId });
+  if (!hasPermission(permissions, 'account:delete')) {
+    logger.security.warn('Intento de eliminación de cuenta bloqueado por falta de permisos', { userId });
     return false;
   }
 
@@ -344,6 +344,19 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     }
   }
 
+  if (user.banner_url && user.banner_url.startsWith('/uploads/banners/')) {
+    try {
+      const bannerName = path.basename(user.banner_url);
+      await deleteObject(`uploads/banners/${bannerName}`);
+      const bannerPath = path.join(__dirname, '../../public/uploads/banners', bannerName);
+      if (fs.existsSync(bannerPath)) {
+        await fs.promises.unlink(bannerPath);
+      }
+    } catch (err) {
+      logger.app.warn('No se pudo eliminar archivo de portada al borrar usuario', err);
+    }
+  }
+
   try {
     await revokeAllUserSessions(userId);
     await redis.del(`2fa:setup:${userId}`);
@@ -351,6 +364,30 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     await redis.del(`user:prefs:${userId}`);
   } catch (err) {
     logger.db.warn('No se pudieron limpiar claves de Redis al borrar usuario', err);
+  }
+
+  try {
+    const [uploads] = await pool.query<RowDataPacket[]>(
+      'SELECT id, file_path, thumbnail_path FROM user_uploads WHERE user_id = ?',
+      [userId]
+    );
+    for (const u of uploads) {
+      if (u.file_path) {
+        const fileName = path.basename(String(u.file_path));
+        await deleteObject(`uploads/media/${fileName}`).catch(() => {});
+        const localPath = path.join(process.cwd(), 'public', 'uploads', 'media', fileName);
+        await fs.promises.unlink(localPath).catch(() => {});
+      }
+      if (u.thumbnail_path) {
+        const thumbName = path.basename(String(u.thumbnail_path));
+        await deleteObject(`uploads/media/${thumbName}`).catch(() => {});
+        const localThumbPath = path.join(process.cwd(), 'public', 'uploads', 'media', thumbName);
+        await fs.promises.unlink(localThumbPath).catch(() => {});
+      }
+    }
+    await pool.query('DELETE FROM user_uploads WHERE user_id = ?', [userId]);
+  } catch (uploadErr) {
+    logger.db.warn('Aviso al limpiar multimedia del usuario durante eliminación de cuenta', uploadErr);
   }
 
   try {
@@ -364,6 +401,8 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
         await redis.del(`canvas:snapshot:${c.uuid}`);
         await redis.del(`canvas:meta:${c.uuid}`);
         await deleteCanvasBlob(c.uuid);
+        await deleteCanvasAllSnapshotsBlobs(c.uuid);
+        await deleteCanvasThumbnail(c.uuid);
       } catch {}
     }
 

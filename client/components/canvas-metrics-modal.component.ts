@@ -1,5 +1,7 @@
+import { showConfirmModal, showPromptModal } from './modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { deleteApi, getApi, postApi } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasMetricsData, CanvasPageMetric, CanvasPublicLinkItem, CanvasPublicLinkMetricsData, CanvasPublicLinksSummary } from '../types/canvas.types.js';
@@ -775,7 +777,11 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
   btnLinkDetailDelete?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!activeLinkDetail) return;
-    const confirmDelete = window.confirm(`¿Estás seguro de eliminar el enlace "${activeLinkDetail.link.name}"?`);
+    const confirmDelete = await showConfirmModal({
+      confirmClass: 'component-button--danger',
+      confirmText: t('modal.delete'),
+      title: `¿Estás seguro de eliminar el enlace "${activeLinkDetail.link.name}"?`,
+    });
     if (!confirmDelete) return;
 
     try {
@@ -832,15 +838,25 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
     }
   };
 
-  const openCreateLinkDialog = () => {
+  const openCreateLinkDialog = async () => {
     const defaultIndex = (publicLinksSummary?.links.length || 0) + 1;
     const defaultName = defaultIndex === 1 ? 'Enlace de visualización pública' : `Enlace de visualización pública ${defaultIndex}`;
 
-    const linkNameInput = window.prompt('Nombre del nuevo enlace público:', defaultName);
+    const linkNameInput = await showPromptModal({
+      defaultValue: defaultName,
+      placeholder: defaultName,
+      title: 'Nombre del nuevo enlace público:',
+    });
     if (linkNameInput === null) return;
 
     const trimmedName = linkNameInput.trim() || defaultName;
-    const slugInput = window.prompt('Enlace personalizado / slug (opcional, dejar en blanco para código automático):', '');
+    const slugInput = await showPromptModal({
+      defaultValue: '',
+      description: 'Opcional, dejar en blanco para código automático.',
+      placeholder: 'mi-enlace-personalizado',
+      title: 'Enlace personalizado / slug:',
+    });
+    if (slugInput === null) return;
     const cleanSlug = slugInput && slugInput.trim() ? slugInput.trim() : undefined;
 
     void (async () => {

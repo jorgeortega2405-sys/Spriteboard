@@ -1,6 +1,7 @@
 import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
+import { showConfirmModal, showPromptModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, getApi, patchApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
@@ -743,9 +744,12 @@ export class SheetController implements ViewController {
         this.switchSheet(sheet.id);
       }, { signal });
 
-      tabBtn.addEventListener('dblclick', (e) => {
+      tabBtn.addEventListener('dblclick', async (e) => {
         e.stopPropagation();
-        const newName = window.prompt('Nombre de la hoja:', sheet.name);
+        const newName = await showPromptModal({
+          defaultValue: sheet.name,
+          title: 'Nombre de la hoja:',
+        });
         if (newName && newName.trim() && newName.trim() !== sheet.name) {
           sheet.name = newName.trim();
           this.renderSheetTabs();
@@ -753,13 +757,17 @@ export class SheetController implements ViewController {
         }
       }, { signal });
 
-      tabBtn.addEventListener('contextmenu', (e) => {
+      tabBtn.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
         if (this.project.sheets.length <= 1) {
           showToast('No se puede eliminar la única hoja', 'warning');
           return;
         }
-        if (window.confirm(`¿Eliminar la hoja "${sheet.name}"?`)) {
+        const confirmed = await showConfirmModal({
+          confirmClass: 'component-button--danger',
+          title: `¿Eliminar la hoja "${sheet.name}"?`,
+        });
+        if (confirmed) {
           this.deleteSheet(sheet.id);
         }
       }, { signal });

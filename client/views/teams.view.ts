@@ -1,7 +1,7 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { openEnterpriseSsoModal } from '../components/enterprise-sso-modal.component.js';
-import { openModal } from '../components/modal.component.js';
+import { openModal, showConfirmModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
@@ -350,10 +350,12 @@ class TeamsController {
       showToast(t('teams.load_error') || 'Error al cargar equipos', 'danger');
     }
 
-    const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     const hasTeams = this.allTeams.length > 0;
-    const userPermissions = (currentUser as any)?.permissions || [];
-    const canCreateTeams = ['business', 'negocios', 'enterprise', 'empresas'].includes(userTier) || userPermissions.includes('subscription:feature:teams');
+    const userPermissions: string[] = (currentUser as any)?.permissions || [];
+    const canCreateTeams = userPermissions.includes('*') ||
+      userPermissions.includes('subscription:feature:teams') ||
+      userPermissions.includes('subscription:feature:all') ||
+      userPermissions.includes('teams:manage');
     if (!canCreateTeams && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');
@@ -528,7 +530,12 @@ class TeamsController {
       confirmMsg = `¿Estás seguro de que deseas eliminar o salir de los ${count} equipos seleccionados?`;
     }
 
-    if (!window.confirm(confirmMsg)) return;
+    const confirmed = await showConfirmModal({
+      confirmClass: 'component-button--danger',
+      confirmText: t('modal.confirm'),
+      title: confirmMsg,
+    });
+    if (!confirmed) return;
 
     try {
       for (const team of selectedList) {
@@ -548,9 +555,13 @@ class TeamsController {
   }
 
   private openTeamModal(teamToEdit?: Team): void {
-    const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+    const userPermissions: string[] = (currentUser as any)?.permissions || [];
+    const canCreateTeams = userPermissions.includes('*') ||
+      userPermissions.includes('subscription:feature:teams') ||
+      userPermissions.includes('subscription:feature:all') ||
+      userPermissions.includes('teams:manage');
     if (!teamToEdit) {
-      if (!['business', 'negocios'].includes(userTier)) {
+      if (!canCreateTeams) {
         showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción a Spriteboard Negocios.', 'warning');
         openUpgradeModal('business');
         return;

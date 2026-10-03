@@ -99,6 +99,19 @@ export async function getUserEffectivePermissions(
 
   if (userId > 0) {
     try {
+      if (subscriptionTier === undefined) {
+        const [userRows] = await pool.query<RowDataPacket[]>(
+          'SELECT subscription_tier, subscription_status FROM users WHERE id = ? LIMIT 1',
+          [userId]
+        );
+        if (userRows.length > 0) {
+          subscriptionTier = userRows[0].subscription_tier;
+          if (subscriptionStatus === undefined) {
+            subscriptionStatus = userRows[0].subscription_status;
+          }
+        }
+      }
+
       const [dbRoles] = await pool.query<RowDataPacket[]>(
         `SELECT r.name
          FROM user_roles ur

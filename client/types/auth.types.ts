@@ -150,15 +150,12 @@ export function canAccessAdmin(user?: User | null): boolean {
 export function canBatchDownload(user?: User | null): boolean {
   if (!user) return false;
   if (Array.isArray(user.permissions) && user.permissions.length > 0) {
-    if (user.permissions.includes('*') ||
-        user.permissions.includes('subscription:feature:batch_download') ||
-        user.permissions.includes('subscription:feature:all') ||
-        user.permissions.includes('canvases:batch_download')) {
-      return true;
-    }
+    return user.permissions.includes('*') ||
+      user.permissions.includes('subscription:feature:batch_download') ||
+      user.permissions.includes('subscription:feature:all') ||
+      user.permissions.includes('canvases:batch_download');
   }
-  const tier = (user.subscription_tier || '').toLowerCase();
-  return tier === 'pro' || tier === 'business' || tier === 'enterprise';
+  return false;
 }
 
 

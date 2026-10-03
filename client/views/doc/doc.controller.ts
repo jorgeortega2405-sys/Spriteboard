@@ -4,7 +4,7 @@ import { CanvasGridViewModalController, openCanvasGridView } from '../../compone
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
-import { openModal } from '../../components/modal.component.js';
+import { openModal, showConfirmModal, showPromptModal } from '../../components/modal.component.js';
 import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BoardProject, TEXT_PRESETS } from '../../core/canvas-engine.js';
@@ -755,9 +755,12 @@ export class DocController implements ViewController {
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="doc-title"]');
     if (titleEl) {
-      titleEl.addEventListener('click', () => {
+      titleEl.addEventListener('click', async () => {
         const current = this.canvasTitle;
-        const newTitle = prompt('Nombre del documento:', current);
+        const newTitle = await showPromptModal({
+          defaultValue: current,
+          title: 'Nombre del documento:',
+        });
         if (newTitle && newTitle.trim() && newTitle !== current) {
           this.canvasTitle = newTitle.trim();
           titleEl.textContent = this.canvasTitle;
@@ -1163,8 +1166,12 @@ export class DocController implements ViewController {
     }
 
     if (btnFontSizeBadge) {
-      btnFontSizeBadge.addEventListener('click', () => {
-        const val = prompt('Tamaño de fuente (pt):', String(this.project.settings.fontSize || 11));
+      btnFontSizeBadge.addEventListener('click', async () => {
+        const val = await showPromptModal({
+          defaultValue: String(this.project.settings.fontSize || 11),
+          inputType: 'number',
+          title: 'Tamaño de fuente (pt):',
+        });
         const num = Number(val);
         if (num && num >= 6 && num <= 96) {
           this.applyFontSizeToSelection(num);
@@ -1703,8 +1710,12 @@ export class DocController implements ViewController {
 
     const btnInsertLink = this.container.querySelector<HTMLElement>('[data-ref="btn-insert-link"]');
     if (btnInsertLink) {
-      btnInsertLink.addEventListener('click', () => {
-        const url = prompt('Introduce la dirección URL del enlace:', 'https://');
+      btnInsertLink.addEventListener('click', async () => {
+        const url = await showPromptModal({
+          defaultValue: 'https://',
+          inputType: 'url',
+          title: 'Introduce la dirección URL del enlace:',
+        });
         if (url) {
           document.execCommand('createLink', false, url);
           this.recordChange();
@@ -2064,9 +2075,11 @@ export class DocController implements ViewController {
     const btnImgRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="img-btn-remove-bg"]');
     if (btnImgRemoveBg) {
       btnImgRemoveBg.addEventListener('click', async () => {
-        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
-        if (!isProOrBusiness) {
+        const userPermissions: string[] = (currentUser as any)?.permissions || [];
+        const hasAiBgRemoval = userPermissions.includes('*') ||
+          userPermissions.includes('subscription:feature:ai_bg_removal') ||
+          userPermissions.includes('subscription:feature:all');
+        if (!hasAiBgRemoval) {
           openUpgradeModal('pro');
           showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
           return;
@@ -2535,9 +2548,13 @@ export class DocController implements ViewController {
 
     const bubbleLink = this.container.querySelector<HTMLElement>('[data-ref="bubble-btn-link"]');
     if (bubbleLink) {
-      bubbleLink.addEventListener('click', (e) => {
+      bubbleLink.addEventListener('click', async (e) => {
         e.preventDefault();
-        const url = prompt('Introduce la dirección URL:', 'https://');
+        const url = await showPromptModal({
+          defaultValue: 'https://',
+          inputType: 'url',
+          title: 'Introduce la dirección URL:',
+        });
         if (url) {
           document.execCommand('createLink', false, url);
           this.recordChange();
@@ -2834,10 +2851,14 @@ export class DocController implements ViewController {
     });
 
     this.container.querySelectorAll<HTMLElement>('[data-ref^="btn-delete-page-"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const pageId = btn.getAttribute('data-page-id');
         if (pageId && this.project.pages.length > 1) {
-          if (confirm('¿Deseas eliminar esta página del documento?')) {
+          const confirmed = await showConfirmModal({
+            confirmClass: 'component-button--danger',
+            title: '¿Deseas eliminar esta página del documento?',
+          });
+          if (confirmed) {
             this.paginationManager.deletePage(this.project, pageId);
             this.renderDocument();
             this.recordChange();
@@ -3603,8 +3624,12 @@ export class DocController implements ViewController {
           ref: 'ctx-doc-clear-format',
         },
         {
-          action: () => {
-            const url = prompt('URL del enlace:');
+          action: async () => {
+            const url = await showPromptModal({
+              defaultValue: 'https://',
+              inputType: 'url',
+              title: 'URL del enlace:',
+            });
             if (url) {
               document.execCommand('createLink', false, url);
               this.recordChange();
