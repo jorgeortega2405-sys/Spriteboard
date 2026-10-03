@@ -1,27 +1,10 @@
-import { CanvasPageType } from '../../types/stage.types.js';
 import { DocPage, DocProject, DocStats } from './doc.types.js';
 
 export class DocPaginationManager {
-  public addPage(project: DocProject, afterIndex?: number, pageType: CanvasPageType = 'doc'): DocPage {
-    let contentHtml = '<p><br></p>';
-    let data: any = undefined;
-
-    if (pageType === 'board') {
-      contentHtml = '';
-      data = { background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' }, elements: [] };
-    } else if (pageType === 'sheet') {
-      contentHtml = '';
-      data = { cells: {}, colCount: 15, rowCount: 30 };
-    } else if (pageType === 'presentation' || pageType === 'social' || pageType === 'video') {
-      contentHtml = '';
-      data = { background: { color: pageType === 'video' ? '#0f172a' : '#ffffff', type: 'solid' }, elements: [] };
-    }
-
+  public addPage(project: DocProject, afterIndex?: number): DocPage {
     const newPage: DocPage = {
-      contentHtml,
-      data,
+      contentHtml: '<p><br></p>',
       id: `page_${crypto.randomUUID().slice(0, 8)}`,
-      pageType,
     };
 
     if (afterIndex !== undefined && afterIndex >= 0 && afterIndex < project.pages.length) {

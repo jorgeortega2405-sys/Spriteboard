@@ -1,5 +1,4 @@
 import { MockupFitMode } from '../types/mockups.types.js';
-import { CanvasPageType } from '../types/stage.types.js';
 import { DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE } from '../utils/color.util.js';
 
 export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector' | 'mockups' | 'charts';
@@ -571,7 +570,6 @@ export interface BoardPageItem {
   height?: number;
   id: string;
   name: string;
-  pageType?: CanvasPageType;
   previewThumbnail?: string;
   width?: number;
 }

@@ -26,7 +26,6 @@ import { closeWebSocket } from '../../services/websocket.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
-import { CanvasPageType } from '../../types/stage.types.js';
 import { detectCanvasType } from '../../utils/canvas-type.util.js';
 import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
@@ -420,7 +419,6 @@ export class BoardController {
     });
     this.pagesTray = new BoardPagesTrayComponent({
       onAddPage: () => this.addPage(),
-      onAddPageWithType: (type) => this.addPageWithType(type),
       onDeletePage: () => this.deletePage(),
       onDrawElement: (ctx, el) => this.drawElementOn(ctx, el),
       onDuplicatePage: () => this.duplicatePage(),
@@ -6675,99 +6673,24 @@ export class BoardController {
   }
 
   private addPage(): void {
-    this.addPageWithType('board');
-  }
-
-  private addPageWithType(type: CanvasPageType): void {
     if (this.pages.length >= MAX_BOARD_PAGES) {
       showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
       return;
     }
     this.syncActivePageData();
 
-    let bg: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
-    const elements: BoardElement[] = [];
-
-    if (type === 'doc') {
-      bg = { color: '#ffffff', type: 'solid' };
-      const docSection = createSectionElement('Documento (Carta)', {
-        backgroundColor: '#ffffff',
-        borderColor: '#cbd5e1',
-        height: 1056,
-        width: 816,
-        x: -408,
-        y: -528,
-      });
-      elements.push(docSection);
-
-      const titleText = createTextElement('Título del documento', {
-        color: '#0f172a',
-        fontFamily: 'Inter',
-        fontSize: 32,
-        fontWeight: 'bold',
-      });
-      titleText.x = -350;
-      titleText.y = -460;
-      elements.push(titleText);
-
-      const quoteText = createTextElement('«El secreto para salir adelante es simplemente comenzar.» — Mark Twain', {
-        color: '#64748b',
-        fontFamily: 'Inter',
-        fontSize: 16,
-        fontStyle: 'italic',
-      });
-      quoteText.x = -350;
-      quoteText.y = -400;
-      elements.push(quoteText);
-    } else if (type === 'sheet') {
-      const table = createTableElement(10, 6, { headerBackgroundColor: '#f1f5f9' });
-      table.x = -Math.round(table.width / 2);
-      table.y = -Math.round(table.height / 2);
-      elements.push(table);
-    } else if (type === 'presentation') {
-      bg = { color: '#ffffff', type: 'solid' };
-      const slideSection = createSectionElement('Presentación (16:9)', {
-        backgroundColor: '#ffffff',
-        borderColor: '#cbd5e1',
-        height: 720,
-        width: 1280,
-        x: -640,
-        y: -360,
-      });
-      elements.push(slideSection);
-
-      const titleText = createTextElement('Título de la presentación', {
-        color: '#0f172a',
-        fontFamily: 'Inter',
-        fontSize: 40,
-        fontWeight: 'bold',
-      });
-      titleText.x = -250;
-      titleText.y = -50;
-      elements.push(titleText);
-    }
-
     const newPage: BoardPageItem = {
-      background: bg,
+      background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
       camera: { x: 0, y: 0, zoom: 1 },
       createdAt: Date.now(),
-      elements,
+      elements: [],
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: `Página ${this.pages.length + 1}`,
-      pageType: type,
     };
     this.pages.push(newPage);
     this.switchToPage(newPage.id);
     this.collaborationManager.broadcastPageAdd(newPage);
-    const typeNames: Record<CanvasPageType, string> = {
-      board: 'Pizarrón',
-      doc: 'Documento',
-      presentation: 'Presentación',
-      sheet: 'Hoja de cálculo',
-      social: 'Redes sociales',
-      video: 'Video',
-    };
-    showToast(`Nueva página de ${typeNames[type] || 'pizarrón'} creada`);
+    showToast('Nueva página creada', 'success');
   }
 
   private duplicatePage(pageId?: string): void {

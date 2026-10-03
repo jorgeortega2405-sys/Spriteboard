@@ -18,7 +18,6 @@ import { closeWebSocket } from '../../services/websocket.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
-import { CanvasPageType } from '../../types/stage.types.js';
 import { getCollaboratorColor } from '../../utils/color.util.js';
 import { initCarouselScroll, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
@@ -73,7 +72,6 @@ export class DocController implements ViewController {
   private btnDocFileMenu: HTMLButtonElement | null = null;
   private btnDocMetrics: HTMLButtonElement | null = null;
   private btnDocPresent: HTMLButtonElement | null = null;
-  private isDocPageTypesPopupOpen = false;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
@@ -672,10 +670,8 @@ export class DocController implements ViewController {
       : (this.project.settings.columnsCount === 3 ? 'doc-page--cols-3' : '');
 
     this.project.pages.forEach((page, index) => {
-      const pageType: CanvasPageType = page.pageType || 'doc';
-      const isDocPage = pageType === 'doc';
       const pageEl = document.createElement('div');
-      pageEl.className = `doc-page ${pageThemeClass} ${pageBorderClass}${!isDocPage ? ` doc-page--${pageType}` : ''}`.trim();
+      pageEl.className = `doc-page ${pageThemeClass} ${pageBorderClass}`.trim();
       pageEl.setAttribute('data-ref', `doc-page-${page.id}`);
       pageEl.setAttribute('data-page-id', page.id);
       pageEl.setAttribute('data-page-index', String(index + 1));
@@ -683,8 +679,12 @@ export class DocController implements ViewController {
       pageEl.style.paddingRight = `${margins.right}px`;
       pageEl.style.paddingBottom = `${margins.bottom}px`;
       pageEl.style.paddingLeft = `${margins.left}px`;
-      pageEl.style.width = `${paper.widthPx > 0 ? paper.widthPx : 816}px`;
-      pageEl.style.minHeight = paper.heightPx > 0 ? `${paper.heightPx}px` : 'calc(100vh - 180px)';
+
+      const pageWidth = paper.widthPx > 0 ? paper.widthPx : 816;
+      const minPageHeight = paper.heightPx > 0 ? paper.heightPx : 1056;
+
+      pageEl.style.width = `${pageWidth}px`;
+      pageEl.style.minHeight = `${minPageHeight}px`;
 
       const isFirstPage = index === 0;
 
@@ -700,92 +700,13 @@ export class DocController implements ViewController {
       const letterSpacingStyle = this.project.settings.letterSpacing ? `letter-spacing: ${this.project.settings.letterSpacing}px;` : '';
       const isDocEmpty = this.isDocumentEmpty();
 
-      const typeIcons: Record<CanvasPageType, string> = {
-        board: 'draw',
-        doc: 'article',
-        presentation: 'slideshow',
-        sheet: 'table_chart',
-        social: 'favorite',
-        video: 'videocam',
-      };
-      const typeLabels: Record<CanvasPageType, string> = {
-        board: 'Pizarrón online',
-        doc: 'Documento',
-        presentation: 'Presentación',
-        sheet: 'Hoja de cálculo',
-        social: 'Redes sociales',
-        video: 'Video',
-      };
-
-      if (isDocPage) {
-        pageEl.innerHTML = `
-          ${watermarkEl}
-          ${isFirstPage ? `<div class="doc-empty-placeholder" data-ref="doc-empty-placeholder" style="top: ${margins.top}px; left: ${margins.left}px; right: ${margins.right}px; display: ${isDocEmpty ? 'block' : 'none'};">${escapeHtml(this.activeInspiringQuote)}</div>` : ''}
-          <div class="doc-page__content ${columnsClass}" data-ref="page-content-${page.id}" contenteditable="true" spellcheck="true" style="font-family: ${this.project.settings.fontFamily}; font-size: ${this.project.settings.fontSize}pt; line-height: ${this.project.settings.lineHeight}; ${letterSpacingStyle}">${page.contentHtml || '<p><br></p>'}</div>
-          <div class="doc-page__badge">Página ${index + 1}</div>
-          ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página"><span class="component-icon">delete</span></button>` : ''}
-        `;
-      } else {
-        pageEl.innerHTML = `
-          ${watermarkEl}
-          <div class="doc-embedded-header" data-ref="embedded-header-${page.id}">
-            <div class="doc-embedded-header__left">
-              <span class="doc-embedded-header__badge doc-embedded-header__badge--${pageType}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${typeIcons[pageType]}"></use></svg>
-                <span>${typeLabels[pageType]}</span>
-              </span>
-              <span class="doc-embedded-header__title">${escapeHtml(page.name || `${typeLabels[pageType]} ${index + 1}`)}</span>
-            </div>
-            <div class="doc-embedded-header__actions">
-              ${this.project.pages.length > 1 ? `
-                <button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página">
-                  <span class="component-icon">delete</span>
-                </button>
-              ` : ''}
-            </div>
-          </div>
-          <div class="doc-embedded-body doc-embedded-body--${pageType}" data-ref="embedded-body-${page.id}">
-            ${pageType === 'board' ? `
-              <div class="doc-embedded-board-preview">
-                <div class="doc-embedded-board-dots"></div>
-                <div class="doc-embedded-board-cta">
-                  <svg class="component-icon component-icon--lg" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
-                  <p class="doc-embedded-board-cta__text">Pizarrón interactivo integrado</p>
-                </div>
-              </div>
-            ` : pageType === 'sheet' ? `
-              <div class="doc-embedded-sheet-preview">
-                <table class="doc-embedded-sheet-table">
-                  <thead>
-                    <tr>
-                      <th class="doc-embedded-sheet-th--corner"></th>
-                      <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${[1, 2, 3, 4, 5, 6].map((r) => `
-                      <tr>
-                        <td class="doc-embedded-sheet-row-idx">${r}</td>
-                        <td></td><td></td><td></td><td></td><td></td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            ` : `
-              <div class="doc-embedded-slide-preview">
-                <div class="doc-embedded-slide-aspect">
-                  <div class="doc-embedded-slide-content">
-                    <svg class="component-icon component-icon--lg" aria-hidden="true"><use href="/icons.svg#${typeIcons[pageType]}"></use></svg>
-                    <span>Lienzo de ${typeLabels[pageType].toLowerCase()}</span>
-                  </div>
-                </div>
-              </div>
-            `}
-          </div>
-          <div class="doc-page__badge">Página ${index + 1}</div>
-        `;
-      }
+      pageEl.innerHTML = `
+        ${watermarkEl}
+        ${isFirstPage ? `<div class="doc-empty-placeholder" data-ref="doc-empty-placeholder" style="top: ${margins.top}px; left: ${margins.left}px; right: ${margins.right}px; display: ${isDocEmpty ? 'block' : 'none'};">${escapeHtml(this.activeInspiringQuote)}</div>` : ''}
+        <div class="doc-page__content ${columnsClass}" data-ref="page-content-${page.id}" contenteditable="true" spellcheck="true" style="font-family: ${this.project.settings.fontFamily}; font-size: ${this.project.settings.fontSize}pt; line-height: ${this.project.settings.lineHeight}; ${letterSpacingStyle}">${page.contentHtml || '<p><br></p>'}</div>
+        <div class="doc-page__badge">Página ${index + 1}</div>
+        ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página"><span class="component-icon">delete</span></button>` : ''}
+      `;
 
       pagesContainer.appendChild(pageEl);
     });
@@ -793,89 +714,19 @@ export class DocController implements ViewController {
     const addPageWrapper = document.createElement('div');
     addPageWrapper.className = 'doc-add-page-wrapper';
     addPageWrapper.setAttribute('data-ref', 'doc-add-page-wrapper');
-    addPageWrapper.style.width = `${paper.widthPx > 0 ? paper.widthPx : 816}px`;
+    addPageWrapper.style.width = '100%';
+    addPageWrapper.style.maxWidth = `${paper.widthPx > 0 ? paper.widthPx : 816}px`;
     addPageWrapper.innerHTML = `
-      <div class="canvas-add-page-btn-group" data-ref="canvas-add-page-btn-group">
-        <button type="button" class="canvas-add-page-btn" data-ref="btn-doc-bottom-add-page-main">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          <span>+ Agregar una página</span>
-        </button>
-        <button type="button" class="canvas-add-page-sub-btn${this.isDocPageTypesPopupOpen ? ' is-active' : ''}" data-ref="btn-doc-bottom-add-page-dropdown" data-tooltip="Tipos de lienzo" aria-label="Tipos de lienzo">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_${this.isDocPageTypesPopupOpen ? 'up' : 'down'}"></use></svg>
-        </button>
-      </div>
-      <div class="canvas-page-types-popup${this.isDocPageTypesPopupOpen ? '' : ' is-hidden'}" data-ref="canvas-page-types-popup">
-        <div class="canvas-page-types-grid" data-ref="canvas-page-types-grid">
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-presentation" data-type="presentation">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--presentation">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Presentación</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-social" data-type="social">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--social">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Redes sociales</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-video" data-type="video">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--video">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Video</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-doc" data-type="doc">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Doc</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-board" data-type="board">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--board">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Pizarrón online</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-sheet" data-type="sheet">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--sheet">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Hoja de cálculo</span>
-          </button>
-        </div>
-      </div>
+      <button type="button" class="component-button component-button--h44 component-button--secondary" data-ref="btn-doc-bottom-add-page" style="width: 100%; justify-content: center; gap: 8px; border-style: dashed; border-radius: 8px;">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        <span>Agregar una página</span>
+      </button>
     `;
 
-    const btnBottomAddMain = addPageWrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-main"]');
-    btnBottomAddMain?.addEventListener('click', (e) => {
+    const btnBottomAdd = addPageWrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page"]');
+    btnBottomAdd?.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.closeDocPageTypesPopup();
-      this.addNewDocPage(undefined, 'doc');
-    });
-
-    const btnBottomAddDropdown = addPageWrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-dropdown"]');
-    const docPopup = addPageWrapper.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
-    btnBottomAddDropdown?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.isDocPageTypesPopupOpen = !this.isDocPageTypesPopupOpen;
-      if (docPopup) {
-        docPopup.classList.toggle('is-hidden', !this.isDocPageTypesPopupOpen);
-      }
-      btnBottomAddDropdown.classList.toggle('is-active', this.isDocPageTypesPopupOpen);
-      const iconUse = btnBottomAddDropdown.querySelector('use');
-      if (iconUse) {
-        iconUse.setAttribute('href', `/icons.svg#keyboard_arrow_${this.isDocPageTypesPopupOpen ? 'up' : 'down'}`);
-      }
-    });
-
-    const typeCards = addPageWrapper.querySelectorAll<HTMLButtonElement>('.canvas-page-type-card');
-    typeCards.forEach((card) => {
-      card.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const pageType = card.getAttribute('data-type') as CanvasPageType;
-        this.closeDocPageTypesPopup();
-        this.addNewDocPage(undefined, pageType || 'doc');
-      });
+      this.addNewDocPage();
     });
 
     pagesContainer.appendChild(addPageWrapper);
@@ -889,35 +740,8 @@ export class DocController implements ViewController {
     renderIcons(pagesContainer);
   }
 
-  private closeDocPageTypesPopup(): void {
-    this.isDocPageTypesPopupOpen = false;
-    const popup = this.container.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
-    const btnDropdown = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-dropdown"]');
-    popup?.classList.add('is-hidden');
-    btnDropdown?.classList.remove('is-active');
-    const iconUse = btnDropdown?.querySelector('use');
-    if (iconUse) {
-      iconUse.setAttribute('href', '/icons.svg#keyboard_arrow_down');
-    }
-  }
-
   private bindEvents(): void {
     const signal = this.abortController.signal;
-
-    document.addEventListener('click', (e) => {
-      if (this.isDocPageTypesPopupOpen) {
-        const wrapper = this.container.querySelector('[data-ref="doc-add-page-wrapper"]');
-        if (wrapper && !wrapper.contains(e.target as Node)) {
-          this.closeDocPageTypesPopup();
-        }
-      }
-    }, { signal });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.isDocPageTypesPopupOpen) {
-        this.closeDocPageTypesPopup();
-      }
-    }, { signal });
 
     const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="doc-pages-container"]');
     if (pagesContainer) {
@@ -2979,6 +2803,36 @@ export class DocController implements ViewController {
       }, { signal });
     });
 
+    this.container.querySelectorAll<HTMLElement>('.doc-page__action-btn[data-action="move-up"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const pageId = btn.getAttribute('data-page-id');
+        if (!pageId) return;
+        const idx = this.project.pages.findIndex((p) => p.id === pageId);
+        if (idx > 0) {
+          const temp = this.project.pages[idx];
+          this.project.pages[idx] = this.project.pages[idx - 1];
+          this.project.pages[idx - 1] = temp;
+          this.renderDocument();
+          this.recordChange();
+        }
+      }, { signal });
+    });
+
+    this.container.querySelectorAll<HTMLElement>('.doc-page__action-btn[data-action="move-down"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const pageId = btn.getAttribute('data-page-id');
+        if (!pageId) return;
+        const idx = this.project.pages.findIndex((p) => p.id === pageId);
+        if (idx >= 0 && idx < this.project.pages.length - 1) {
+          const temp = this.project.pages[idx];
+          this.project.pages[idx] = this.project.pages[idx + 1];
+          this.project.pages[idx + 1] = temp;
+          this.renderDocument();
+          this.recordChange();
+        }
+      }, { signal });
+    });
+
     this.container.querySelectorAll<HTMLElement>('[data-ref^="btn-delete-page-"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const pageId = btn.getAttribute('data-page-id');
@@ -3198,9 +3052,9 @@ export class DocController implements ViewController {
     this.gridViewModal?.setPages(gridPages, this.activeDocPageIndex);
   }
 
-  private addNewDocPage(afterIndex?: number, pageType: CanvasPageType = 'doc'): void {
+  private addNewDocPage(afterIndex?: number): void {
     const targetIdx = afterIndex ?? this.activeDocPageIndex;
-    const newPage = this.paginationManager.addPage(this.project, targetIdx, pageType);
+    const newPage = this.paginationManager.addPage(this.project, targetIdx);
     this.activeDocPageIndex = this.project.pages.findIndex((p) => p.id === newPage.id);
     this.renderDocument();
     this.recordChange();
@@ -3208,15 +3062,7 @@ export class DocController implements ViewController {
     if (this.pageViewMode === 'single-page') {
       this.applySinglePageView();
     }
-    const typeNames: Record<CanvasPageType, string> = {
-      board: 'Pizarrón online',
-      doc: 'Documento',
-      presentation: 'Presentación',
-      sheet: 'Hoja de cálculo',
-      social: 'Redes sociales',
-      video: 'Video',
-    };
-    showToast(`Página de ${typeNames[pageType] || 'documento'} añadida`, 'success');
+    showToast('Página añadida', 'success');
     const newPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${newPage.id}"]`);
     newPageEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -3292,36 +3138,18 @@ export class DocController implements ViewController {
   private updateDocThumbnailsTray(): void {
     if (!this.docPagesTrayEl) return;
     const pages = this.project.pages;
-    const typeIcons: Record<CanvasPageType, string> = {
-      board: 'draw',
-      doc: 'article',
-      presentation: 'slideshow',
-      sheet: 'table_chart',
-      social: 'favorite',
-      video: 'videocam',
-    };
-    const typeLabels: Record<CanvasPageType, string> = {
-      board: 'Pizarrón',
-      doc: 'Doc',
-      presentation: 'Presentación',
-      sheet: 'Hoja',
-      social: 'Redes',
-      video: 'Video',
-    };
 
     this.docPagesTrayEl.innerHTML = `
       <div class="doc-pages-tray__cards" data-ref="doc-pages-tray-cards">
         ${pages.map((p, idx) => {
           const isActive = idx === this.activeDocPageIndex;
-          const pageType: CanvasPageType = p.pageType || 'doc';
           const temp = document.createElement('div');
           temp.innerHTML = p.contentHtml || '';
           const previewText = (temp.textContent || temp.innerText || '').trim().slice(0, 100);
           return `
             <div class="doc-page-thumb-card${isActive ? ' is-active' : ''}" data-ref="doc-thumb-${p.id}" data-index="${idx}">
               <div class="doc-page-thumb-card__preview">
-                ${pageType !== 'doc' ? `<span class="doc-thumb-type-tag doc-thumb-type-tag--${pageType}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${typeIcons[pageType]}"></use></svg> ${typeLabels[pageType]}</span>` : ''}
-                ${escapeHtml(previewText || (pageType !== 'doc' ? typeLabels[pageType] : 'Página ' + (idx + 1)))}
+                ${escapeHtml(previewText || 'Página ' + (idx + 1))}
               </div>
               <span class="doc-page-thumb-card__badge">${idx + 1}</span>
             </div>

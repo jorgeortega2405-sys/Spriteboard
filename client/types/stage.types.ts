@@ -17,8 +17,6 @@ export const PRESENTATION_FORMATS: Record<PresentationFormatKey, PresentationFor
   presentation_mobile: { aspectRatio: '9:16', height: 1280, label: '720 × 1280 px', name: '9:16 Vertical Móvil', width: 720 },
 };
 
-export type CanvasPageType = 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
-
 export interface StagePageItem {
   background?: { color: string; dotColor?: string; type: BackgroundType };
   camera?: { x: number; y: number; zoom: number };
@@ -27,9 +25,7 @@ export interface StagePageItem {
   elements: BoardElement[];
   height?: number;
   id: string;
-  linkedCanvasUuid?: string;
   name: string;
-  pageType?: CanvasPageType;
   previewThumbnail?: string;
   width?: number;
 }
