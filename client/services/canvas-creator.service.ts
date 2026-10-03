@@ -290,17 +290,18 @@ export async function createCanvasRecord(options: CreateCanvasOptions): Promise<
   });
 
   if (currentUser) {
-    void postApi(API_ROUTES.canvases.base, {
-      canvas_type: canvasType,
-      data: initialData,
-      height,
-      name,
-      preview_thumbnail: previewThumbnail,
-      team_uuid: options.teamUuid || undefined,
-      unit,
-      uuid: canvasUuid,
-      width,
-    }).then(async (res) => {
+    try {
+      const res = await postApi(API_ROUTES.canvases.base, {
+        canvas_type: canvasType,
+        data: initialData,
+        height,
+        name,
+        preview_thumbnail: previewThumbnail,
+        team_uuid: options.teamUuid || undefined,
+        unit,
+        uuid: canvasUuid,
+        width,
+      });
       if (res.ok) {
         const created = await res.json();
         if (created?.canvas) {
@@ -309,11 +310,13 @@ export async function createCanvasRecord(options: CreateCanvasOptions): Promise<
             data: created.canvas.data || initialData,
             is_local: false,
             preview_thumbnail: created.canvas.preview_thumbnail || previewThumbnail || undefined,
+            role: created.role || 'owner',
+            room_token: created.room_token,
           });
           window.dispatchEvent(new CustomEvent('canvas:synced', { detail: created.canvas }));
         }
       }
-    }).catch(() => {});
+    } catch {}
   }
 
   return canvasUuid;

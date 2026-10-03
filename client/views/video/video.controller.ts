@@ -1,7 +1,7 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { DiagramComponentItem } from '../../config/diagram-components.data.js';
-import { currentUser, patchApi, uploadFilesApi } from '../../services/api.service.js';
+import { currentUser, patchApi, postApi, uploadFilesApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -878,12 +878,13 @@ export class VideoController {
 
     if (currentUser) {
       try {
-        const res = await patchApi(API_ROUTES.canvases.byId(this._canvasUuid), {
+        const res = await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'video',
           data: dataStr,
           height: this._project.height,
           name: this._project.name,
           unit: 'video',
+          uuid: this._canvasUuid,
           width: this._project.width,
         });
         if (res.ok) {

@@ -60,10 +60,11 @@ export class StageSlidesManager {
     this.controller.activeSlideId = newSlide.id;
     this.controller.selectedSlideId = newSlide.id;
     this.controller.selectedElementIds.clear();
+    const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
     const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -92,10 +93,11 @@ export class StageSlidesManager {
     this.controller.activeSlideId = newSlide.id;
     this.controller.selectedSlideId = newSlide.id;
     this.controller.selectedElementIds.clear();
+    const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
     const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -119,10 +121,11 @@ export class StageSlidesManager {
     this.controller.activeSlideId = this.controller.slides[nextIdx].id;
     this.controller.selectedSlideId = this.controller.slides[nextIdx].id;
     this.controller.selectedElementIds.clear();
+    const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
     const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -143,10 +146,11 @@ export class StageSlidesManager {
       this.controller.slideDuration = current.duration;
       this.controller.updateSlideDurationUI();
     }
+    const isSingleSlideView = this.controller.pageViewMode === 'single-page' || this.controller.pageViewMode === 'thumbnails';
     const activeIdx = this.controller.getActiveSlideIndex();
     const slideGap = 80;
     this.controller.panOffset.x = 0;
-    this.controller.panOffset.y = activeIdx * (this.controller.slideHeight + slideGap);
+    this.controller.panOffset.y = isSingleSlideView ? 0 : activeIdx * (this.controller.slideHeight + slideGap);
     this.controller.clampPan();
     this.controller.syncPanels();
     this.controller.updateSelectionToolbar();
@@ -178,20 +182,140 @@ export class StageSlidesManager {
     cardsList.innerHTML = '';
     this.controller.slides.forEach((slide, idx) => {
       const card = document.createElement('div');
-      card.className = `canva-page-card${slide.id === this.controller.selectedSlideId ? ' is-active' : ''}`;
+      card.className = `canva-page-card${slide.id === this.controller.activeSlideId ? ' is-active' : ''}`;
       card.setAttribute('data-ref', `slide-card-${slide.id}`);
-      const bg = slide.background?.color || '#ffffff';
+      
+      const thumbUrl = generateThumbnail(slide.elements, slide.background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.controller.drawElementOn(sctx, el));
+
       card.innerHTML = `
-        <div class="canva-page-card__header">
-          <span class="canva-page-card__num">${idx + 1}</span>
-          <span class="canva-page-card__dur">${(slide.duration || 5.0).toFixed(1)}s</span>
+        <div class="canva-page-card__preview" data-ref="slide-preview-${slide.id}">
+          <img src="${thumbUrl}" alt="${this.controller.escapeHtml(slide.name)}" loading="lazy" />
         </div>
-        <div class="canva-page-card__preview" data-ref="slide-preview-${slide.id}" style="background-color: ${bg};"></div>
-        <span class="canva-page-card__title">${this.controller.escapeHtml(slide.name)}</span>
+        <span class="canva-page-card__num">${idx + 1}</span>
       `;
-      card.addEventListener('click', () => this.controller.selectSlide(slide.id));
+      card.addEventListener('click', () => {
+        this.selectSlide(slide.id);
+      });
       cardsList.appendChild(card);
     });
+
+    const addCardContainer = document.createElement('div');
+    addCardContainer.className = 'canva-page-card--add-container';
+    addCardContainer.setAttribute('data-ref', 'tray-add-slide-container');
+
+    const isSocial = this.controller.canvasType === 'social';
+    const pageLabel = isSocial ? 'página' : 'diapositiva';
+
+    addCardContainer.innerHTML = `
+      <div class="canva-page-card--add" data-ref="btn-tray-add-slide">
+        <button type="button" class="canva-page-card--add-btn" data-ref="btn-tray-add-slide-main" data-tooltip="Agregar ${pageLabel}" aria-label="Agregar ${pageLabel}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        </button>
+        <button type="button" class="canva-page-card--add-dropdown" data-ref="btn-tray-add-slide-dropdown" data-tooltip="Tipos de lienzo" aria-label="Tipos de lienzo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-page-types-popup is-hidden" data-ref="tray-canvas-page-types-popup">
+        <div class="canvas-page-types-grid" data-ref="tray-canvas-page-types-grid">
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-presentation" data-type="presentation">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--presentation">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Presentación</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-social" data-type="social">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--social">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Redes sociales</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-video" data-type="video">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--video">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Video</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-print" data-type="print">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--print">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#print"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Imprimir</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-doc" data-type="doc">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Documento</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-board" data-type="board">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--board">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Tablero</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-sheet" data-type="sheet">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--sheet">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Hojas</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-web" data-type="web">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--web">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Sitios web</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="tray-btn-type-more" data-type="more">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--more">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_horiz"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Más</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const btnMain = addCardContainer.querySelector<HTMLButtonElement>('[data-ref="btn-tray-add-slide-main"]');
+    const btnDropdown = addCardContainer.querySelector<HTMLButtonElement>('[data-ref="btn-tray-add-slide-dropdown"]');
+    const popup = addCardContainer.querySelector<HTMLElement>('[data-ref="tray-canvas-page-types-popup"]');
+
+    const closeTrayPopup = () => {
+      popup?.classList.add('is-hidden');
+      btnDropdown?.classList.remove('is-active');
+    };
+
+    btnMain?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTrayPopup();
+      this.addSlide();
+    });
+
+    btnDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = popup?.classList.contains('is-hidden');
+      if (isHidden) {
+        popup?.classList.remove('is-hidden');
+        btnDropdown.classList.add('is-active');
+      } else {
+        closeTrayPopup();
+      }
+    });
+
+    const typeCards = addCardContainer.querySelectorAll<HTMLButtonElement>('.canvas-page-type-card');
+    typeCards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTrayPopup();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!addCardContainer.contains(e.target as Node)) {
+        closeTrayPopup();
+      }
+    });
+
+    cardsList.appendChild(addCardContainer);
   }
 
   public setPageViewMode(mode: CanvasPageViewMode): void {
@@ -201,14 +325,30 @@ export class StageSlidesManager {
 
     if (mode === 'scroll') {
       tray?.classList.add('is-hidden');
+      const activeIdx = this.controller.getActiveSlideIndex();
+      const slideGap = 80;
+      this.controller.panOffset.x = 0;
+      this.controller.panOffset.y = activeIdx * (this.controller.slideHeight + slideGap);
+      this.controller.clampPan();
+      this.controller.render();
+      (this.controller as any).renderOverlays?.();
     } else if (mode === 'single-page') {
       tray?.classList.add('is-hidden');
-      this.controller.selectSlide(this.controller.activeSlideId);
+      this.controller.panOffset.x = 0;
+      this.controller.panOffset.y = 0;
+      this.controller.clampPan();
+      this.controller.render();
+      (this.controller as any).renderOverlays?.();
     } else if (mode === 'thumbnails') {
       tray?.classList.remove('is-hidden');
-      this.controller.renderSlidesTray();
+      this.controller.panOffset.x = 0;
+      this.controller.panOffset.y = 0;
+      this.controller.clampPan();
+      this.renderSlidesTray();
+      this.controller.render();
+      (this.controller as any).renderOverlays?.();
     } else if (mode === 'grid') {
-      this.controller.openPresentationGridView();
+      this.openPresentationGridView();
     }
   }
 
@@ -225,13 +365,15 @@ export class StageSlidesManager {
     this.controller.gridViewModal = openCanvasGridView({
       activePageIndex: this.controller.getActiveSlideIndex(),
       canvasType: 'presentation',
+      containerEl: this.controller.container.querySelector<HTMLElement>('.component-bottom') || this.controller.container,
       onAddPage: () => {
-        this.controller.addSlide();
-        this.controller.refreshPresentationGridView();
+        this.addSlide();
+        this.refreshPresentationGridView();
       },
       onClose: (selectedPageIndex) => {
+        this.setPageViewMode('scroll');
         if (typeof selectedPageIndex === 'number' && this.controller.slides[selectedPageIndex]) {
-          this.controller.selectSlide(this.controller.slides[selectedPageIndex].id);
+          this.selectSlide(this.controller.slides[selectedPageIndex].id);
         }
       },
       onDeletePages: (indices) => {
@@ -244,10 +386,10 @@ export class StageSlidesManager {
         this.controller.slides = this.controller.slides.filter((_, idx) => !set.has(idx));
         this.controller.activeSlideId = this.controller.slides[0].id;
         this.controller.selectedSlideId = this.controller.slides[0].id;
-        this.controller.renderSlidesTray();
+        this.renderSlidesTray();
         this.controller.render();
         this.controller.scheduleAutoSave();
-        this.controller.refreshPresentationGridView();
+        this.refreshPresentationGridView();
         showToast('Diapositivas eliminadas', 'success');
       },
       onDuplicatePages: (indices) => {
@@ -268,15 +410,15 @@ export class StageSlidesManager {
             this.controller.slides.splice(idx + 1, 0, newSlide);
           }
         }
-        this.controller.renderSlidesTray();
+        this.renderSlidesTray();
         this.controller.render();
         this.controller.scheduleAutoSave();
-        this.controller.refreshPresentationGridView();
+        this.refreshPresentationGridView();
         showToast('Diapositivas duplicadas', 'success');
       },
       onSelectPage: (idx) => {
         if (this.controller.slides[idx]) {
-          this.controller.selectSlide(this.controller.slides[idx].id);
+          this.selectSlide(this.controller.slides[idx].id);
         }
       },
       pages: gridPages,

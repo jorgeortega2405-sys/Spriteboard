@@ -2888,14 +2888,23 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-  outline: none !important;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, outline 0.15s ease;
+  outline: 2px solid transparent !important;
+  outline-offset: 4px !important;
   overflow: hidden;
 }
 
-.doc-page:focus-within {
+.doc-page:hover {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 4px !important;
+}
+
+.doc-page:focus-within,
+.doc-page.is-active,
+.doc-page.is-selected {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
-  outline: none !important;
+  outline: 2px solid #2563eb !important;
+  outline-offset: 4px !important;
 }
 
 .doc-page--theme-white {

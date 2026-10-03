@@ -86,7 +86,7 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
                 <span class="menu-item__text">Visualización de la página</span>
                 <svg class="component-icon menu-item__chevron" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
               </button>
-              <div class="dropdown-backdrop is-hidden" data-ref="dropdown-backdrop-page-view">
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-page-view">
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto canvas-file-submenu" data-ref="dropdown-menu-page-view">
                   <div class="menu-panel__list" data-ref="submenu-list-page-view">
                     <button type="button" class="menu-item" data-action="view-single-page" data-ref="menu-item-view-single-page">
@@ -244,16 +244,60 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
   const submenuBackdrop = menu.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-page-view"]');
   const submenuMenu = menu.querySelector<HTMLElement>('[data-ref="dropdown-menu-page-view"]');
 
+  let closeSubmenuTimer: number | null = null;
+
+  const cancelCloseSubmenu = () => {
+    if (closeSubmenuTimer !== null) {
+      window.clearTimeout(closeSubmenuTimer);
+      closeSubmenuTimer = null;
+    }
+  };
+
+  const scheduleCloseSubmenu = (delay = 250) => {
+    cancelCloseSubmenu();
+    closeSubmenuTimer = window.setTimeout(() => {
+      submenuDropdown.close();
+      closeSubmenuTimer = null;
+    }, delay);
+  };
+
   const submenuDropdown = setupDropdown(submenuWrapper, {
     backdrop: submenuBackdrop,
     menu: submenuMenu,
-    offset: [0, 4],
+    offset: [-4, 2],
     placement: 'right-start',
     trigger: submenuTrigger,
   });
 
   submenuTrigger?.addEventListener('mouseenter', () => {
+    cancelCloseSubmenu();
     submenuDropdown.open();
+  });
+
+  submenuMenu?.addEventListener('mouseenter', () => {
+    cancelCloseSubmenu();
+  });
+
+  submenuWrapper?.addEventListener('mouseleave', (e: MouseEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (submenuMenu && related && submenuMenu.contains(related)) {
+      return;
+    }
+    scheduleCloseSubmenu(250);
+  });
+
+  submenuMenu?.addEventListener('mouseleave', (e: MouseEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (submenuWrapper && related && submenuWrapper.contains(related)) {
+      return;
+    }
+    scheduleCloseSubmenu(250);
+  });
+
+  menu.querySelectorAll<HTMLElement>('.menu-panel__list > .menu-item:not(.menu-item--has-submenu)').forEach((otherItem) => {
+    otherItem.addEventListener('mouseenter', () => {
+      scheduleCloseSubmenu(200);
+    });
   });
 
   renderIcons(menu);

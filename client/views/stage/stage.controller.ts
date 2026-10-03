@@ -25,7 +25,7 @@ import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem, StageCanvasOptions } from '../../types/stage.types.js';
 import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
-import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { initCarouselScroll, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
@@ -102,12 +102,14 @@ export class StageCanvasController {
   private gridViewModal: CanvasGridViewModalController | null = null;
   private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
   private hasInitialFit: boolean = false;
+  private hoveredSlideId: string | null = null;
   private fileMenuController: CanvasFileMenuController | null = null;
   private pageViewMode: CanvasPageViewMode = 'scroll';
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
   private isEyedropperActive: boolean = false;
   private isOwner: boolean = true;
+  private isPageTypesPopupOpen: boolean = false;
   private isPanning: boolean = false;
   private isPreviewingSnapshot: boolean = false;
   private isSnappingEnabled: boolean = true;
@@ -258,6 +260,12 @@ export class StageCanvasController {
       rawData = canvas.data;
       this.canvasServerId = canvas.id || null;
       this.canvasUserId = canvas.user_id || null;
+      if (canvas.role) {
+        this.role = canvas.role;
+      }
+      if (canvas.room_token) {
+        this.roomToken = canvas.room_token;
+      }
       if (canvas.public_role) {
         this.publicRole = canvas.public_role;
       }
@@ -266,7 +274,7 @@ export class StageCanvasController {
       }
     }
 
-    if (!canvas || !canvas.data) {
+    if (!canvas || !canvas.data || (!this.canvasServerId && currentUser)) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -302,6 +310,36 @@ export class StageCanvasController {
                 ...canvas,
                 data: canvas.data,
                 is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
+              });
+            }
+          }
+        } else if (res.status === 404 && currentUser && rawData) {
+          const syncRes = await postApi(API_ROUTES.canvases.sync, {
+            canvas_type: this.canvasType || 'presentation',
+            data: rawData,
+            height: this.slideHeight,
+            name: this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título'),
+            unit: this.canvasType || 'presentation',
+            uuid: this.canvasUuid,
+            width: this.slideWidth,
+          });
+          if (syncRes.ok) {
+            const syncBody = await syncRes.json();
+            if (syncBody?.canvas) {
+              canvas = syncBody.canvas;
+              this.canvasRecord = canvas;
+              this.canvasServerId = canvas.id || null;
+              this.canvasUserId = canvas.user_id || null;
+              this.role = syncBody.role || 'owner';
+              this.roomToken = syncBody.room_token || '';
+              void saveLocalCanvas({
+                ...canvas,
+                data: rawData,
+                is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
               });
             }
           }
@@ -1169,16 +1207,74 @@ export class StageCanvasController {
     return idx >= 0 ? idx : 0;
   }
 
-  private clampPan(): void {
-    const slideGap = 80;
-    const totalHeight = (Math.max(1, this.slides.length) - 1) * (this.slideHeight + slideGap);
-    const padY = this.slideHeight * 0.4;
-    const padX = this.slideWidth * 0.4;
+  public isSingleSlideView(): boolean {
+    return this.pageViewMode === 'single-page' || this.pageViewMode === 'thumbnails';
+  }
 
-    const minY = -padY;
-    const maxY = totalHeight + padY;
-    const minX = -padX;
-    const maxX = padX;
+  public getSlideCy(idx: number): number {
+    if (this.isSingleSlideView()) {
+      return 0;
+    }
+    const slideGap = 80;
+    return idx * (this.slideHeight + slideGap);
+  }
+
+  public getActiveSlideCy(): number {
+    if (this.isSingleSlideView()) {
+      return 0;
+    }
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    return activeIdx * (this.slideHeight + slideGap);
+  }
+
+  public getClickedSlideIndex(wp: { x: number; y: number }): number {
+    const halfW = this.slideWidth / 2;
+    const halfH = this.slideHeight / 2;
+    if (this.isSingleSlideView()) {
+      if (wp.x >= -halfW && wp.x <= halfW && wp.y >= -halfH && wp.y <= halfH) {
+        return this.getActiveSlideIndex();
+      }
+      return -1;
+    }
+    const slideGap = 80;
+    for (let i = 0; i < this.slides.length; i++) {
+      const cy = i * (this.slideHeight + slideGap);
+      if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public clampPan(): void {
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]');
+    const vWidth = viewport && viewport.clientWidth > 0 ? viewport.clientWidth : (this.canvas && this.canvas.width > 0 ? this.canvas.width / (window.devicePixelRatio || 1) : 1000);
+    const vHeight = viewport && viewport.clientHeight > 0 ? viewport.clientHeight : (this.canvas && this.canvas.height > 0 ? this.canvas.height / (window.devicePixelRatio || 1) : 800);
+
+    const halfW = this.slideWidth / 2;
+    const halfH = this.slideHeight / 2;
+    const slideGap = 80;
+    const isSingle = this.isSingleSlideView();
+    const numSlides = Math.max(1, this.slides.length);
+    const lastCy = isSingle ? 0 : (numSlides - 1) * (this.slideHeight + slideGap);
+
+    const slide0TopY = -halfH - 40;
+    const addBtnBottomY = isSingle ? halfH + 40 : lastCy + halfH + 80;
+
+    let minX = Math.min(0, -halfW + (vWidth / 2 - 40) / this.zoom);
+    let maxX = Math.max(0, halfW - (vWidth / 2 - 40) / this.zoom);
+    if (maxX < minX) {
+      minX = 0;
+      maxX = 0;
+    }
+
+    let minY = Math.min(0, slide0TopY + (vHeight / 2 - 60) / this.zoom);
+    let maxY = Math.max(0, addBtnBottomY - (vHeight / 2 - 70) / this.zoom);
+    if (maxY < minY) {
+      minY = 0;
+      maxY = 0;
+    }
 
     this.panOffset.x = Math.max(minX, Math.min(maxX, this.panOffset.x));
     this.panOffset.y = Math.max(minY, Math.min(maxY, this.panOffset.y));
@@ -1229,9 +1325,7 @@ export class StageCanvasController {
     const bestZoom = Math.min(scaleX, scaleY, 1.2);
 
     this.zoom = Math.max(0.2, Math.min(2.0, bestZoom));
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    this.panOffset = { x: 0, y: activeIdx * (this.slideHeight + slideGap) };
+    this.panOffset = { x: 0, y: this.getActiveSlideCy() };
     this.clampPan();
     this.updateZoomUI();
     this.render();
@@ -1580,22 +1674,10 @@ export class StageCanvasController {
       const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
 
-      const halfW = this.slideWidth / 2;
-      const halfH = this.slideHeight / 2;
-      const slideGap = 80;
-
-      let clickedIdx = -1;
-      for (let i = 0; i < this.slides.length; i++) {
-        const cy = i * (this.slideHeight + slideGap);
-        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
-          clickedIdx = i;
-          break;
-        }
-      }
-
+      const clickedIdx = this.getClickedSlideIndex(wp);
       if (clickedIdx !== -1) {
         this.selectSlide(this.slides[clickedIdx].id);
-        const cy = clickedIdx * (this.slideHeight + slideGap);
+        const cy = this.getSlideCy(clickedIdx);
         const localWp = { x: wp.x, y: wp.y - cy };
         const elements = this.slides[clickedIdx].elements;
         const hit = hitTestElement(elements, localWp.x, localWp.y, this.zoom);
@@ -1648,18 +1730,8 @@ export class StageCanvasController {
       this.dragStartScreen = { x: sx, y: sy };
       this.dragStartWorld = wp;
 
-      const halfW = this.slideWidth / 2;
-      const halfH = this.slideHeight / 2;
-      const slideGap = 80;
-
-      let clickedSlideIdx = -1;
-      for (let i = 0; i < this.slides.length; i++) {
-        const cy = i * (this.slideHeight + slideGap);
-        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
-          clickedSlideIdx = i;
-          break;
-        }
-      }
+      const clickedSlideIdx = this.getClickedSlideIndex(wp);
+      const activeCy = this.getActiveSlideCy();
 
       if (this.currentTool === 'draw') {
         if (clickedSlideIdx !== -1) {
@@ -1669,9 +1741,7 @@ export class StageCanvasController {
           this.renderSlidesTray();
           this.syncPanels();
         }
-        const activeIdx = this.getActiveSlideIndex();
-        const activeCy = activeIdx * (this.slideHeight + slideGap);
-        const localWp = { x: wp.x, y: wp.y - activeCy };
+        const localWp = { x: wp.x, y: wp.y - this.getActiveSlideCy() };
         this.isDrawing = true;
         this.drawPoints = [localWp];
         this.canvas.setPointerCapture(e.pointerId);
@@ -1679,8 +1749,6 @@ export class StageCanvasController {
       }
 
       if (this.currentTool === 'laser') {
-        const activeIdx = this.getActiveSlideIndex();
-        const activeCy = activeIdx * (this.slideHeight + slideGap);
         const localWp = { x: wp.x, y: wp.y - activeCy };
         this.laserPoint = localWp;
         this.render();
@@ -1695,9 +1763,7 @@ export class StageCanvasController {
           this.renderSlidesTray();
           this.syncPanels();
         }
-        const activeIdx = this.getActiveSlideIndex();
-        const activeCy = activeIdx * (this.slideHeight + slideGap);
-        const localWp = { x: wp.x, y: wp.y - activeCy };
+        const localWp = { x: wp.x, y: wp.y - this.getActiveSlideCy() };
         this.insertShape(this.currentShapeType, undefined, this.currentFillColor, this.currentStrokeColor, localWp.x, localWp.y);
         this.setTool('select');
         return;
@@ -1711,9 +1777,7 @@ export class StageCanvasController {
           this.renderSlidesTray();
           this.syncPanels();
         }
-        const activeIdx = this.getActiveSlideIndex();
-        const activeCy = activeIdx * (this.slideHeight + slideGap);
-        const localWp = { x: wp.x, y: wp.y - activeCy };
+        const localWp = { x: wp.x, y: wp.y - this.getActiveSlideCy() };
         this.insertTextPreset('body', localWp.x, localWp.y);
         this.setTool('select');
         return;
@@ -1727,16 +1791,11 @@ export class StageCanvasController {
           this.renderSlidesTray();
           this.syncPanels();
         }
-        const activeIdx = this.getActiveSlideIndex();
-        const activeCy = activeIdx * (this.slideHeight + slideGap);
-        const localWp = { x: wp.x, y: wp.y - activeCy };
+        const localWp = { x: wp.x, y: wp.y - this.getActiveSlideCy() };
         this.insertStickyNote(this.currentFillColor || CANVAS_DEFAULTS.STICKY_COLOR, 'Nota', localWp.x, localWp.y);
         this.setTool('select');
         return;
       }
-
-      const activeIdx = this.getActiveSlideIndex();
-      const activeCy = activeIdx * (this.slideHeight + slideGap);
 
       if (this.selectedElementIds.size === 1) {
         const singleId = Array.from(this.selectedElementIds)[0];
@@ -1783,15 +1842,25 @@ export class StageCanvasController {
 
       let hitSlideIdx = -1;
       let hitElement: BoardElement | null = null;
-      for (let i = this.slides.length - 1; i >= 0; i--) {
-        const slide = this.slides[i];
-        const cy = i * (this.slideHeight + slideGap);
-        const sLocalWp = { x: wp.x, y: wp.y - cy };
-        const hit = hitTestElement(slide.elements, sLocalWp.x, sLocalWp.y, this.zoom);
+      if (this.isSingleSlideView()) {
+        const slide = this.getActiveSlide();
+        const hit = hitTestElement(slide.elements, wp.x, wp.y, this.zoom);
         if (hit) {
-          hitSlideIdx = i;
+          hitSlideIdx = this.getActiveSlideIndex();
           hitElement = hit;
-          break;
+        }
+      } else {
+        const slideGap = 80;
+        for (let i = this.slides.length - 1; i >= 0; i--) {
+          const slide = this.slides[i];
+          const cy = i * (this.slideHeight + slideGap);
+          const sLocalWp = { x: wp.x, y: wp.y - cy };
+          const hit = hitTestElement(slide.elements, sLocalWp.x, sLocalWp.y, this.zoom);
+          if (hit) {
+            hitSlideIdx = i;
+            hitElement = hit;
+            break;
+          }
         }
       }
 
@@ -1804,7 +1873,7 @@ export class StageCanvasController {
           this.updateSlideDurationUI();
         }
 
-        const hitCy = hitSlideIdx * (this.slideHeight + slideGap);
+        const hitCy = this.getSlideCy(hitSlideIdx);
         const hitLocalWp = { x: wp.x, y: wp.y - hitCy };
 
         const now = Date.now();
@@ -1881,8 +1950,7 @@ export class StageCanvasController {
       this.renderSlidesTray();
       this.syncPanels();
 
-      const currentActiveIdx = this.getActiveSlideIndex();
-      const currentActiveCy = currentActiveIdx * (this.slideHeight + slideGap);
+      const currentActiveCy = this.getActiveSlideCy();
       const currentLocalWp = { x: wp.x, y: wp.y - currentActiveCy };
 
       this.marqueeStart = currentLocalWp;
@@ -1915,9 +1983,7 @@ export class StageCanvasController {
       if (this.broadcastMyCursor) {
         this.collaborationManager.sendCursor(wp.x, wp.y, this.activeSlideId);
       }
-      const slideGap = 80;
-      const activeIdx = this.getActiveSlideIndex();
-      const activeCy = activeIdx * (this.slideHeight + slideGap);
+      const activeCy = this.getActiveSlideCy();
       const localWp = { x: wp.x, y: wp.y - activeCy };
       const halfW = this.slideWidth / 2;
       const halfH = this.slideHeight / 2;
@@ -2038,7 +2104,8 @@ export class StageCanvasController {
           }
         }
 
-        if (this.selectionStartBBox) {
+        if (!this.isSingleSlideView() && this.selectionStartBBox) {
+          const slideGap = 80;
           const currentBBoxCenterWorldY = (this.selectionStartBBox.y + this.selectionStartBBox.height / 2 + effectiveDy) + activeCy;
           let targetSlideIdx = Math.round(currentBBoxCenterWorldY / (this.slideHeight + slideGap));
           targetSlideIdx = Math.max(0, Math.min(this.slides.length - 1, targetSlideIdx));
@@ -2134,14 +2201,40 @@ export class StageCanvasController {
       }
 
       let hoverHit: BoardElement | null = null;
-      for (let i = this.slides.length - 1; i >= 0; i--) {
-        const cy = i * (this.slideHeight + slideGap);
-        const sLocalWp = { x: wp.x, y: wp.y - cy };
-        const hit = hitTestElement(this.slides[i].elements, sLocalWp.x, sLocalWp.y, this.zoom);
-        if (hit) {
-          hoverHit = hit;
-          break;
+      if (this.isSingleSlideView()) {
+        const slide = this.getActiveSlide();
+        hoverHit = hitTestElement(slide.elements, localWp.x, localWp.y, this.zoom);
+      } else {
+        const slideGap = 80;
+        for (let i = this.slides.length - 1; i >= 0; i--) {
+          const cy = i * (this.slideHeight + slideGap);
+          const sLocalWp = { x: wp.x, y: wp.y - cy };
+          const hit = hitTestElement(this.slides[i].elements, sLocalWp.x, sLocalWp.y, this.zoom);
+          if (hit) {
+            hoverHit = hit;
+            break;
+          }
         }
+      }
+
+      let hoverSlideHit: string | null = null;
+      if (this.isSingleSlideView()) {
+        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= -halfH && wp.y <= halfH) {
+          hoverSlideHit = this.getActiveSlide().id;
+        }
+      } else {
+        const slideGap = 80;
+        for (let i = 0; i < this.slides.length; i++) {
+          const cy = i * (this.slideHeight + slideGap);
+          if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+            hoverSlideHit = this.slides[i].id;
+            break;
+          }
+        }
+      }
+      if (this.hoveredSlideId !== hoverSlideHit) {
+        this.hoveredSlideId = hoverSlideHit;
+        this.render();
       }
 
       if (this.currentTool === 'hand' || this.isSpaceDown) {
@@ -2150,6 +2243,13 @@ export class StageCanvasController {
         this.canvas.style.cursor = 'move';
       } else {
         this.canvas.style.cursor = this.isEyedropperActive ? 'crosshair' : 'default';
+      }
+    }, { signal });
+
+    this.canvas.addEventListener('pointerleave', () => {
+      if (this.hoveredSlideId !== null) {
+        this.hoveredSlideId = null;
+        this.render();
       }
     }, { signal });
 
@@ -2261,6 +2361,19 @@ export class StageCanvasController {
           }
         }
         this.clampPan();
+        if (!this.isSingleSlideView()) {
+          const slideGap = 80;
+          const closestIdx = Math.max(0, Math.min(this.slides.length - 1, Math.round(this.panOffset.y / (this.slideHeight + slideGap))));
+          if (this.slides[closestIdx] && this.activeSlideId !== this.slides[closestIdx].id) {
+            this.activeSlideId = this.slides[closestIdx].id;
+            const currentSlide = this.getActiveSlide();
+            if (currentSlide?.duration) {
+              this.slideDuration = currentSlide.duration;
+              this.updateSlideDurationUI();
+            }
+            this.renderSlidesTray();
+          }
+        }
         this.render();
       }
     }, { passive: false, signal });
@@ -2276,19 +2389,7 @@ export class StageCanvasController {
       const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
 
-      const halfW = this.slideWidth / 2;
-      const halfH = this.slideHeight / 2;
-      const slideGap = 80;
-
-      let clickedIdx = -1;
-      for (let i = 0; i < this.slides.length; i++) {
-        const cy = i * (this.slideHeight + slideGap);
-        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
-          clickedIdx = i;
-          break;
-        }
-      }
-
+      let clickedIdx = this.getClickedSlideIndex(wp);
       if (clickedIdx === -1) {
         clickedIdx = this.getActiveSlideIndex();
       }
@@ -2298,7 +2399,7 @@ export class StageCanvasController {
         this.selectSlide(activeSlide.id);
       }
 
-      const cy = clickedIdx * (this.slideHeight + slideGap);
+      const cy = this.getSlideCy(clickedIdx);
       const localWp = { x: wp.x, y: wp.y - cy };
       const elements = this.slides[clickedIdx]?.elements || [];
       const hit = hitTestElement(elements, localWp.x, localWp.y, this.zoom);
@@ -2640,14 +2741,44 @@ export class StageCanvasController {
         y: e.clientY,
       });
     }, { signal });
+
+    document.addEventListener('click', (e) => {
+      if (this.isPageTypesPopupOpen) {
+        const wrapper = this.container.querySelector('[data-ref="presentation-add-page-wrapper"]');
+        if (wrapper && !wrapper.contains(e.target as Node)) {
+          this.closePageTypesPopup();
+        }
+      }
+    }, { signal });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isPageTypesPopupOpen) {
+        this.closePageTypesPopup();
+      }
+    }, { signal });
   }
 
   private bindTrayEvents(signal: AbortSignal): void {
     const btnBottomPages = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-bottom-pages"]');
     const tray = this.container.querySelector<HTMLElement>('[data-ref="design-pages-tray"]');
     btnBottomPages?.addEventListener('click', () => {
-      tray?.classList.toggle('is-hidden');
+      const isHidden = tray?.classList.contains('is-hidden');
+      if (isHidden) {
+        this.slidesManager.setPageViewMode('thumbnails');
+      } else {
+        this.slidesManager.setPageViewMode('scroll');
+      }
     }, { signal });
+
+    const pagesCardsWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-cards-wrapper"]');
+    if (pagesCardsWrapper) {
+      initCarouselScroll(pagesCardsWrapper, {
+        carouselSelector: '[data-ref="pages-cards-list"]',
+        leftBtnSelector: '[data-ref="btn-pages-tray-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-pages-tray-scroll-right"]',
+        step: 180,
+      });
+    }
 
     const btnPagePrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-prev"]');
     btnPagePrev?.addEventListener('click', () => {
@@ -3798,9 +3929,7 @@ export class StageCanvasController {
       floatingToolbar.classList.add('is-hidden');
       return;
     }
-    const slideGap = 80;
-    const activeIdx = this.getActiveSlideIndex();
-    const activeCy = activeIdx * (this.slideHeight + slideGap);
+    const activeCy = this.getActiveSlideCy();
     const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
     const topLeftScreen = worldToScreen(bbox.x, bbox.y + activeCy, this.canvas, camera);
     const bottomRightScreen = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height + activeCy, this.canvas, camera);
@@ -4145,9 +4274,7 @@ export class StageCanvasController {
     const container = this.container.querySelector<HTMLElement>('[data-ref="presentation-text-editor-container"]');
     if (!container || !this.canvas) return;
 
-    const slideGap = 80;
-    const activeIdx = this.getActiveSlideIndex();
-    const activeCy = activeIdx * (this.slideHeight + slideGap);
+    const activeCy = this.getActiveSlideCy();
     const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
     const screenPt = worldToScreen((el as any).x || 0, ((el as any).y || 0) + activeCy, this.canvas, camera);
     const textarea = document.createElement('textarea');
@@ -4691,9 +4818,13 @@ export class StageCanvasController {
     const halfW = this.slideWidth / 2;
     const halfH = this.slideHeight / 2;
     const slideGap = 80;
+    const isSingle = this.isSingleSlideView();
 
-    this.slides.forEach((slide, idx) => {
-      const cy = idx * (this.slideHeight + slideGap);
+    const slidesToRender = isSingle
+      ? [{ cy: 0, idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
+      : this.slides.map((slide, idx) => ({ cy: idx * (this.slideHeight + slideGap), idx, slide }));
+
+    slidesToRender.forEach(({ slide, idx, cy }) => {
       const slideBg = slide.background?.color || (isDark ? '#18181b' : '#ffffff');
 
       ctx.save();
@@ -4709,10 +4840,21 @@ export class StageCanvasController {
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      const isSlideSelected = slide.id === this.selectedSlideId && this.selectedElementIds.size === 0;
-      ctx.strokeStyle = isSlideSelected ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#e2e8f0');
-      ctx.lineWidth = isSlideSelected ? 2 : 1;
+      ctx.strokeStyle = isDark ? '#27272a' : '#e2e8f0';
+      ctx.lineWidth = 1;
       ctx.strokeRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+
+      const isSlideSelected = slide.id === this.selectedSlideId && this.selectedElementIds.size === 0;
+      const isSlideHovered = slide.id === this.hoveredSlideId && !isSlideSelected && this.selectedElementIds.size === 0;
+
+      if (isSlideSelected || isSlideHovered) {
+        const gap = 4 / this.zoom;
+        ctx.strokeStyle = isSlideSelected
+          ? (isDark ? '#3b82f6' : '#2563eb')
+          : (isDark ? 'rgba(59, 130, 246, 0.7)' : 'rgba(37, 99, 235, 0.7)');
+        ctx.lineWidth = 2 / this.zoom;
+        ctx.strokeRect(-halfW - gap, -halfH - gap, this.slideWidth + gap * 2, this.slideHeight + gap * 2);
+      }
 
       ctx.save();
       ctx.beginPath();
@@ -4802,6 +4944,18 @@ export class StageCanvasController {
       .replace(/'/g, '&#039;');
   }
 
+  private closePageTypesPopup(): void {
+    this.isPageTypesPopupOpen = false;
+    const popup = this.container.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
+    const btnDropdown = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-add-page-dropdown"]');
+    popup?.classList.add('is-hidden');
+    btnDropdown?.classList.remove('is-active');
+    const iconUse = btnDropdown?.querySelector('use');
+    if (iconUse) {
+      iconUse.setAttribute('href', '/icons.svg#keyboard_arrow_down');
+    }
+  }
+
   private renderOverlays(): void {
     const overlaysContainer = this.container.querySelector<HTMLElement>('[data-ref="presentation-canvas-overlays"]');
     if (!overlaysContainer || !this.canvas) return;
@@ -4810,31 +4964,59 @@ export class StageCanvasController {
     const halfW = this.slideWidth / 2;
     const halfH = this.slideHeight / 2;
     const slideGap = 80;
+    const isSingle = this.isSingleSlideView();
 
-    const activeInput = document.activeElement as HTMLInputElement;
-    const isEditingTitle = activeInput && activeInput.classList.contains('slide-title-input') && overlaysContainer.contains(activeInput);
+    const slidesToOverlay = isSingle
+      ? [{ cy: 0, idx: this.getActiveSlideIndex(), slide: this.getActiveSlide() }]
+      : this.slides.map((slide, idx) => ({ cy: idx * (this.slideHeight + slideGap), idx, slide }));
 
-    if (isEditingTitle) {
-      this.slides.forEach((slide, idx) => {
-        const cy = idx * (this.slideHeight + slideGap);
-        const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
-        const headerLeft = Math.round(slideTopPt.x);
-        const headerTop = Math.round(slideTopPt.y - 36);
-        const headerWidth = Math.round(this.slideWidth * this.zoom);
+    const lastIdx = this.slides.length - 1;
+    const lastCy = isSingle ? 0 : lastIdx * (this.slideHeight + slideGap);
+    const lastSlideTopPt = worldToScreen(-halfW, lastCy - halfH, this.canvas, camera);
+    const lastSlideBottomPt = worldToScreen(0, lastCy + halfH, this.canvas, camera);
+    const addBtnLeft = Math.round(lastSlideTopPt.x);
+    const addBtnTop = Math.round(lastSlideBottomPt.y + 16);
+    const addBtnWidth = Math.round(this.slideWidth * this.zoom);
 
-        const overlayEl = overlaysContainer.querySelector<HTMLElement>(`[data-ref="slide-overlay-${slide.id}"]`);
-        if (overlayEl) {
+    const existingHeaders = overlaysContainer.querySelectorAll<HTMLElement>('.presentation-slide-overlay-header');
+    const addPageWrapper = overlaysContainer.querySelector<HTMLElement>('[data-ref="presentation-add-page-wrapper"]');
+
+    if (existingHeaders.length === slidesToOverlay.length && (isSingle || addPageWrapper)) {
+      let allMatch = true;
+      for (let i = 0; i < slidesToOverlay.length; i++) {
+        if (existingHeaders[i].getAttribute('data-ref') !== `slide-overlay-${slidesToOverlay[i].slide.id}`) {
+          allMatch = false;
+          break;
+        }
+      }
+      if (allMatch) {
+        slidesToOverlay.forEach(({ slide, idx, cy }, i) => {
+          const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
+          const headerLeft = Math.round(slideTopPt.x);
+          const headerTop = Math.round(slideTopPt.y - 36);
+          const headerWidth = Math.round(this.slideWidth * this.zoom);
+
+          const overlayEl = existingHeaders[i];
           overlayEl.style.left = `${headerLeft}px`;
           overlayEl.style.top = `${headerTop}px`;
           overlayEl.style.width = `${headerWidth}px`;
+        });
+        if (addPageWrapper) {
+          if (isSingle) {
+            addPageWrapper.style.display = 'none';
+          } else {
+            addPageWrapper.style.display = '';
+            addPageWrapper.style.left = `${addBtnLeft}px`;
+            addPageWrapper.style.top = `${addBtnTop}px`;
+            addPageWrapper.style.width = `${addBtnWidth}px`;
+          }
         }
-      });
-      return;
+        return;
+      }
     }
 
     let html = '';
-    this.slides.forEach((slide, idx) => {
-      const cy = idx * (this.slideHeight + slideGap);
+    slidesToOverlay.forEach(({ slide, idx, cy }) => {
       const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
       const headerLeft = Math.round(slideTopPt.x);
       const headerTop = Math.round(slideTopPt.y - 36);
@@ -4845,7 +5027,7 @@ export class StageCanvasController {
           <div class="header-left">
             <span class="slide-page-badge">Página ${idx + 1}</span>
             <span class="slide-page-dash">-</span>
-            <input type="text" class="slide-title-input" data-ref="input-slide-title-${slide.id}" data-slide-id="${slide.id}" value="${this.escapeHtml(slide.name)}" placeholder="Título" aria-label="Nombre de diapositiva" />
+            <input type="text" class="slide-title-input" data-ref="input-slide-title-${slide.id}" data-slide-id="${slide.id}" value="${this.escapeHtml(slide.name)}" placeholder="Agregar título de diapositiva" aria-label="Nombre de diapositiva" />
           </div>
           <div class="header-actions">
             <button type="button" class="header-action-btn" data-ref="btn-slide-move-up-${slide.id}" data-action="move-up" data-slide-id="${slide.id}" data-tooltip="Mover arriba" aria-label="Mover arriba"${idx === 0 ? ' disabled' : ''}>
@@ -4870,6 +5052,80 @@ export class StageCanvasController {
         </div>
       `;
     });
+
+    if (!isSingle && this.slides.length > 0) {
+      html += `
+        <div class="presentation-add-page-wrapper" data-ref="presentation-add-page-wrapper" style="left: ${addBtnLeft}px; top: ${addBtnTop}px; width: ${addBtnWidth}px;">
+          <div class="canvas-add-page-btn-group" data-ref="canvas-add-page-btn-group">
+            <button type="button" class="canvas-add-page-btn" data-ref="btn-canvas-add-page-main">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>+ Agregar una página</span>
+            </button>
+            <button type="button" class="canvas-add-page-sub-btn${this.isPageTypesPopupOpen ? ' is-active' : ''}" data-ref="btn-canvas-add-page-dropdown" data-tooltip="Tipos de lienzo" aria-label="Tipos de lienzo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_${this.isPageTypesPopupOpen ? 'up' : 'down'}"></use></svg>
+            </button>
+          </div>
+          <div class="canvas-page-types-popup${this.isPageTypesPopupOpen ? '' : ' is-hidden'}" data-ref="canvas-page-types-popup">
+            <div class="canvas-page-types-grid" data-ref="canvas-page-types-grid">
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-presentation" data-type="presentation">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--presentation">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Presentación</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-social" data-type="social">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--social">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Redes sociales</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-video" data-type="video">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--video">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Video</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-print" data-type="print">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--print">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#print"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Imprimir</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-doc" data-type="doc">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Doc</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-board" data-type="board">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--board">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Pizarrón online</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-sheet" data-type="sheet">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--sheet">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Hoja de cálculo</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-web" data-type="web">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--web">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Sitios web</span>
+              </button>
+              <button type="button" class="canvas-page-type-card" data-ref="btn-type-more" data-type="more">
+                <span class="canvas-page-type-card__icon canvas-page-type-card__icon--more">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_horiz"></use></svg>
+                </span>
+                <span class="canvas-page-type-card__label">Más</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     overlaysContainer.innerHTML = html;
     this.bindOverlayEvents(overlaysContainer);
@@ -4981,6 +5237,36 @@ export class StageCanvasController {
         }
       });
     });
+
+    const btnAddMain = container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-add-page-main"]');
+    btnAddMain?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closePageTypesPopup();
+      this.addSlide();
+    });
+
+    const btnAddDropdown = container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-add-page-dropdown"]');
+    const popup = container.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
+    btnAddDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.isPageTypesPopupOpen = !this.isPageTypesPopupOpen;
+      if (popup) {
+        popup.classList.toggle('is-hidden', !this.isPageTypesPopupOpen);
+      }
+      btnAddDropdown.classList.toggle('is-active', this.isPageTypesPopupOpen);
+      const iconUse = btnAddDropdown.querySelector('use');
+      if (iconUse) {
+        iconUse.setAttribute('href', `/icons.svg#keyboard_arrow_${this.isPageTypesPopupOpen ? 'up' : 'down'}`);
+      }
+    });
+
+    const typeCards = container.querySelectorAll<HTMLButtonElement>('.canvas-page-type-card');
+    typeCards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closePageTypesPopup();
+      });
+    });
   }
 
   public startSlideshow(): void {
@@ -5051,13 +5337,13 @@ export class StageCanvasController {
     const initialData = JSON.stringify(project);
 
     await saveLocalCanvas({
-      canvas_type: 'presentation',
+      canvas_type: this.canvasType || 'presentation',
       created_at: this.canvasRecord?.created_at || new Date().toISOString(),
       data: initialData,
       height: this.slideHeight,
       is_local: !currentUser,
-      name: this.canvasRecord?.name || 'Presentación sin título',
-      unit: 'presentation',
+      name: this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título'),
+      unit: this.canvasType || 'presentation',
       updated_at: new Date().toISOString(),
       uuid: this.canvasUuid,
       width: this.slideWidth,
@@ -5065,16 +5351,32 @@ export class StageCanvasController {
 
     if (currentUser) {
       try {
-        await putApi(API_ROUTES.canvases.byId(this.canvasUuid), {
-          canvas_type: 'presentation',
+        const syncRes = await postApi(API_ROUTES.canvases.sync, {
+          canvas_type: this.canvasType || 'presentation',
           data: initialData,
           height: this.slideHeight,
-          name: this.canvasRecord?.name || 'Presentación sin título',
-          unit: 'presentation',
+          id: this.canvasServerId || undefined,
+          name: this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título'),
+          unit: this.canvasType || 'presentation',
+          uuid: this.canvasUuid,
           width: this.slideWidth,
         });
+        if (syncRes.ok) {
+          const syncBody = await syncRes.json();
+          if (syncBody?.canvas) {
+            this.canvasServerId = syncBody.canvas.id || this.canvasServerId;
+            this.canvasUserId = syncBody.canvas.user_id || this.canvasUserId;
+            if (syncBody.role) {
+              this.role = syncBody.role;
+            }
+            if (syncBody.room_token && !this.roomToken) {
+              this.roomToken = syncBody.room_token;
+              this.collaborationManager.roomToken = this.roomToken;
+            }
+          }
+        }
         const now = Date.now();
-        if (now - this.lastAutoSnapshotTime > 5 * 60 * 1000) {
+        if (this.canvasServerId && now - this.lastAutoSnapshotTime > 5 * 60 * 1000) {
           this.lastAutoSnapshotTime = now;
           const thumb = generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el));
           void postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
@@ -5180,8 +5482,7 @@ export class StageCanvasController {
       return;
     }
 
-    const slideGap = 80;
-    const cy = slideIdx * (this.slideHeight + slideGap);
+    const cy = this.getSlideCy(slideIdx);
     const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
     const screenPos = worldToScreen(embed.x, embed.y + cy, this.canvas, camera);
     const screenWidth = Math.round(embed.width * this.zoom);

@@ -975,11 +975,12 @@ export class SheetController implements ViewController {
 
     if (currentUser) {
       try {
-        const res = await patchApi(API_ROUTES.canvases.byId(this.canvasUuid), {
+        const res = await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'sheet',
           data: serialized,
           preview_thumbnail: thumbnail,
           unit: 'sheet',
+          uuid: this.canvasUuid,
         });
         if (res.ok) {
           statusBtn?.classList.remove('is-saving', 'is-error');

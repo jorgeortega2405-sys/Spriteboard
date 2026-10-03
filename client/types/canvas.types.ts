@@ -25,6 +25,8 @@ export interface CanvasItem {
   owner_avatar?: string | null;
   owner_tier?: 'free' | 'pro' | 'business' | null;
   effective_tier?: 'free' | 'pro' | 'business' | null;
+  role?: 'editor' | 'owner' | 'viewer';
+  room_token?: string;
   team_id?: number | null;
   team_uuid?: string | null;
   team_info?: { id: number; uuid: string; name: string; color?: string } | null;

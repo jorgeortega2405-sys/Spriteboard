@@ -72,6 +72,7 @@ export class DocController implements ViewController {
   private btnDocFileMenu: HTMLButtonElement | null = null;
   private btnDocMetrics: HTMLButtonElement | null = null;
   private btnDocPresent: HTMLButtonElement | null = null;
+  private isDocPageTypesPopupOpen = false;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
@@ -136,6 +137,8 @@ export class DocController implements ViewController {
     version: 1,
   };
   private publicRole: 'editor' | 'viewer' = 'editor';
+  private role: 'editor' | 'owner' | 'viewer' = 'owner';
+  private roomToken = '';
   private saveDebounceTimer: number | null = null;
   private statsDebounceTimer: number | null = null;
   private typingDebounceTimer: number | null = null;
@@ -242,18 +245,63 @@ export class DocController implements ViewController {
   private async loadCanvasData(): Promise<boolean> {
     let canvasRecord: any = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvasRecord || !canvasRecord.data) {
+    if (canvasRecord && canvasRecord.data) {
+      this.canvasServerId = canvasRecord.id || null;
+      this.canvasUserId = canvasRecord.user_id || null;
+      if (canvasRecord.role) this.role = canvasRecord.role;
+      if (canvasRecord.room_token) this.roomToken = canvasRecord.room_token;
+      if (canvasRecord.public_role) this.publicRole = canvasRecord.public_role;
+      if (canvasRecord.access_level) this.accessLevel = canvasRecord.access_level;
+    }
+
+    if (!canvasRecord || !canvasRecord.data || (!this.canvasServerId && currentUser)) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
           const body = await res.json();
           if (body?.canvas) {
             canvasRecord = body.canvas;
+            this.canvasServerId = canvasRecord.id || null;
+            this.canvasUserId = canvasRecord.user_id || null;
+            if (body.role) this.role = body.role;
+            if (body.room_token) this.roomToken = body.room_token;
+            if (canvasRecord.public_role) this.publicRole = canvasRecord.public_role;
+            if (canvasRecord.access_level) this.accessLevel = canvasRecord.access_level;
             if (canvasRecord.data) {
               void saveLocalCanvas({
                 ...canvasRecord,
                 data: canvasRecord.data,
                 is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
+              });
+            }
+          }
+        } else if (res.status === 404 && currentUser && canvasRecord && canvasRecord.data) {
+          const syncRes = await postApi(API_ROUTES.canvases.sync, {
+            canvas_type: 'doc',
+            data: canvasRecord.data,
+            height: canvasRecord.height || 0,
+            name: canvasRecord.name || 'Documento sin título',
+            preview_thumbnail: canvasRecord.preview_thumbnail,
+            unit: 'doc',
+            uuid: this.canvasUuid,
+            width: canvasRecord.width || 816,
+          });
+          if (syncRes.ok) {
+            const syncBody = await syncRes.json();
+            if (syncBody?.canvas) {
+              canvasRecord = syncBody.canvas;
+              this.canvasServerId = syncBody.canvas.id || null;
+              this.canvasUserId = syncBody.canvas.user_id || null;
+              this.role = syncBody.role || 'owner';
+              this.roomToken = syncBody.room_token || '';
+              void saveLocalCanvas({
+                ...canvasRecord,
+                data: canvasRecord.data,
+                is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
               });
             }
           }
@@ -341,6 +389,8 @@ export class DocController implements ViewController {
     this.collaborationManager.isOwner = this.isOwner;
     this.collaborationManager.accessLevel = this.accessLevel;
     this.collaborationManager.publicRole = this.publicRole;
+    this.collaborationManager.role = this.role;
+    this.collaborationManager.roomToken = this.roomToken;
 
     this.collaborationManager.init(userId, username, avatarUrl, tier, {
       onAccessChanged: (accessLevel, publicRole) => {
@@ -658,6 +708,117 @@ export class DocController implements ViewController {
       pagesContainer.appendChild(pageEl);
     });
 
+    const addPageWrapper = document.createElement('div');
+    addPageWrapper.className = 'doc-add-page-wrapper';
+    addPageWrapper.setAttribute('data-ref', 'doc-add-page-wrapper');
+    addPageWrapper.style.width = `${paper.widthPx > 0 ? paper.widthPx : 816}px`;
+    addPageWrapper.innerHTML = `
+      <div class="canvas-add-page-btn-group" data-ref="canvas-add-page-btn-group">
+        <button type="button" class="canvas-add-page-btn" data-ref="btn-doc-bottom-add-page-main">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          <span>+ Agregar una página</span>
+        </button>
+        <button type="button" class="canvas-add-page-sub-btn${this.isDocPageTypesPopupOpen ? ' is-active' : ''}" data-ref="btn-doc-bottom-add-page-dropdown" data-tooltip="Tipos de lienzo" aria-label="Tipos de lienzo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_${this.isDocPageTypesPopupOpen ? 'up' : 'down'}"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-page-types-popup${this.isDocPageTypesPopupOpen ? '' : ' is-hidden'}" data-ref="canvas-page-types-popup">
+        <div class="canvas-page-types-grid" data-ref="canvas-page-types-grid">
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-presentation" data-type="presentation">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--presentation">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Presentación</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-social" data-type="social">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--social">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Redes sociales</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-video" data-type="video">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--video">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Video</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-print" data-type="print">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--print">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#print"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Imprimir</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-doc" data-type="doc">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Doc</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-board" data-type="board">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--board">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Pizarrón online</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-sheet" data-type="sheet">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--sheet">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Hoja de cálculo</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-web" data-type="web">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--web">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Sitios web</span>
+          </button>
+          <button type="button" class="canvas-page-type-card" data-ref="btn-type-more" data-type="more">
+            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--more">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_horiz"></use></svg>
+            </span>
+            <span class="canvas-page-type-card__label">Más</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const btnBottomAddMain = addPageWrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-main"]');
+    btnBottomAddMain?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeDocPageTypesPopup();
+      const newPage = this.paginationManager.addPage(this.project);
+      this.renderDocument();
+      this.scheduleAutosave();
+      showToast('Nueva página añadida al documento', 'success');
+      const newPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${newPage.id}"]`);
+      newPageEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    const btnBottomAddDropdown = addPageWrapper.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-dropdown"]');
+    const docPopup = addPageWrapper.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
+    btnBottomAddDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.isDocPageTypesPopupOpen = !this.isDocPageTypesPopupOpen;
+      if (docPopup) {
+        docPopup.classList.toggle('is-hidden', !this.isDocPageTypesPopupOpen);
+      }
+      btnBottomAddDropdown.classList.toggle('is-active', this.isDocPageTypesPopupOpen);
+      const iconUse = btnBottomAddDropdown.querySelector('use');
+      if (iconUse) {
+        iconUse.setAttribute('href', `/icons.svg#keyboard_arrow_${this.isDocPageTypesPopupOpen ? 'up' : 'down'}`);
+      }
+    });
+
+    const typeCards = addPageWrapper.querySelectorAll<HTMLButtonElement>('.canvas-page-type-card');
+    typeCards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeDocPageTypesPopup();
+      });
+    });
+
+    pagesContainer.appendChild(addPageWrapper);
+
     this.bindPageEvents();
     this.initExistingImages();
     if (this.pageViewMode === 'single-page') {
@@ -667,8 +828,35 @@ export class DocController implements ViewController {
     renderIcons(pagesContainer);
   }
 
+  private closeDocPageTypesPopup(): void {
+    this.isDocPageTypesPopupOpen = false;
+    const popup = this.container.querySelector<HTMLElement>('[data-ref="canvas-page-types-popup"]');
+    const btnDropdown = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-bottom-add-page-dropdown"]');
+    popup?.classList.add('is-hidden');
+    btnDropdown?.classList.remove('is-active');
+    const iconUse = btnDropdown?.querySelector('use');
+    if (iconUse) {
+      iconUse.setAttribute('href', '/icons.svg#keyboard_arrow_down');
+    }
+  }
+
   private bindEvents(): void {
     const signal = this.abortController.signal;
+
+    document.addEventListener('click', (e) => {
+      if (this.isDocPageTypesPopupOpen) {
+        const wrapper = this.container.querySelector('[data-ref="doc-add-page-wrapper"]');
+        if (wrapper && !wrapper.contains(e.target as Node)) {
+          this.closeDocPageTypesPopup();
+        }
+      }
+    }, { signal });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isDocPageTypesPopupOpen) {
+        this.closeDocPageTypesPopup();
+      }
+    }, { signal });
 
     const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="doc-pages-container"]');
     if (pagesContainer) {
@@ -2911,6 +3099,7 @@ export class DocController implements ViewController {
     this.gridViewModal = openCanvasGridView({
       activePageIndex: this.activeDocPageIndex,
       canvasType: 'doc',
+      containerEl: this.container.querySelector<HTMLElement>('.component-bottom') || this.container,
       onAddPage: () => {
         this.addNewDocPage();
         this.refreshGridView();

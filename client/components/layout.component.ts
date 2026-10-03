@@ -279,6 +279,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnMoreApps?.classList.toggle('is-active', path === '/your-apps');
   btnMoreApply?.classList.toggle('is-active', isDesigner || path === '/apply-designer' || path === '/designer/apply' || path === '/creators' || path === '/creators/apply');
 
+  const itemAi = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ai"]');
   const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
   const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
   const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
@@ -287,6 +288,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
 
   if (!currentUser) {
+    if (itemAi) itemAi.style.display = 'none';
     if (itemBrand) itemBrand.style.display = 'none';
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';
@@ -298,6 +300,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
       btnSettings.classList.toggle('is-active', path.startsWith('/settings'));
     }
   } else {
+    if (itemAi) itemAi.style.display = '';
     if (itemBrand) itemBrand.style.display = '';
     if (itemShared) itemShared.style.display = '';
     if (itemTeams) itemTeams.style.display = '';
@@ -517,9 +520,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   }
 
   if (!currentUser) {
+    const itemAi = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ai"]');
     const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
     const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
     const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
+    if (itemAi) itemAi.style.display = 'none';
     if (itemBrand) itemBrand.style.display = 'none';
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';

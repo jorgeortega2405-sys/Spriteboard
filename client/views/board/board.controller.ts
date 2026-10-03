@@ -520,7 +520,16 @@ export class BoardController {
   private async loadBoardData(): Promise<boolean> {
     let canvas: CanvasItem | null = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvas || !canvas.data) {
+    if (canvas && canvas.data) {
+      this.canvasServerId = canvas.id || null;
+      this.canvasUserId = canvas.user_id || null;
+      if (canvas.role) this.role = canvas.role;
+      if (canvas.room_token) this.roomToken = canvas.room_token;
+      if (canvas.public_role) this.publicRole = canvas.public_role;
+      if (canvas.access_level) this.accessLevel = canvas.access_level;
+    }
+
+    if (!canvas || !canvas.data || (!this.canvasServerId && currentUser)) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -543,6 +552,37 @@ export class BoardController {
                 ...data.canvas,
                 data: data.canvas.data,
                 is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
+              });
+            }
+          }
+        } else if (res.status === 404 && currentUser && canvas && canvas.data) {
+          const syncRes = await postApi(API_ROUTES.canvases.sync, {
+            canvas_type: 'board',
+            data: canvas.data,
+            height: 0,
+            name: canvas.name || 'Pizarrón sin título',
+            preview_thumbnail: canvas.preview_thumbnail,
+            unit: 'board',
+            uuid: this.canvasUuid,
+            width: 0,
+          });
+          if (syncRes.ok) {
+            const syncBody = await syncRes.json();
+            if (syncBody?.canvas) {
+              const syncedCanvas: CanvasItem = syncBody.canvas;
+              canvas = syncedCanvas;
+              this.canvasServerId = syncedCanvas.id || null;
+              this.canvasUserId = syncedCanvas.user_id || null;
+              this.role = syncBody.role || 'owner';
+              this.roomToken = syncBody.room_token || '';
+              void saveLocalCanvas({
+                ...syncedCanvas,
+                data: syncedCanvas.data || canvas?.data,
+                is_local: false,
+                role: this.role,
+                room_token: this.roomToken,
               });
             }
           }
@@ -6791,6 +6831,7 @@ export class BoardController {
     this.gridViewModal = openCanvasGridView({
       activePageIndex: this.pages.findIndex((p) => p.id === this.activePageId),
       canvasType: 'board',
+      containerEl: this.container.querySelector<HTMLElement>('.component-bottom') || this.container,
       onAddPage: () => {
         this.addPage();
         this.refreshBoardGridView();

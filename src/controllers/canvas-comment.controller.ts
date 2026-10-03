@@ -1,7 +1,7 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createCanvasComment, deleteCanvasComment, listCanvasComments, updateCanvasComment } from '../services/canvas-comment.service.js';
-import { sendBadRequest, sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
-import { Request, Response } from 'express';
+import { sendBadRequest, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 
 export async function listCommentsHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -12,6 +12,10 @@ export async function listCommentsHandler(req: Request, res: Response): Promise<
     const comments = await listCanvasComments(uuid, user ? user.id : undefined, frameIndex);
     sendSuccess(res, { comments, success: true });
   } catch (err: any) {
+    if (err?.message?.includes('no encontrado') || err?.message?.includes('sin acceso')) {
+      sendNotFound(res, 'Lienzo no encontrado o sin acceso.');
+      return;
+    }
     sendInternalError(res, 'Error al listar comentarios del lienzo', err);
   }
 }

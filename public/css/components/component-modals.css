@@ -4495,8 +4495,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
 
 .canvas-card__btn-sync {
   position: absolute;
-  top: 8px;
-  left: 38px;
+  bottom: 8px;
+  left: 8px;
   font-size: 11px;
   font-weight: 600;
   gap: 4px;
@@ -4507,6 +4507,7 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   color: #000000;
   border: none;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   transition: background-color var(--sl-transition-fast), transform var(--sl-transition-x-fast);
   z-index: 10;
   display: inline-flex;
@@ -5994,6 +5995,32 @@ html.dark-theme .component-bottom--canvas {
   display: none !important;
 }
 
+.design-pages-tray.design-pages-tray--transparent {
+  width: auto !important;
+  max-width: calc(100% - 32px);
+  padding: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 4px;
+}
+
+.design-pages-tray--transparent .design-pages-tray__cards-wrapper {
+  width: auto;
+  max-width: 100%;
+  justify-content: center;
+}
+
+.design-pages-tray--transparent .design-pages-tray__cards {
+  width: auto;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 6px;
+}
+
 .design-pages-tray__toolbar {
   display: flex;
   align-items: center;
@@ -6106,6 +6133,204 @@ html.dark-theme .component-bottom--canvas {
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.5);
   transform: scale(1.05);
+}
+
+.canva-page-card {
+  flex: 0 0 auto;
+  width: 84px;
+  height: 48px;
+  padding: 0;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.canva-page-card:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.canva-page-card.is-active {
+  border: 2px solid #2563eb !important;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25), 0 4px 12px rgba(0, 0, 0, 0.14) !important;
+}
+
+.canva-page-card__preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+}
+
+.canva-page-card__preview img,
+.canva-page-card__preview canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.canva-page-card__header {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  display: none;
+}
+
+.canva-page-card__num {
+  position: absolute;
+  bottom: 3px;
+  left: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #1e293b;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.95);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.canva-page-card__title {
+  display: none;
+}
+
+.canva-page-card--add-container {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.canva-page-card--add {
+  flex: 0 0 auto;
+  width: 68px;
+  height: 48px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.canva-page-card--add:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  transform: translateY(-2px);
+}
+
+.canva-page-card--add-btn,
+.canva-page-card--add-dropdown {
+  background: transparent;
+  border: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.canva-page-card--add-btn {
+  flex: 1 1 auto;
+  padding-left: 6px;
+}
+
+.canva-page-card--add-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.canva-page-card--add-dropdown {
+  width: 26px;
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.canva-page-card--add-dropdown:hover,
+.canva-page-card--add-dropdown.is-active {
+  background: rgba(0, 0, 0, 0.06);
+  color: #2563eb;
+}
+
+.canva-page-card--add-btn .component-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.canva-page-card--add-dropdown .component-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+html[data-theme="dark"] .canva-page-card,
+html.dark-theme .canva-page-card {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="dark"] .canva-page-card__num,
+html.dark-theme .canva-page-card__num {
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme="dark"] .canva-page-card--add,
+html.dark-theme .canva-page-card--add {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .canva-page-card--add:hover,
+html.dark-theme .canva-page-card--add:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .canva-page-card--add-btn:hover,
+html.dark-theme .canva-page-card--add-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .canva-page-card--add-dropdown,
+html.dark-theme .canva-page-card--add-dropdown {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"] .canva-page-card--add-dropdown:hover,
+html.dark-theme .canva-page-card--add-dropdown:hover,
+html[data-theme="dark"] .canva-page-card--add-dropdown.is-active,
+html.dark-theme .canva-page-card--add-dropdown.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #60a5fa;
 }
 
 .design-page-card--add.is-disabled {
@@ -8536,9 +8761,9 @@ html[data-theme="dark"] .design-share-search-results,
   position: fixed;
   pointer-events: none;
   z-index: 1000;
-  border: 1.5px solid var(--accent-pink);
-  background-color: var(--accent-pink-subtle);
-  border-radius: 4px;
+  border: 1.5px solid var(--action-primary, #3b82f6);
+  background-color: rgba(59, 130, 246, 0.12);
+  border-radius: 0;
   box-sizing: border-box;
 }
 
@@ -13513,7 +13738,7 @@ html.dark-theme .canva-layer-card:hover {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  z-index: 5;
+  z-index: 25;
 }
 
 .presentation-slide-overlay-header {
@@ -13631,6 +13856,248 @@ html.dark-theme .canva-layer-card:hover {
   stroke: currentColor;
 }
 
+.presentation-add-page-wrapper {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.doc-add-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: var(--doc-paper-width, 816px);
+  margin: 24px auto 60px auto;
+  position: relative;
+  pointer-events: auto;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.canvas-add-page-btn-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 38px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.canvas-add-page-btn-group:hover {
+  border-color: var(--action-primary, #3b82f6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.canvas-add-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  height: 100%;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  gap: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.canvas-add-page-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.canvas-add-page-btn .component-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  fill: currentColor;
+}
+
+.canvas-add-page-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  min-width: 38px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--border-color, #cbd5e1);
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.canvas-add-page-sub-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #0f172a);
+}
+
+.canvas-add-page-sub-btn.is-active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--action-primary, #3b82f6);
+}
+
+.canvas-add-page-sub-btn .component-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  fill: currentColor;
+}
+
+.canvas-page-types-popup {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+  z-index: 60;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.canvas-page-types-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.canvas-page-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px 8px 4px;
+  border-radius: 12px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  min-height: 84px;
+}
+
+.canvas-page-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.canvas-page-type-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.canvas-page-type-card__icon .component-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  fill: currentColor;
+}
+
+.canvas-page-type-card__icon--presentation {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.canvas-page-type-card__icon--social {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+}
+
+.canvas-page-type-card__icon--video {
+  background: linear-gradient(135deg, #c084fc, #a855f7);
+}
+
+.canvas-page-type-card__icon--print {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+}
+
+.canvas-page-type-card__icon--doc {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+
+.canvas-page-type-card__icon--board {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.canvas-page-type-card__icon--sheet {
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+}
+
+.canvas-page-type-card__icon--web {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+.canvas-page-type-card__icon--more {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+}
+
+.canvas-page-type-card__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary, #334155);
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+  max-width: 100%;
+}
+
+html[data-theme="dark"] .canvas-add-page-btn-group,
+html.dark-theme .canvas-add-page-btn-group {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+html[data-theme="dark"] .canvas-add-page-sub-btn,
+html.dark-theme .canvas-add-page-sub-btn {
+  border-left-color: #27272a;
+}
+
+html[data-theme="dark"] .canvas-page-types-popup,
+html.dark-theme .canvas-page-types-popup {
+  background: #18181b;
+  border-color: #27272a;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .canvas-page-type-card,
+html.dark-theme .canvas-page-type-card {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .canvas-page-type-card:hover,
+html.dark-theme .canvas-page-type-card:hover {
+  background: #3f3f46;
+  border-color: #3b82f6;
+}
+
 /* ============================================================
    CANVAS PAGE VIEW & GRID VIEW STYLES (CANVA STYLE)
    ============================================================ */
@@ -13667,6 +14134,17 @@ html.dark-theme .canva-layer-card:hover {
   z-index: 10050;
   min-width: 200px;
   animation: fadeIn 0.12s ease-out;
+}
+
+.canvas-file-submenu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 14px;
+  background: transparent;
+  pointer-events: auto;
 }
 
 /* Single Page View for Document */
@@ -13813,10 +14291,13 @@ html.dark-theme .canva-layer-card:hover {
    ============================================================ */
 
 .canvas-grid-view-modal {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 99999;
-  background: #0f141f;
+  width: 100%;
+  height: 100%;
+  z-index: 40;
+  background: var(--bg-canvas, var(--bg-app, #f8fafc));
+  color: var(--text-primary, #0f172a);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13825,112 +14306,70 @@ html.dark-theme .canva-layer-card:hover {
   animation: fadeIn 0.18s ease-out;
 }
 
+html[data-theme="dark"] .canvas-grid-view-modal,
+html.dark-theme .canvas-grid-view-modal {
+  background: var(--bg-canvas, var(--bg-app, #121216));
+  color: var(--text-primary, #f8fafc);
+}
+
 .canvas-grid-view-modal.is-hidden {
   display: none !important;
 }
 
-.grid-view-toolbar {
+.canvas-grid-view-modal .selection-marquee {
   position: absolute;
-  top: 20px;
+  pointer-events: none;
+  z-index: 80;
+  border: 1.5px solid var(--action-primary, #2563eb);
+  background-color: rgba(37, 99, 235, 0.12);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.canvas-grid-view-modal .selection-toolbar {
+  position: absolute;
+  bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(26, 32, 46, 0.88);
+  transform: translateX(-50%) translateY(40px) translateZ(0);
+  z-index: 90;
+  width: auto;
+  max-width: calc(100% - 32px);
+  background: rgba(18, 18, 22, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.grid-view-btn-select-all {
-  display: inline-flex;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  padding: 6px 10px;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 9999px;
-  color: #e2e8f0;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.grid-view-btn-select-all:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.grid-view-btn-select-all.is-active {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
-  border-color: rgba(139, 92, 246, 0.35);
-}
-
-.grid-view-divider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  margin: 0 4px;
-}
-
-.grid-view-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 9999px;
-  background: transparent;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.grid-view-action-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  gap: 8px;
   color: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.grid-view-action-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.canvas-grid-view-modal .selection-toolbar.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0) translateZ(0);
 }
 
-.grid-view-action-btn .component-icon {
-  width: 18px;
-  height: 18px;
+.canvas-grid-view-modal .selection-toolbar.is-hidden {
+  display: none !important;
 }
 
-.grid-view-close-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  border: 1px solid transparent;
+.canvas-grid-view-modal .selection-toolbar__count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  user-select: none;
+  padding: 2px 10px;
+  background: rgba(37, 99, 235, 0.25);
   border-radius: 9999px;
-  background: transparent;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin-left: 4px;
-}
-
-.grid-view-close-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  border: 1px solid rgba(37, 99, 235, 0.4);
 }
 
 .grid-view-body {
@@ -13938,7 +14377,7 @@ html.dark-theme .canva-layer-card:hover {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 84px 48px 48px 48px;
+  padding: 32px 48px 80px 48px;
   box-sizing: border-box;
 }
 
@@ -13962,10 +14401,10 @@ html.dark-theme .canva-layer-card:hover {
 .grid-view-card {
   width: 180px;
   height: 240px;
-  background: #ffffff;
+  background: var(--bg-surface, #ffffff);
   border-radius: 8px;
-  border: 2px solid transparent;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border: 1.5px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -13974,15 +14413,43 @@ html.dark-theme .canva-layer-card:hover {
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+html[data-theme="dark"] .grid-view-card,
+html.dark-theme .grid-view-card {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.canvas-grid-view-modal--presentation .grid-view-card,
+.canvas-grid-view-modal--social .grid-view-card,
+.canvas-grid-view-modal--board .grid-view-card {
+  width: 220px;
+  height: 124px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.canvas-grid-view-modal--presentation .grid-view-card--add,
+.canvas-grid-view-modal--social .grid-view-card--add,
+.canvas-grid-view-modal--board .grid-view-card--add {
+  width: 220px;
+  height: 124px;
+}
+
 .grid-view-card:hover {
   transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+html[data-theme="dark"] .grid-view-card:hover,
+html.dark-theme .grid-view-card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  border-color: rgba(139, 92, 246, 0.5);
 }
 
 .grid-view-card.is-selected {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4), 0 8px 24px rgba(0, 0, 0, 0.16) !important;
 }
 
 .grid-view-card.is-page-hidden-state {
@@ -14014,31 +14481,32 @@ html.dark-theme .canva-layer-card:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #94a3b8;
+  color: var(--text-secondary, #64748b);
   font-size: 13px;
   font-weight: 500;
   padding-left: 2px;
 }
 
-.grid-view-card-footer .component-icon {
-  width: 16px;
-  height: 16px;
-  opacity: 0.8;
-}
-
 .grid-view-card--add {
-  background: rgba(26, 32, 46, 0.5);
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.03);
+  border: 2px dashed var(--border-color, rgba(0, 0, 0, 0.15));
+  color: var(--text-secondary, #64748b);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+html[data-theme="dark"] .grid-view-card--add,
+html.dark-theme .grid-view-card--add {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #94a3b8;
+}
+
 .grid-view-card--add:hover {
-  background: rgba(139, 92, 246, 0.12);
-  border-color: #8b5cf6;
-  color: #ffffff;
+  background: rgba(37, 99, 235, 0.08);
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 .grid-view-card--add .grid-view-card__add-icon-box {

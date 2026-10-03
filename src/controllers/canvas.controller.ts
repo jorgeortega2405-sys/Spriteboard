@@ -132,7 +132,11 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       width: numWidth,
     });
 
-    sendSuccess(res, { canvas, success: true });
+    const isOwner = Boolean(user && canvas.user_id === user.id);
+    const role = isOwner ? 'owner' : (canvas.access_level === 'public' && canvas.public_role === 'viewer' ? 'viewer' : 'editor');
+    const roomToken = user ? generateCanvasRoomToken(canvas.uuid, user.id, role) : undefined;
+
+    sendSuccess(res, { canvas, role, room_token: roomToken, success: true });
   } catch (err: any) {
     if (err?.message?.includes('eliminado')) {
       sendNotFound(res, 'El lienzo ha sido eliminado.');

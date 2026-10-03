@@ -1,7 +1,7 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createCanvasSnapshot, deleteCanvasSnapshot, forkCanvasSnapshot, getCanvasSnapshotData, listCanvasSnapshots, restoreCanvasSnapshot, updateCanvasSnapshot } from '../services/canvas-snapshot.service.js';
-import { sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
-import { Request, Response } from 'express';
+import { sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 
 export async function listSnapshotsHandler(req: Request, res: Response): Promise<void> {
   const { uuid } = req.params;
@@ -12,6 +12,10 @@ export async function listSnapshotsHandler(req: Request, res: Response): Promise
     const snapshots = await listCanvasSnapshots(uuid, userId);
     sendSuccess(res, { snapshots });
   } catch (err: any) {
+    if (err?.message?.includes('encontrado') || err?.message?.includes('permiso')) {
+      sendNotFound(res, 'No se pudo obtener el historial de versiones.');
+      return;
+    }
     sendInternalError(res, `Error al listar snapshots del lienzo ${uuid}`, err, 'No se pudo obtener el historial de versiones.');
   }
 }
@@ -32,6 +36,10 @@ export async function createSnapshotHandler(req: Request, res: Response): Promis
     });
     sendCreated(res, { snapshot });
   } catch (err: any) {
+    if (err?.message?.includes('permiso') || err?.message?.includes('encontrado')) {
+      sendNotFound(res, 'No se pudo guardar la versión del lienzo.');
+      return;
+    }
     sendInternalError(res, `Error al crear snapshot para el lienzo ${uuid}`, err, 'No se pudo guardar la versión del lienzo.');
   }
 }

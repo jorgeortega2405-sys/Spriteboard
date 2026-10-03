@@ -1512,8 +1512,6 @@ class HomeController {
     const typeIconSvg = getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
-    const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
-
     const thumbnailHtml = canvas.preview_thumbnail
       ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
@@ -1605,7 +1603,6 @@ class HomeController {
         <div class="canvas-card__meta" data-ref="canvas-meta">
           ${typeIconSvg}
           <span>Editado ${editedTime}</span>
-          ${isLocal ? `<span class="canvas-card__meta-dot">·</span><span class="canvas-card__meta-badge" data-ref="badge-status-text">${badgeText}</span>` : ''}
         </div>
       </div>
     `;

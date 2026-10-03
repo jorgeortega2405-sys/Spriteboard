@@ -4030,8 +4030,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
 
 .canvas-card__btn-sync {
   position: absolute;
-  top: 8px;
-  left: 38px;
+  bottom: 8px;
+  left: 8px;
   font-size: 11px;
   font-weight: 600;
   gap: 4px;
@@ -4042,6 +4042,7 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   color: #000000;
   border: none;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   transition: background-color var(--sl-transition-fast), transform var(--sl-transition-x-fast);
   z-index: 10;
   display: inline-flex;
