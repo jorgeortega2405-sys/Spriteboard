@@ -355,3 +355,28 @@ export async function getFeaturedCreators(limit = 4): Promise<FeaturedCreator[]>
   }
 }
 
+export async function getTotalCreatorsCount(): Promise<number> {
+  try {
+    let canvasCreatorIds: number[] = [];
+    try {
+      const [rows] = await canvasPool.query<RowDataPacket[]>(
+        `SELECT DISTINCT user_id FROM templates WHERE status = 'approved' AND user_id IS NOT NULL AND user_id > 0`
+      );
+      canvasCreatorIds = rows.map((r) => Number(r.user_id)).filter((id) => id > 0);
+    } catch (err) {
+      logger.db.warn('Error al contar creadores desde templates', err);
+    }
+
+    const [userRows] = await pool.query<RowDataPacket[]>(
+      `SELECT id FROM users WHERE (designer_onboarded = 1 OR designer_handle IS NOT NULL)`
+    );
+    const userCreatorIds = userRows.map((r) => Number(r.id)).filter((id) => id > 0);
+
+    const allIds = new Set([...canvasCreatorIds, ...userCreatorIds]);
+    return allIds.size;
+  } catch (error) {
+    logger.app.error('Error al obtener conteo total de creadores', error);
+    return 0;
+  }
+}
+

@@ -102,9 +102,9 @@ app.get('/:slug', async (req: Request, res: Response, next: express.NextFunction
     return next();
   }
   try {
-    const canvas = await getCanvasBySlug(slug);
-    if (canvas) {
-      return res.redirect(302, `/design/${canvas.uuid}`);
+    const result = await getCanvasBySlug(slug);
+    if (result && result.canvas) {
+      return res.redirect(302, `/design/${result.canvas.uuid}`);
     }
   } catch (err) {
     logger.app.error('Error al resolver slug de lienzo en Express', err);

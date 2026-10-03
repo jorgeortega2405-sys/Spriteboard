@@ -24,9 +24,9 @@ export interface CanvasHistoryModalController {
   close: () => void;
   destroy: () => void;
   isOpen: () => boolean;
-  open: () => void;
+  open: () => Promise<void> | void;
   reloadSnapshots: () => Promise<void>;
-  toggle: () => void;
+  toggle: () => Promise<void> | void;
   update: () => void;
 }
 
@@ -58,121 +58,8 @@ function formatSnapshotDate(iso: string): string {
 export function openCanvasHistoryModal(options: CanvasHistoryModalOptions): CanvasHistoryModalController {
   const { canvasTitle = 'Lienzo', canvasType = 'board', canvasUuid, generateThumbnail, getCurrentProjectData, isOwner, onExitPreview, onPreviewSnapshot, onRestoreSnapshot, signal } = options;
 
-  let modalEl = document.querySelector<HTMLElement>('[data-ref="canvas-history-modal"]');
-  if (modalEl) {
-    modalEl.remove();
-  }
-
-  const modalHtml = `
-    <div class="canvas-history-modal is-hidden" data-ref="canvas-history-modal" role="dialog" aria-modal="true" aria-label="Historial de versiones">
-      <header class="canvas-history-modal__topbar" data-ref="history-modal-topbar">
-        <div class="canvas-history-modal__top-left">
-          <button type="button" class="component-button canvas-history-modal__exit-btn" data-ref="btn-history-exit" aria-label="Salir">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-            <span>Salir</span>
-          </button>
-          <span class="canvas-history-modal__title" data-ref="history-modal-title">${escapeHtml(canvasTitle)}</span>
-        </div>
-        <div class="canvas-history-modal__top-right">
-          <button type="button" class="component-button component-button--h36 component-button--outline canvas-history-modal__btn-fork" data-ref="btn-history-fork" aria-label="Crear una copia">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-            <span>Crear una copia</span>
-          </button>
-          <button type="button" class="component-button component-button--h36 component-button--black canvas-history-modal__btn-restore" data-ref="btn-history-restore" aria-label="Restaurar versión">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span>Restaurar</span>
-          </button>
-        </div>
-      </header>
-
-      <div class="canvas-history-modal__body">
-        <div class="canvas-history-modal__preview-area" data-ref="history-preview-area">
-          <div class="canvas-history-modal__preview-viewport" data-ref="history-preview-viewport">
-            <div class="canvas-history-modal__preview-content" data-ref="history-preview-content"></div>
-          </div>
-          <div class="canvas-history-modal__pages-tray is-hidden" data-ref="history-pages-tray">
-            <div class="canvas-history-modal__pages-list" data-ref="history-pages-list" style="display: flex; gap: 8px;"></div>
-          </div>
-        </div>
-
-        <aside class="canvas-history-modal__sidebar" data-ref="history-sidebar">
-          <div class="canvas-history-modal__sidebar-header">
-            <h2 class="canvas-history-modal__sidebar-title">Historial de versiones</h2>
-            <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-toggle-create-snapshot" aria-label="Nuevo hito" data-tooltip="Guardar punto de control">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Nuevo hito</span>
-            </button>
-          </div>
-
-          <div class="canvas-history-modal__create-form is-hidden" data-ref="history-create-form">
-            <div class="canvas-history-modal__create-box">
-              <span class="canvas-history-modal__create-title">Crear punto de control</span>
-              <label class="field field--sm" data-ref="field-snapshot-name">
-                <input class="field__input" data-ref="input-snapshot-name" type="text" placeholder=" " maxlength="255" autocomplete="off" />
-                <span class="field__label">Nombre del hito</span>
-              </label>
-              <label class="field field--sm" data-ref="field-snapshot-description">
-                <textarea class="field__input field__textarea" data-ref="input-snapshot-description" placeholder=" " rows="2"></textarea>
-                <span class="field__label">Nota opcional</span>
-              </label>
-              <div class="canvas-history-modal__create-actions">
-                <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-submit-create-snapshot">
-                  <span>Guardar</span>
-                </button>
-                <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-cancel-create-snapshot">
-                  <span>Cancelar</span>
-                </button>
-              </div>
-              <div class="banner banner--danger is-hidden" data-ref="history-create-error"></div>
-            </div>
-          </div>
-
-          <div class="canvas-history-modal__timeline-container" data-ref="history-timeline-container">
-            <div class="canvas-history-modal__timeline-line"></div>
-            <div class="canvas-history-modal__loader is-hidden" data-ref="history-loader">
-              <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
-              <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
-              <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
-            </div>
-            <div class="canvas-history-modal__empty is-hidden" data-ref="history-empty">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history_toggle_off"></use></svg>
-              <span>No hay versiones registradas aún</span>
-            </div>
-            <div class="canvas-history-modal__timeline-list" data-ref="history-timeline-list"></div>
-          </div>
-
-          <div class="canvas-history-modal__sidebar-footer">
-            <label class="canvas-history-modal__toggle-label">
-              <span>Resaltar los cambios</span>
-              <input type="checkbox" class="component-switch" checked data-ref="toggle-highlight-changes" />
-            </label>
-          </div>
-        </aside>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  modalEl = document.querySelector<HTMLElement>('[data-ref="canvas-history-modal"]')!;
-  renderIcons(modalEl);
-
-  const btnExit = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-exit"]');
-  const btnFork = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-fork"]');
-  const btnRestore = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-restore"]');
-  const btnToggleCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-create-snapshot"]');
-  const btnSubmitCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-snapshot"]');
-  const btnCancelCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-snapshot"]');
-  const createFormEl = modalEl.querySelector<HTMLElement>('[data-ref="history-create-form"]');
-  const inputNameEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-snapshot-name"]');
-  const inputDescEl = modalEl.querySelector<HTMLTextAreaElement>('[data-ref="input-snapshot-description"]');
-  const createErrorEl = modalEl.querySelector<HTMLElement>('[data-ref="history-create-error"]');
-  const timelineListEl = modalEl.querySelector<HTMLElement>('[data-ref="history-timeline-list"]');
-  const loaderEl = modalEl.querySelector<HTMLElement>('[data-ref="history-loader"]');
-  const emptyEl = modalEl.querySelector<HTMLElement>('[data-ref="history-empty"]');
-  const previewContentEl = modalEl.querySelector<HTMLElement>('[data-ref="history-preview-content"]');
-  const pagesTrayEl = modalEl.querySelector<HTMLElement>('[data-ref="history-pages-tray"]');
-  const pagesListEl = modalEl.querySelector<HTMLElement>('[data-ref="history-pages-list"]');
-
+  let modalEl: HTMLElement | null = null;
+  let abortController: AbortController | null = null;
   let snapshots: CanvasSnapshotItem[] = [];
   let selectedSnapshotUuid: string | 'current' = 'current';
   let currentLiveProjectData: any = null;
@@ -180,6 +67,18 @@ export function openCanvasHistoryModal(options: CanvasHistoryModalOptions): Canv
   let activePreviewPageIndex = 0;
   let isCreateFormOpen = false;
   let isModalVisible = false;
+
+  let createFormEl: HTMLElement | null = null;
+  let inputNameEl: HTMLInputElement | null = null;
+  let inputDescEl: HTMLTextAreaElement | null = null;
+  let createErrorEl: HTMLElement | null = null;
+  let timelineListEl: HTMLElement | null = null;
+  let loaderEl: HTMLElement | null = null;
+  let emptyEl: HTMLElement | null = null;
+  let previewContentEl: HTMLElement | null = null;
+  let pagesTrayEl: HTMLElement | null = null;
+  let pagesListEl: HTMLElement | null = null;
+  let btnRestore: HTMLButtonElement | null = null;
 
   const setCreateFormVisible = (visible: boolean) => {
     isCreateFormOpen = visible;
@@ -502,231 +401,399 @@ export function openCanvasHistoryModal(options: CanvasHistoryModalOptions): Canv
     }
   };
 
-  timelineListEl?.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    const deleteBtn = target.closest<HTMLButtonElement>('button[data-action="delete"]');
-    if (deleteBtn) {
-      e.stopPropagation();
-      const snapUuid = deleteBtn.getAttribute('data-snap-uuid');
-      if (snapUuid) {
-        void (async () => {
-          if (!isOwner) {
-            showToast('Solo el propietario puede eliminar versiones.', 'error');
-            return;
-          }
-          try {
-            const res = await deleteApi(API_ROUTES.canvases.snapshotById(canvasUuid, snapUuid));
-            if (!res.ok) throw new Error('Error al eliminar la versión.');
-            snapshots = snapshots.filter((s) => s.uuid !== snapUuid);
-            if (selectedSnapshotUuid === snapUuid) {
-              void selectSnapshot('current');
-            } else {
-              renderTimeline();
-            }
-            showToast('Versión eliminada correctamente.', 'success');
-          } catch (err: any) {
-            showToast(err.message || 'No se pudo eliminar la versión.', 'error');
-          }
-        })();
-      }
-      return;
-    }
-
-    const node = target.closest<HTMLElement>('.canvas-history-modal__timeline-node');
-    if (!node) return;
-    const uuid = node.getAttribute('data-uuid');
-    if (uuid) {
-      void selectSnapshot(uuid);
-    }
-  });
-
-  pagesListEl?.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.canvas-history-modal__page-thumb-btn');
-    if (!btn) return;
-    const idxStr = btn.getAttribute('data-page-index');
-    if (idxStr !== null) {
-      activePreviewPageIndex = parseInt(idxStr, 10) || 0;
-      renderPreview();
-    }
-  });
-
-  btnToggleCreate?.addEventListener('click', () => {
-    setCreateFormVisible(!isCreateFormOpen);
-  });
-
-  btnCancelCreate?.addEventListener('click', () => {
-    setCreateFormVisible(false);
-  });
-
-  btnSubmitCreate?.addEventListener('click', async () => {
-    if (!currentUser) {
-      showToast('Debes iniciar sesión para guardar versiones.', 'error');
-      return;
-    }
-    const name = inputNameEl?.value.trim() || 'Hito manual';
-    const description = inputDescEl?.value.trim() || undefined;
-
-    try {
-      const projectData = getCurrentProjectData ? getCurrentProjectData() : currentLiveProjectData;
-      let thumbnail: string | undefined;
-      if (generateThumbnail) {
-        thumbnail = await generateThumbnail();
-      }
-
-      const res = await postApi(API_ROUTES.canvases.snapshots(canvasUuid), {
-        data: typeof projectData === 'string' ? projectData : JSON.stringify(projectData),
-        description,
-        is_manual: true,
-        name,
-        preview_thumbnail: thumbnail,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al guardar la versión.');
-      }
-
-      setCreateFormVisible(false);
-      showToast('Punto de control guardado correctamente.', 'success');
-      await loadSnapshots();
-    } catch (err: any) {
-      if (createErrorEl) {
-        createErrorEl.textContent = err.message || 'Error al crear la versión.';
-        createErrorEl.classList.remove('is-hidden');
-      } else {
-        showToast(err.message || 'Error al crear la versión.', 'error');
-      }
-    }
-  });
-
-  btnRestore?.addEventListener('click', async () => {
-    if (selectedSnapshotUuid === 'current') return;
-    if (!currentUser) {
-      showToast('Debes iniciar sesión para restaurar versiones.', 'error');
-      return;
-    }
-
-    try {
-      const res = await postApi(API_ROUTES.canvases.snapshotRestore(canvasUuid, selectedSnapshotUuid), {});
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al restaurar la versión.');
-      }
-      const data = await res.json();
-      const restored = typeof data.restoredData === 'string' ? JSON.parse(data.restoredData) : data.restoredData;
-
-      if (onRestoreSnapshot) {
-        await onRestoreSnapshot(selectedSnapshotUuid, restored);
-      }
-      showToast('Versión restaurada correctamente.', 'success');
-      closeModal();
-    } catch (err: any) {
-      showToast(err.message || 'No se pudo restaurar la versión.', 'error');
-    }
-  });
-
-  btnFork?.addEventListener('click', async () => {
-    if (!currentUser) {
-      showToast('Debes iniciar sesión para duplicar versiones.', 'error');
-      return;
-    }
-
-    try {
-      if (selectedSnapshotUuid === 'current') {
-        showToast('Creando copia del lienzo actual...', 'info');
-        const projectData = getCurrentProjectData ? getCurrentProjectData() : currentLiveProjectData;
-        const res = await postApi(API_ROUTES.canvases.base, {
-          access_level: 'private',
-          canvas_type: canvasType,
-          data: typeof projectData === 'string' ? projectData : JSON.stringify(projectData),
-          name: `${canvasTitle} - Copia`,
-        });
-        if (!res.ok) throw new Error('Error al crear la copia.');
-        const data = await res.json();
-        showToast('Copia creada correctamente.', 'success');
-        if (data.canvas?.uuid) {
-          const route = canvasType === 'doc' ? `/doc/${data.canvas.uuid}` : canvasType === 'presentation' ? `/presentation/${data.canvas.uuid}` : `/board/${data.canvas.uuid}`;
-          window.location.href = route;
-        }
-        return;
-      }
-
-      const res = await postApi(API_ROUTES.canvases.snapshotFork(canvasUuid, selectedSnapshotUuid), {});
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al crear la copia.');
-      }
-      const data = await res.json();
-      showToast('Copia creada a partir de la versión seleccionada.', 'success');
-      if (data.canvas?.uuid) {
-        const route = canvasType === 'doc' ? `/doc/${data.canvas.uuid}` : canvasType === 'presentation' ? `/presentation/${data.canvas.uuid}` : `/board/${data.canvas.uuid}`;
-        window.location.href = route;
-      }
-    } catch (err: any) {
-      showToast(err.message || 'No se pudo duplicar la versión.', 'error');
-    }
-  });
-
   const closeModal = () => {
-    if (!isModalVisible) return;
+    if (!isModalVisible && !modalEl) return;
     isModalVisible = false;
-    modalEl?.classList.add('is-hidden');
+    abortController?.abort();
+    abortController = null;
+    if (modalEl) {
+      modalEl.remove();
+      modalEl = null;
+    }
     document.body.style.overflow = '';
     if (onExitPreview) {
       onExitPreview();
     }
   };
 
-  const openModal = () => {
+  const openModal = async (): Promise<void> => {
+    if (isModalVisible && modalEl) return;
+
+    closeModal();
+
     isModalVisible = true;
+    abortController = new AbortController();
+    const { signal: modalSignal } = abortController;
+
     if (getCurrentProjectData) {
       currentLiveProjectData = getCurrentProjectData();
     }
     activePreviewProjectData = currentLiveProjectData;
     selectedSnapshotUuid = 'current';
     activePreviewPageIndex = 0;
-    modalEl?.classList.remove('is-hidden');
+
+    const modalHtml = `
+      <div class="canvas-history-modal" data-ref="canvas-history-modal" role="dialog" aria-modal="true" aria-label="Historial de versiones">
+        <header class="canvas-history-modal__topbar" data-ref="history-modal-topbar">
+          <div class="canvas-history-modal__top-left">
+            <button type="button" class="component-button canvas-history-modal__exit-btn" data-ref="btn-history-exit" aria-label="Salir">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+              <span>Salir</span>
+            </button>
+            <span class="canvas-history-modal__title" data-ref="history-modal-title">${escapeHtml(canvasTitle)}</span>
+          </div>
+          <div class="canvas-history-modal__top-right">
+            <button type="button" class="component-button component-button--h36 component-button--outline canvas-history-modal__btn-fork" data-ref="btn-history-fork" aria-label="Crear una copia">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              <span>Crear una copia</span>
+            </button>
+            <button type="button" class="component-button component-button--h36 component-button--black canvas-history-modal__btn-restore" data-ref="btn-history-restore" aria-label="Restaurar versión">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+              <span>Restaurar</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="canvas-history-modal__body">
+          <div class="canvas-history-modal__preview-area" data-ref="history-preview-area">
+            <div class="canvas-history-modal__preview-viewport" data-ref="history-preview-viewport">
+              <div class="canvas-history-modal__preview-content" data-ref="history-preview-content"></div>
+            </div>
+            <div class="canvas-history-modal__pages-tray is-hidden" data-ref="history-pages-tray">
+              <div class="canvas-history-modal__pages-list" data-ref="history-pages-list" style="display: flex; gap: 8px;"></div>
+            </div>
+          </div>
+
+          <div class="canvas-history-modal__sidebar-parent" data-ref="history-sidebar-parent">
+            <aside class="canvas-history-modal__sidebar" data-ref="history-sidebar">
+              <div class="canvas-history-modal__sidebar-header">
+                <h2 class="canvas-history-modal__sidebar-title">Historial de versiones</h2>
+                <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-toggle-create-snapshot" aria-label="Nuevo hito" data-tooltip="Guardar punto de control">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  <span>Nuevo hito</span>
+                </button>
+              </div>
+
+              <div class="canvas-history-modal__create-form is-hidden" data-ref="history-create-form">
+                <div class="canvas-history-modal__create-box">
+                  <span class="canvas-history-modal__create-title">Crear punto de control</span>
+                  <label class="field field--sm" data-ref="field-snapshot-name">
+                    <input class="field__input" data-ref="input-snapshot-name" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+                    <span class="field__label">Nombre del hito</span>
+                  </label>
+                  <label class="field field--sm" data-ref="field-snapshot-description">
+                    <textarea class="field__input field__textarea" data-ref="input-snapshot-description" placeholder=" " rows="2"></textarea>
+                    <span class="field__label">Nota opcional</span>
+                  </label>
+                  <div class="canvas-history-modal__create-actions">
+                    <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-submit-create-snapshot">
+                      <span>Guardar</span>
+                    </button>
+                    <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-cancel-create-snapshot">
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                  <div class="banner banner--danger is-hidden" data-ref="history-create-error"></div>
+                </div>
+              </div>
+
+              <div class="canvas-history-modal__timeline-container" data-ref="history-timeline-container">
+                <div class="canvas-history-modal__timeline-line"></div>
+                <div class="canvas-history-modal__loader is-hidden" data-ref="history-loader">
+                  <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
+                  <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
+                  <div class="skeleton" style="height: 52px; border-radius: 8px; width: 100%;"></div>
+                </div>
+                <div class="canvas-history-modal__empty is-hidden" data-ref="history-empty">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history_toggle_off"></use></svg>
+                  <span>No hay versiones registradas aún</span>
+                </div>
+                <div class="canvas-history-modal__timeline-list" data-ref="history-timeline-list"></div>
+              </div>
+
+              <div class="canvas-history-modal__sidebar-footer">
+                <span class="canvas-history-modal__toggle-title">Resaltar los cambios</span>
+                <label class="toggle-switch" data-ref="toggle-highlight-switch">
+                  <input class="toggle-switch__input" data-ref="toggle-highlight-changes" type="checkbox" checked />
+                  <span class="toggle-switch__slider"></span>
+                </label>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    modalEl = document.querySelector<HTMLElement>('[data-ref="canvas-history-modal"]');
+    if (!modalEl) return;
+    renderIcons(modalEl);
     document.body.style.overflow = 'hidden';
+
+    const btnExit = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-exit"]');
+    const btnFork = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-fork"]');
+    btnRestore = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-history-restore"]');
+    const btnToggleCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-create-snapshot"]');
+    const btnSubmitCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-snapshot"]');
+    const btnCancelCreate = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-snapshot"]');
+    createFormEl = modalEl.querySelector<HTMLElement>('[data-ref="history-create-form"]');
+    inputNameEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-snapshot-name"]');
+    inputDescEl = modalEl.querySelector<HTMLTextAreaElement>('[data-ref="input-snapshot-description"]');
+    createErrorEl = modalEl.querySelector<HTMLElement>('[data-ref="history-create-error"]');
+    timelineListEl = modalEl.querySelector<HTMLElement>('[data-ref="history-timeline-list"]');
+    loaderEl = modalEl.querySelector<HTMLElement>('[data-ref="history-loader"]');
+    emptyEl = modalEl.querySelector<HTMLElement>('[data-ref="history-empty"]');
+    previewContentEl = modalEl.querySelector<HTMLElement>('[data-ref="history-preview-content"]');
+    pagesTrayEl = modalEl.querySelector<HTMLElement>('[data-ref="history-pages-tray"]');
+    pagesListEl = modalEl.querySelector<HTMLElement>('[data-ref="history-pages-list"]');
+    const toggleHighlightEl = modalEl.querySelector<HTMLInputElement>('[data-ref="toggle-highlight-changes"]');
+
+    timelineListEl?.addEventListener(
+      'click',
+      (e) => {
+        const target = e.target as HTMLElement;
+        const deleteBtn = target.closest<HTMLButtonElement>('button[data-action="delete"]');
+        if (deleteBtn) {
+          e.stopPropagation();
+          const snapUuid = deleteBtn.getAttribute('data-snap-uuid');
+          if (snapUuid) {
+            void (async () => {
+              if (!isOwner) {
+                showToast('Solo el propietario puede eliminar versiones.', 'error');
+                return;
+              }
+              try {
+                const res = await deleteApi(API_ROUTES.canvases.snapshotById(canvasUuid, snapUuid));
+                if (!res.ok) throw new Error('Error al eliminar la versión.');
+                snapshots = snapshots.filter((s) => s.uuid !== snapUuid);
+                if (selectedSnapshotUuid === snapUuid) {
+                  void selectSnapshot('current');
+                } else {
+                  renderTimeline();
+                }
+                showToast('Versión eliminada correctamente.', 'success');
+              } catch (err: any) {
+                showToast(err.message || 'No se pudo eliminar la versión.', 'error');
+              }
+            })();
+          }
+          return;
+        }
+
+        const node = target.closest<HTMLElement>('.canvas-history-modal__timeline-node');
+        if (!node) return;
+        const uuid = node.getAttribute('data-uuid');
+        if (uuid) {
+          void selectSnapshot(uuid);
+        }
+      },
+      { signal: modalSignal }
+    );
+
+    pagesListEl?.addEventListener(
+      'click',
+      (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.canvas-history-modal__page-thumb-btn');
+        if (!btn) return;
+        const idxStr = btn.getAttribute('data-page-index');
+        if (idxStr !== null) {
+          activePreviewPageIndex = parseInt(idxStr, 10) || 0;
+          renderPreview();
+        }
+      },
+      { signal: modalSignal }
+    );
+
+    toggleHighlightEl?.addEventListener(
+      'change',
+      () => {
+        renderPreview();
+      },
+      { signal: modalSignal }
+    );
+
+    btnToggleCreate?.addEventListener(
+      'click',
+      () => {
+        setCreateFormVisible(!isCreateFormOpen);
+      },
+      { signal: modalSignal }
+    );
+
+    btnCancelCreate?.addEventListener(
+      'click',
+      () => {
+        setCreateFormVisible(false);
+      },
+      { signal: modalSignal }
+    );
+
+    btnSubmitCreate?.addEventListener(
+      'click',
+      async () => {
+        if (!currentUser) {
+          showToast('Debes iniciar sesión para guardar versiones.', 'error');
+          return;
+        }
+        const name = inputNameEl?.value.trim() || 'Hito manual';
+        const description = inputDescEl?.value.trim() || undefined;
+
+        try {
+          const projectData = getCurrentProjectData ? getCurrentProjectData() : currentLiveProjectData;
+          let thumbnail: string | undefined;
+          if (generateThumbnail) {
+            thumbnail = await generateThumbnail();
+          }
+
+          const res = await postApi(API_ROUTES.canvases.snapshots(canvasUuid), {
+            data: typeof projectData === 'string' ? projectData : JSON.stringify(projectData),
+            description,
+            is_manual: true,
+            name,
+            preview_thumbnail: thumbnail,
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al guardar la versión.');
+          }
+
+          setCreateFormVisible(false);
+          showToast('Punto de control guardado correctamente.', 'success');
+          await loadSnapshots();
+        } catch (err: any) {
+          if (createErrorEl) {
+            createErrorEl.textContent = err.message || 'Error al crear la versión.';
+            createErrorEl.classList.remove('is-hidden');
+          } else {
+            showToast(err.message || 'Error al crear la versión.', 'error');
+          }
+        }
+      },
+      { signal: modalSignal }
+    );
+
+    btnRestore?.addEventListener(
+      'click',
+      async () => {
+        if (selectedSnapshotUuid === 'current') return;
+        if (!currentUser) {
+          showToast('Debes iniciar sesión para restaurar versiones.', 'error');
+          return;
+        }
+
+        try {
+          const res = await postApi(API_ROUTES.canvases.snapshotRestore(canvasUuid, selectedSnapshotUuid), {});
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al restaurar la versión.');
+          }
+          const data = await res.json();
+          const restored = typeof data.restoredData === 'string' ? JSON.parse(data.restoredData) : data.restoredData;
+
+          if (onRestoreSnapshot) {
+            await onRestoreSnapshot(selectedSnapshotUuid, restored);
+          }
+          showToast('Versión restaurada correctamente.', 'success');
+          closeModal();
+        } catch (err: any) {
+          showToast(err.message || 'No se pudo restaurar la versión.', 'error');
+        }
+      },
+      { signal: modalSignal }
+    );
+
+    btnFork?.addEventListener(
+      'click',
+      async () => {
+        if (!currentUser) {
+          showToast('Debes iniciar sesión para duplicar versiones.', 'error');
+          return;
+        }
+
+        try {
+          if (selectedSnapshotUuid === 'current') {
+            showToast('Creando copia del lienzo actual...', 'info');
+            const projectData = getCurrentProjectData ? getCurrentProjectData() : currentLiveProjectData;
+            const res = await postApi(API_ROUTES.canvases.base, {
+              access_level: 'private',
+              canvas_type: canvasType,
+              data: typeof projectData === 'string' ? projectData : JSON.stringify(projectData),
+              name: `${canvasTitle} - Copia`,
+            });
+            if (!res.ok) throw new Error('Error al crear la copia.');
+            const data = await res.json();
+            showToast('Copia creada correctamente.', 'success');
+            if (data.canvas?.uuid) {
+              const route = canvasType === 'doc' ? `/doc/${data.canvas.uuid}` : canvasType === 'presentation' ? `/presentation/${data.canvas.uuid}` : `/board/${data.canvas.uuid}`;
+              window.location.href = route;
+            }
+            return;
+          }
+
+          const res = await postApi(API_ROUTES.canvases.snapshotFork(canvasUuid, selectedSnapshotUuid), {});
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al crear la copia.');
+          }
+          const data = await res.json();
+          showToast('Copia creada a partir de la versión seleccionada.', 'success');
+          if (data.canvas?.uuid) {
+            const route = canvasType === 'doc' ? `/doc/${data.canvas.uuid}` : canvasType === 'presentation' ? `/presentation/${data.canvas.uuid}` : `/board/${data.canvas.uuid}`;
+            window.location.href = route;
+          }
+        } catch (err: any) {
+          showToast(err.message || 'No se pudo duplicar la versión.', 'error');
+        }
+      },
+      { signal: modalSignal }
+    );
+
+    btnExit?.addEventListener(
+      'click',
+      () => {
+        closeModal();
+      },
+      { signal: modalSignal }
+    );
+
+    window.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && isModalVisible) {
+          closeModal();
+        }
+      },
+      { signal: modalSignal }
+    );
+
     setCreateFormVisible(false);
     renderTimeline();
     renderPreview();
-    void loadSnapshots();
+    await loadSnapshots();
   };
-
-  btnExit?.addEventListener('click', () => {
-    closeModal();
-  });
 
   if (options.trigger) {
     options.trigger.addEventListener('click', () => {
-      openModal();
+      void openModal();
     });
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isModalVisible) {
-      closeModal();
-    }
-  };
-  window.addEventListener('keydown', handleKeyDown);
-
   if (signal) {
     signal.addEventListener('abort', () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      modalEl?.remove();
+      closeModal();
     });
   }
 
   return {
     close: closeModal,
     destroy: () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      modalEl?.remove();
+      closeModal();
     },
     isOpen: () => isModalVisible,
     open: openModal,
     reloadSnapshots: loadSnapshots,
-    toggle: () => (isModalVisible ? closeModal() : openModal()),
+    toggle: async () => (isModalVisible ? closeModal() : await openModal()),
     update: () => {
       renderTimeline();
       renderPreview();

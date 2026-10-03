@@ -73,9 +73,29 @@ CREATE TABLE IF NOT EXISTS canvas_teams (
     FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS canvas_public_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    canvas_id INT NOT NULL,
+    user_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL DEFAULT 'Enlace de visualización pública',
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    short_code VARCHAR(32) NULL UNIQUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_public_links_canvas (canvas_id),
+    INDEX idx_public_links_user (user_id),
+    INDEX idx_public_links_slug (slug),
+    INDEX idx_public_links_uuid (uuid),
+    INDEX idx_public_links_created (canvas_id, created_at DESC),
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS canvas_views (
     id INT AUTO_INCREMENT PRIMARY KEY,
     canvas_id INT NOT NULL,
+    public_link_id INT NULL DEFAULT NULL,
     user_id INT NULL,
     session_id VARCHAR(100) NOT NULL,
     ip_address VARCHAR(45) NULL,
@@ -84,12 +104,14 @@ CREATE TABLE IF NOT EXISTS canvas_views (
     viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_canvas_views_canvas (canvas_id),
+    INDEX idx_canvas_views_link (public_link_id),
     INDEX idx_canvas_views_user (user_id),
     INDEX idx_canvas_views_session (session_id),
     INDEX idx_canvas_views_viewed_at (viewed_at),
     INDEX idx_views_canvas_viewed (canvas_id, viewed_at DESC),
     INDEX idx_views_canvas_session (canvas_id, session_id),
-    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE,
+    FOREIGN KEY (public_link_id) REFERENCES canvas_public_links(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS canvas_comments (

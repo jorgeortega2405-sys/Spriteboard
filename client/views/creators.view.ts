@@ -5,6 +5,21 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { FeaturedCreator } from '../types/designer.types.js';
 
+function formatRoundedCreatorsCount(count: number): string {
+  if (count <= 0) return '+0';
+  if (count < 100) return `+${count}`;
+  if (count < 500) {
+    const rounded = Math.floor(count / 50) * 50;
+    return `+${rounded.toLocaleString()}`;
+  }
+  if (count < 1000) {
+    const rounded = Math.floor(count / 100) * 100;
+    return `+${rounded.toLocaleString()}`;
+  }
+  const rounded = Math.floor(count / 500) * 500;
+  return `+${rounded.toLocaleString()}`;
+}
+
 export class CreatorsController {
   private abortController = new AbortController();
   private container: HTMLElement;
@@ -25,17 +40,20 @@ export class CreatorsController {
 
   private async loadFeaturedCreators(): Promise<void> {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="creators-featured-grid"]');
-    if (!grid) return;
 
     try {
       const res = await getApi(API_ROUTES.creators.featured);
       if (!res.ok) {
-        this.renderEmptyCreators(grid);
+        if (grid) this.renderEmptyCreators(grid);
         return;
       }
 
       const result = await res.json();
       const creators: FeaturedCreator[] = Array.isArray(result?.creators) ? result.creators : [];
+      const totalCreators = typeof result?.total_creators === 'number' ? result.total_creators : creators.length;
+      this.updateBadgeCount(totalCreators);
+
+      if (!grid) return;
 
       if (creators.length === 0) {
         this.renderEmptyCreators(grid);
@@ -44,8 +62,14 @@ export class CreatorsController {
 
       this.renderCreators(grid, creators);
     } catch {
-      this.renderEmptyCreators(grid);
+      if (grid) this.renderEmptyCreators(grid);
     }
+  }
+
+  private updateBadgeCount(totalCreators: number): void {
+    const badgeCount = this.container.querySelector<HTMLElement>('[data-ref="creators-badge-count"]');
+    if (!badgeCount) return;
+    badgeCount.textContent = `${formatRoundedCreatorsCount(totalCreators)} creadores activos`;
   }
 
   private renderEmptyCreators(grid: HTMLElement): void {

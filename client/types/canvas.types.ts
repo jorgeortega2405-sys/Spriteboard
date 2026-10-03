@@ -114,11 +114,23 @@ export interface CanvasRecentView {
   viewed_at: string;
 }
 
+export interface CanvasPageMetric {
+  page_number: number;
+  page_id?: string;
+  page_name: string;
+  avg_duration_seconds: number;
+  view_percentage: number;
+  views_count: number;
+}
+
 export interface CanvasMetricsData {
   canvas_name: string;
   total_views: number;
   unique_viewers: number;
   avg_duration_seconds: number;
+  avg_pages_viewed: number;
+  total_pages: number;
+  page_metrics: CanvasPageMetric[];
   viewers: CanvasMetricViewer[];
   recent_views: CanvasRecentView[];
 }
@@ -128,5 +140,43 @@ export interface SharedCanvasItem extends CanvasItem {
   owner_avatar?: string | null;
   member_role?: 'editor' | 'viewer';
   team_name?: string | null;
+}
+
+export interface CanvasPublicLinkItem {
+  id: number;
+  uuid: string;
+  canvas_id: number;
+  user_id: number;
+  name: string;
+  slug: string;
+  short_code: string | null;
+  is_active: boolean;
+  total_views: number;
+  unique_viewers: number;
+  avg_duration_seconds: number;
+  last_viewed_at: string | null;
+  url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CanvasPublicLinksSummary {
+  total_links: number;
+  total_viewers: number;
+  total_views: number;
+  links: CanvasPublicLinkItem[];
+}
+
+export interface CanvasPublicLinkMetricsData {
+  link: CanvasPublicLinkItem;
+  total_views: number;
+  unique_viewers: number;
+  avg_duration_seconds: number;
+  views: CanvasRecentView[];
+}
+
+export interface CreateCanvasPublicLinkDto {
+  name?: string;
+  slug?: string;
 }
 

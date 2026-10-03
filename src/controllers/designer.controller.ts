@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createStripeConnectAccountLink, getDesignerPoolSummary, requestDesignerPayoutTransfer, syncStripeAccountStatus } from '../services/creator-pool.service.js';
-import { checkDesignerHandleAvailability, completeDesignerOnboarding, getDesignerOnboardingStatus, getFeaturedCreators } from '../services/designer.service.js';
+import { checkDesignerHandleAvailability, completeDesignerOnboarding, getDesignerOnboardingStatus, getFeaturedCreators, getTotalCreatorsCount } from '../services/designer.service.js';
 import { logger } from '../services/logger.service.js';
 
 export async function getDesignerOnboardingStatusHandler(req: Request, res: Response): Promise<void> {
@@ -160,10 +160,11 @@ export async function getFeaturedCreatorsHandler(req: Request, res: Response): P
   try {
     const limit = Math.min(Math.max(Number(req.query.limit) || 4, 1), 20);
     const creators = await getFeaturedCreators(limit);
-    res.json({ creators, success: true });
+    const total_creators = await getTotalCreatorsCount();
+    res.json({ creators, success: true, total_creators });
   } catch (error: any) {
     logger.app.error('Error al obtener creadores destacados', error);
-    res.status(500).json({ creators: [], error: 'Error al consultar creadores destacados.', success: false });
+    res.status(500).json({ creators: [], error: 'Error al consultar creadores destacados.', success: false, total_creators: 0 });
   }
 }
 

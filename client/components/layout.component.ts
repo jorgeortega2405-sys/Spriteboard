@@ -533,9 +533,13 @@ function setupRailNavigation(sidebar: HTMLElement): void {
 
   const updateRailBrandBadge = () => {
     const railBrandBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-brand-badge"]');
+    const railCanvasBrandBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-canvas-brand-badge"]');
+    const hasBrandAccess = hasFeature('brand_kits', currentUser);
     if (railBrandBadge) {
-      const hasBrandAccess = hasFeature('brand_kits', currentUser);
       railBrandBadge.classList.toggle('is-hidden', hasBrandAccess);
+    }
+    if (railCanvasBrandBadge) {
+      railCanvasBrandBadge.classList.toggle('is-hidden', hasBrandAccess);
     }
   };
   updateRailBrandBadge();
@@ -595,6 +599,13 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
     const handler = (e: Event) => {
       e.preventDefault();
+      if (tab === 'brand') {
+        const hasBrandAccess = hasFeature('brand_kits', currentUser);
+        if (!hasBrandAccess) {
+          openUpgradeModal('business');
+          return;
+        }
+      }
       if (tab === 'tools') {
         if (isDrawerOpen) {
           toggleDrawer(false);

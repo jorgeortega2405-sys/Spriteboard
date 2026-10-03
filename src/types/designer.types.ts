@@ -54,3 +54,10 @@ export interface FeaturedCreator {
   username: string;
 }
 
+export interface FeaturedCreatorsResponse {
+  creators: FeaturedCreator[];
+  error?: string;
+  success: boolean;
+  total_creators?: number;
+}
+

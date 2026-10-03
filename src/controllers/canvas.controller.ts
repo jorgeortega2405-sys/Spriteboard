@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasThumbnail, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, createCanvasPublicLink, deleteCanvas, deleteCanvasPublicLink, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasPublicLinkMetrics, getCanvasTeams, getCanvasThumbnail, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, listCanvasPublicLinks, patchCanvas, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, resolveCanvasType, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 
 export async function listCanvases(req: Request, res: Response): Promise<void> {
@@ -532,12 +532,12 @@ export async function resolveCanvasSlugHandler(req: Request, res: Response): Pro
       sendBadRequest(res, 'Enlace no válido.');
       return;
     }
-    const canvas = await getCanvasBySlug(slug);
-    if (!canvas) {
+    const result = await getCanvasBySlug(slug);
+    if (!result) {
       sendNotFound(res, 'Lienzo no encontrado.');
       return;
     }
-    sendSuccess(res, { uuid: canvas.uuid });
+    sendSuccess(res, { uuid: result.canvas.uuid, public_link_id: result.public_link_id || null });
   } catch (err) {
     sendInternalError(res, 'Error al resolver slug de lienzo', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
@@ -576,10 +576,91 @@ export async function updateCanvasSlugHandler(req: Request, res: Response): Prom
   }
 }
 
+export async function listCanvasPublicLinksHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+    const { uuid } = req.params;
+    const summary = await listCanvasPublicLinks(uuid, user.id);
+    sendSuccess(res, summary);
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      sendForbidden(res, 'Solo el propietario del lienzo puede consultar sus enlaces públicos.');
+      return;
+    }
+    sendInternalError(res, `Error al listar enlaces públicos del lienzo ${req.params.uuid}`, err, 'Ha ocurrido un error al obtener los enlaces públicos.');
+  }
+}
+
+export async function createCanvasPublicLinkHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+    const { uuid } = req.params;
+    const { name, slug } = req.body;
+    const created = await createCanvasPublicLink(uuid, user.id, { name, slug });
+    sendCreated(res, { link: created });
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      sendForbidden(res, 'Solo el propietario del lienzo puede crear enlaces públicos.');
+      return;
+    }
+    if (err?.message?.includes('alfanuméricos') || err?.message?.includes('reservado') || err?.message?.includes('en uso')) {
+      sendBadRequest(res, err.message);
+      return;
+    }
+    sendInternalError(res, `Error al crear enlace público para lienzo ${req.params.uuid}`, err, 'Ha ocurrido un error al crear el enlace público.');
+  }
+}
+
+export async function getCanvasPublicLinkMetricsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+    const { uuid, linkUuid } = req.params;
+    const metrics = await getCanvasPublicLinkMetrics(uuid, linkUuid, user.id);
+    sendSuccess(res, metrics);
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      sendForbidden(res, 'Solo el propietario del lienzo puede consultar las estadísticas del enlace.');
+      return;
+    }
+    sendInternalError(res, `Error al consultar métricas de enlace público ${req.params.linkUuid}`, err, 'Ha ocurrido un error al obtener las estadísticas del enlace.');
+  }
+}
+
+export async function deleteCanvasPublicLinkHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+    const { uuid, linkUuid } = req.params;
+    await deleteCanvasPublicLink(uuid, linkUuid, user.id);
+    sendSuccess(res, { success: true });
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      sendForbidden(res, 'Solo el propietario del lienzo puede eliminar este enlace.');
+      return;
+    }
+    sendInternalError(res, `Error al eliminar enlace público ${req.params.linkUuid}`, err, 'Ha ocurrido un error al eliminar el enlace público.');
+  }
+}
+
 export async function recordCanvasViewHandler(req: Request, res: Response): Promise<void> {
   try {
     const { uuid } = req.params;
-    const { sessionId } = req.body;
+    const { publicLinkId, sessionId } = req.body;
     if (!uuid || typeof uuid !== 'string' || !sessionId || typeof sessionId !== 'string') {
       sendBadRequest(res, 'Parámetros de vista requeridos.');
       return;
@@ -589,7 +670,7 @@ export async function recordCanvasViewHandler(req: Request, res: Response): Prom
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || null;
     const userAgent = (req.headers['user-agent'] as string) || null;
 
-    await recordCanvasView(uuid, user ? user.id : null, sessionId, ip, userAgent);
+    await recordCanvasView(uuid, user ? user.id : null, sessionId, ip, userAgent, typeof publicLinkId === 'number' ? publicLinkId : null);
     sendSuccess(res, { success: true });
   } catch (err) {
     sendInternalError(res, 'Error al registrar vista de lienzo en canvas controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
