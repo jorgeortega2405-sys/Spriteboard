@@ -118,6 +118,29 @@ export function resolveCanvasType(dto?: { canvas_type?: string; unit?: string; d
   return 'board';
 }
 
+export function parseDbPageTypes(rawPageTypes: any, defaultType?: string): string[] {
+  let parsed = rawPageTypes;
+  if (typeof rawPageTypes === 'string') {
+    try {
+      parsed = JSON.parse(rawPageTypes);
+    } catch {
+      parsed = null;
+    }
+  }
+  const set = new Set<string>();
+  if (defaultType) {
+    set.add(defaultType.toLowerCase().trim());
+  }
+  if (Array.isArray(parsed)) {
+    for (const item of parsed) {
+      if (typeof item === 'string' && item.trim().length > 0) {
+        set.add(item.toLowerCase().trim());
+      }
+    }
+  }
+  return set.size > 0 ? Array.from(set) : [defaultType || 'board'];
+}
+
 async function processPreviewThumbnail(uuid: string, thumbnail?: string | null): Promise<string | null> {
   if (!thumbnail) return null;
   if (thumbnail.startsWith('data:image/') || thumbnail.length > 500) {
@@ -350,6 +373,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
+              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               f.uuid AS folder_uuid, f.name AS folder_name,
@@ -365,6 +389,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
     const result = rows.map((r) => ({
       ...r,
       is_favorite: Boolean(r.is_favorite),
+      page_types: parseDbPageTypes(r.page_types, r.canvas_type),
     })) as Canvas[];
 
     try {
@@ -448,6 +473,7 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
+              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               f.uuid AS folder_uuid, f.name AS folder_name,
@@ -465,6 +491,7 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
     const canvases = rows.map((r) => ({
       ...r,
       is_favorite: Boolean(r.is_favorite),
+      page_types: parseDbPageTypes(r.page_types, r.canvas_type),
     })) as Canvas[];
 
     const result: PaginatedCanvasesResult = {
@@ -502,6 +529,7 @@ export async function getSharedCanvases(userId: number): Promise<any[]> {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
+              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier,
@@ -534,6 +562,7 @@ export async function getSharedCanvases(userId: number): Promise<any[]> {
       ...r,
       effective_tier: tierMap.get(r.id) || (r.owner_tier || 'free').toLowerCase(),
       is_favorite: Boolean(r.is_favorite),
+      page_types: parseDbPageTypes(r.page_types, r.canvas_type),
     }));
 
     try {
@@ -1342,10 +1371,13 @@ export async function getUserTrashCanvases(userId: number): Promise<Canvas[]> {
 
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, JSON_EXTRACT(data, \'$.pages[*].pageType\') AS page_types, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
       [userId]
     );
-    const result = rows as Canvas[];
+    const result = rows.map((r) => ({
+      ...r,
+      page_types: parseDbPageTypes(r.page_types, r.canvas_type),
+    })) as Canvas[];
     try {
       await redis.setex(cacheKey, 60, JSON.stringify(result));
     } catch {}

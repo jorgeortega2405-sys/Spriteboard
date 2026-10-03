@@ -3,7 +3,7 @@ import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
+import { getCanvasTypeIconSvg, renderCanvasMetaIconsHtml } from '../graphics/canvas-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -286,7 +286,7 @@ class SharedController {
           ${escapeHtml(canvas.name)}
         </span>
         <div class="canvas-card__meta" data-ref="canvas-meta">
-          ${getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit)}
+          ${renderCanvasMetaIconsHtml(canvas)}
           <span>${typeLabel}</span>
           <span class="canvas-card__meta-dot">·</span>
           <span>${escapeHtml(ownerName)}</span>

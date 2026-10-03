@@ -7,7 +7,7 @@ import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
+import { getCanvasTypeIconSvg, renderCanvasMetaIconsHtml } from '../graphics/canvas-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -471,7 +471,7 @@ class FolderController {
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIconSvg = getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit);
+    const typeIconSvg = renderCanvasMetaIconsHtml(canvas);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const thumbnailHtml = canvas.preview_thumbnail

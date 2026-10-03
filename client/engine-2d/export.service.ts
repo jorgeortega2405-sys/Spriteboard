@@ -8,7 +8,7 @@ import { BackgroundType, Board3DElement, BoardElement, BoardPageItem, BoardPixel
 export function generateThumbnail(
   elements: BoardElement[],
   boardBackground: { color: string; dotColor?: string; type: BackgroundType },
-  drawElementFn: (ctx: CanvasRenderingContext2D, el: BoardElement) => void
+  drawElementFn?: (ctx: CanvasRenderingContext2D, el: BoardElement) => void
 ): string {
   const thumbCanvas = document.createElement('canvas');
   thumbCanvas.width = 320;
@@ -19,16 +19,19 @@ export function generateThumbnail(
   tctx.fillStyle = boardBackground.color;
   tctx.fillRect(0, 0, 320, 200);
 
-  const bbox = computeElementsBoundingBox(elements);
-  if (!bbox) {
+  if (boardBackground.type === 'dots') {
     tctx.fillStyle = boardBackground.dotColor || '#cbd5e1';
-    for (let x = 16; x < 320; x += 32) {
-      for (let y = 16; y < 200; y += 32) {
+    for (let x = 12; x < 320; x += 20) {
+      for (let y = 12; y < 200; y += 20) {
         tctx.beginPath();
-        tctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        tctx.arc(x, y, 1.2, 0, Math.PI * 2);
         tctx.fill();
       }
     }
+  }
+
+  const bbox = computeElementsBoundingBox(elements);
+  if (!bbox || !drawElementFn) {
     return thumbCanvas.toDataURL('image/png');
   }
 

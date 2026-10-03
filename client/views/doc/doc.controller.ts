@@ -742,12 +742,6 @@ export class DocController implements ViewController {
             </span>
             <span class="canvas-page-type-card__label">Video</span>
           </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-print" data-type="print">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--print">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#print"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Imprimir</span>
-          </button>
           <button type="button" class="canvas-page-type-card" data-ref="btn-type-doc" data-type="doc">
             <span class="canvas-page-type-card__icon canvas-page-type-card__icon--doc">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
@@ -765,18 +759,6 @@ export class DocController implements ViewController {
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
             </span>
             <span class="canvas-page-type-card__label">Hoja de cálculo</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-web" data-type="web">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--web">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Sitios web</span>
-          </button>
-          <button type="button" class="canvas-page-type-card" data-ref="btn-type-more" data-type="more">
-            <span class="canvas-page-type-card__icon canvas-page-type-card__icon--more">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_horiz"></use></svg>
-            </span>
-            <span class="canvas-page-type-card__label">Más</span>
           </button>
         </div>
       </div>

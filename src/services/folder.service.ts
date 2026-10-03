@@ -1,10 +1,11 @@
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { Canvas, CreateFolderDto, FolderItem, UpdateFolderDto } from '../types/canvas.types.js';
+import { parseDbPageTypes } from './canvas.service.js';
 import { logger } from './logger.service.js';
 import { getPublicUrl } from './s3.service.js';
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 
 export async function ensureUploadsDefaultFolder(userId: number): Promise<FolderItem> {
   try {
@@ -496,6 +497,7 @@ export async function getFolderCanvases(
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
                 COALESCE(c.canvas_type, 'board') AS canvas_type,
+                JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
                 c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
                 c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
                 (uf.id IS NOT NULL) AS is_favorite
@@ -512,6 +514,7 @@ export async function getFolderCanvases(
       const canvases = rows.map((r) => ({
         ...r,
         is_favorite: Boolean(r.is_favorite),
+        page_types: parseDbPageTypes(r.page_types, r.canvas_type),
       })) as Canvas[];
 
       return {
@@ -531,6 +534,7 @@ export async function getFolderCanvases(
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
               COALESCE(c.canvas_type, 'board') AS canvas_type,
+              JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
               (uf.id IS NOT NULL) AS is_favorite
@@ -546,6 +550,7 @@ export async function getFolderCanvases(
     const canvases = rows.map((r) => ({
       ...r,
       is_favorite: Boolean(r.is_favorite),
+      page_types: parseDbPageTypes(r.page_types, r.canvas_type),
     })) as Canvas[];
 
     return { canvases, folder, uploads };

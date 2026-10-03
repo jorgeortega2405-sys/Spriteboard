@@ -1,13 +1,16 @@
+import { generateThumbnail } from '../../engine-2d/export.service.js';
+import { escapeHtml } from '../../services/api.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { CarouselController, initCarouselScroll } from '../../utils/dom.util.js';
 import { BoardPageItem } from './board.types.js';
 
 export interface BoardPagesTrayCallbacks {
   onAddPage: () => void;
-  onDeletePage: () => void;
-  onDuplicatePage: () => void;
-  onNextPage: () => void;
-  onPrevPage: () => void;
+  onDeletePage?: () => void;
+  onDrawElement?: (ctx: CanvasRenderingContext2D, el: any) => void;
+  onDuplicatePage?: () => void;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
   onReorderPages: (fromIndex: number, toIndex: number) => void;
   onSelectPage: (pageId: string) => void;
 }
@@ -21,10 +24,6 @@ export class BoardPagesTrayComponent {
   private carouselController: CarouselController | null = null;
   private containerEl: HTMLElement | null = null;
   private draggedPageId: string | null = null;
-  private pageDeleteBtn: HTMLButtonElement | null = null;
-  private pageDuplicateBtn: HTMLButtonElement | null = null;
-  private pageNextBtn: HTMLButtonElement | null = null;
-  private pagePrevBtn: HTMLButtonElement | null = null;
   private pages: BoardPageItem[] = [];
   private pagesCardsListEl: HTMLElement | null = null;
   private pagesCardsWrapper: HTMLElement | null = null;
@@ -96,10 +95,6 @@ export class BoardPagesTrayComponent {
     this.trayEl = this.containerEl.querySelector<HTMLElement>('[data-ref="design-pages-tray"]');
     this.pagesCardsWrapper = this.containerEl.querySelector<HTMLElement>('[data-ref="pages-cards-wrapper"]');
     this.pagesCardsListEl = this.containerEl.querySelector<HTMLElement>('[data-ref="pages-cards-list"]');
-    this.pagePrevBtn = this.containerEl.querySelector<HTMLButtonElement>('[data-ref="btn-page-prev"]');
-    this.pageNextBtn = this.containerEl.querySelector<HTMLButtonElement>('[data-ref="btn-page-next"]');
-    this.pageDuplicateBtn = this.containerEl.querySelector<HTMLButtonElement>('[data-ref="btn-page-duplicate"]');
-    this.pageDeleteBtn = this.containerEl.querySelector<HTMLButtonElement>('[data-ref="btn-page-delete"]');
 
     if (this.pagesCardsWrapper) {
       this.carouselController = initCarouselScroll(this.pagesCardsWrapper, {
@@ -116,40 +111,13 @@ export class BoardPagesTrayComponent {
       this.abortController.abort();
     }
     this.abortController = new AbortController();
-    const { signal } = this.abortController;
-
-    this.pagePrevBtn?.addEventListener('click', () => {
-      this.callbacks.onPrevPage();
-    }, { signal });
-
-    this.pageNextBtn?.addEventListener('click', () => {
-      this.callbacks.onNextPage();
-    }, { signal });
-
-    this.pageDuplicateBtn?.addEventListener('click', () => {
-      this.callbacks.onDuplicatePage();
-    }, { signal });
-
-    this.pageDeleteBtn?.addEventListener('click', () => {
-      this.callbacks.onDeletePage();
-    }, { signal });
   }
 
   private updateControlsUI(): void {
-    const activeIndex = this.pages.findIndex((p) => p.id === this.activePageId);
-    const totalPages = this.pages.length;
-
-    if (this.pagePrevBtn) {
-      this.pagePrevBtn.classList.toggle('is-disabled', activeIndex <= 0);
-    }
-    if (this.pageNextBtn) {
-      this.pageNextBtn.classList.toggle('is-disabled', activeIndex >= totalPages - 1);
-    }
-    if (this.pageDeleteBtn) {
-      this.pageDeleteBtn.classList.toggle('is-disabled', totalPages <= 1);
-    }
-    if (this.pageDuplicateBtn) {
-      this.pageDuplicateBtn.classList.toggle('is-disabled', totalPages >= MAX_BOARD_PAGES);
+    const pagesText = this.containerEl?.querySelector<HTMLElement>('[data-ref="bottom-pages-text"]');
+    const activeIdx = this.pages.findIndex((p) => p.id === this.activePageId);
+    if (pagesText) {
+      pagesText.textContent = `${activeIdx >= 0 ? activeIdx + 1 : 1} / ${this.pages.length}`;
     }
   }
 
@@ -161,24 +129,22 @@ export class BoardPagesTrayComponent {
 
     this.pages.forEach((page, index) => {
       const defaultName = `Página ${index + 1}`;
-      const prefix = 'Pág.';
       const card = document.createElement('div');
-      card.className = `design-page-card${page.id === this.activePageId ? ' is-active' : ''}`;
+      card.className = `canva-page-card${page.id === this.activePageId ? ' is-active' : ''}`;
       card.setAttribute('data-ref', `page-card-${page.id}`);
       card.setAttribute('draggable', 'true');
       card.setAttribute('data-tooltip', page.name || defaultName);
 
-      const numSpan = document.createElement('span');
-      numSpan.className = 'design-page-card__num';
-      numSpan.textContent = `${prefix} ${index + 1}`;
+      const thumbUrl = generateThumbnail(page.elements || [], page.background || { color: '#ffffff', type: 'solid' }, this.callbacks.onDrawElement);
 
-      const subSpan = document.createElement('span');
-      subSpan.className = 'design-page-card__sub';
-      const elCount = page.elements ? page.elements.length : 0;
-      subSpan.textContent = `${elCount} obj.`;
-
-      card.appendChild(numSpan);
-      card.appendChild(subSpan);
+      card.innerHTML = `
+        <div class="canva-page-card__preview" data-ref="page-preview-${page.id}">
+          <img src="${thumbUrl}" alt="${escapeHtml(page.name || defaultName)}" loading="lazy" />
+        </div>
+        <div class="canva-page-card__footer">
+          <span class="canva-page-card__num">${index + 1}</span>
+        </div>
+      `;
 
       card.addEventListener('click', () => {
         if (page.id !== this.activePageId) {
@@ -198,7 +164,7 @@ export class BoardPagesTrayComponent {
       card.addEventListener('dragend', () => {
         card.classList.remove('is-dragging');
         this.draggedPageId = null;
-        this.containerEl?.querySelectorAll('.design-page-card').forEach((el) => {
+        this.containerEl?.querySelectorAll('.canva-page-card').forEach((el) => {
           el.classList.remove('is-drag-over');
         });
       });
@@ -234,25 +200,27 @@ export class BoardPagesTrayComponent {
     });
 
     const isLimitReached = totalPages >= MAX_BOARD_PAGES;
-    const addCard = document.createElement('button');
-    addCard.setAttribute('type', 'button');
-    addCard.className = `design-page-card--add${isLimitReached ? ' is-disabled' : ''}`;
-    addCard.setAttribute('data-ref', 'btn-add-page-card');
-    addCard.setAttribute('data-tooltip', isLimitReached ? `Límite máximo de ${MAX_BOARD_PAGES} páginas` : 'Añadir nueva página');
-    addCard.setAttribute('aria-label', 'Añadir nueva página');
+    const addCardContainer = document.createElement('div');
+    addCardContainer.className = 'canva-page-card--add-container';
+    addCardContainer.setAttribute('data-ref', 'tray-add-page-container');
 
-    const addIcon = document.createElement('span');
-    addIcon.className = 'component-icon';
-    addIcon.textContent = 'add';
-    addCard.appendChild(addIcon);
+    addCardContainer.innerHTML = `
+      <div class="canva-page-card--add" data-ref="btn-tray-add-page">
+        <button type="button" class="canva-page-card--add-btn${isLimitReached ? ' is-disabled' : ''}" data-ref="btn-tray-add-page-main" data-tooltip="${isLimitReached ? `Límite máximo de ${MAX_BOARD_PAGES} páginas` : 'Añadir página'}" aria-label="Añadir página">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        </button>
+      </div>
+    `;
 
-    addCard.addEventListener('click', () => {
+    const btnMain = addCardContainer.querySelector<HTMLButtonElement>('[data-ref="btn-tray-add-page-main"]');
+    btnMain?.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (!isLimitReached) {
         this.callbacks.onAddPage();
       }
     });
 
-    this.pagesCardsListEl.appendChild(addCard);
+    this.pagesCardsListEl.appendChild(addCardContainer);
     renderIcons(this.pagesCardsListEl);
   }
 }

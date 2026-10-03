@@ -15,6 +15,7 @@ export interface Canvas {
   unit: string;
   canvas_type?: CanvasType;
   data: string | null;
+  page_types?: string[];
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
   public_role?: 'viewer' | 'editor';

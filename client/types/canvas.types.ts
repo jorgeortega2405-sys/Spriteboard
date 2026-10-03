@@ -13,6 +13,7 @@ export interface CanvasItem {
   unit: string;
   canvas_type?: CanvasType;
   data?: string | null;
+  page_types?: CanvasType[];
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
   public_role?: 'viewer' | 'editor';

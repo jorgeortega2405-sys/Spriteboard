@@ -420,6 +420,7 @@ export class BoardController {
     this.pagesTray = new BoardPagesTrayComponent({
       onAddPage: () => this.addPage(),
       onDeletePage: () => this.deletePage(),
+      onDrawElement: (ctx, el) => this.drawElementOn(ctx, el),
       onDuplicatePage: () => this.duplicatePage(),
       onNextPage: () => this.goToNextPage(),
       onPrevPage: () => this.goToPrevPage(),

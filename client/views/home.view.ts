@@ -12,7 +12,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { renderHomeCategoryBadgesHtml } from '../config/home-category-badges.config.js';
 import { getUserTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
-import { getCanvasTypeIconSvg } from '../graphics/canvas-graphics.js';
+import { getCanvasTypeIconSvg, renderCanvasMetaIconsHtml } from '../graphics/canvas-graphics.js';
 import { FOLDER_BACK_TAB_SVG, getFolderFrontIconSvg } from '../graphics/folder-graphics.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
@@ -1509,7 +1509,7 @@ class HomeController {
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIconSvg = getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit);
+    const typeIconSvg = renderCanvasMetaIconsHtml(canvas);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const thumbnailHtml = canvas.preview_thumbnail

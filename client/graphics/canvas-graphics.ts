@@ -1,3 +1,6 @@
+import { CanvasItem, CanvasType } from '../types/canvas.types.js';
+import { detectCanvasType } from '../utils/canvas-type.util.js';
+
 export function getDocSvg(type: string): string {
   switch (type) {
     case 'digital':
@@ -710,5 +713,80 @@ export function getSocialPlatformBadgeIconSvg(platform: string, className = 'com
   }
 }
 
+const VALID_CANVAS_TYPES = new Set<CanvasType>(['board', 'doc', 'presentation', 'sheet', 'social', 'video']);
 
+export function getCanvasTypeLabel(type: string): string {
+  switch (type.toLowerCase().trim()) {
+    case 'presentation':
+      return 'Presentación';
+    case 'board':
+      return 'Pizarrón';
+    case 'sheet':
+      return 'Hoja de cálculo';
+    case 'doc':
+      return 'Documento';
+    case 'video':
+      return 'Video';
+    case 'social':
+      return 'Redes sociales';
+    default:
+      return 'Lienzo';
+  }
+}
 
+export function resolveCanvasDistinctTypes(canvas: Partial<CanvasItem> | null | any): CanvasType[] {
+  const typesSet = new Set<CanvasType>();
+  const primaryType = detectCanvasType(canvas);
+  typesSet.add(primaryType);
+
+  if (Array.isArray(canvas?.page_types)) {
+    for (const t of canvas.page_types) {
+      if (typeof t === 'string' && t.trim()) {
+        const normalized = t.toLowerCase().trim() as CanvasType;
+        if (VALID_CANVAS_TYPES.has(normalized)) {
+          typesSet.add(normalized);
+        }
+      }
+    }
+  }
+
+  if (canvas?.data) {
+    try {
+      const parsed = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
+      if (parsed && Array.isArray(parsed.pages)) {
+        for (const p of parsed.pages) {
+          const pt = (p?.pageType || p?.type || '').toLowerCase().trim() as CanvasType;
+          if (VALID_CANVAS_TYPES.has(pt)) {
+            typesSet.add(pt);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return Array.from(typesSet);
+}
+
+export function renderCanvasMetaIconsHtml(canvas: Partial<CanvasItem> | null | any): string {
+  const types = resolveCanvasDistinctTypes(canvas);
+  if (types.length === 0) {
+    return getCanvasTypeIconSvg('board');
+  }
+
+  const visibleTypes = types.slice(0, 2);
+  const remainingCount = types.length - 2;
+
+  const iconsHtml = visibleTypes.map((t) => getCanvasTypeIconSvg(t)).join('');
+
+  if (remainingCount > 0) {
+    const extraLabels = types.slice(2).map(getCanvasTypeLabel).join(', ');
+    const badgeHtml = `<span class="canvas-card__types-more" data-tooltip="${extraLabels}">+${remainingCount}</span>`;
+    return `<span class="canvas-card__meta-types">${iconsHtml}${badgeHtml}</span>`;
+  }
+
+  if (visibleTypes.length > 1) {
+    return `<span class="canvas-card__meta-types">${iconsHtml}</span>`;
+  }
+
+  return iconsHtml;
+}

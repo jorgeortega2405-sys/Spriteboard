@@ -4,6 +4,7 @@ import { canvasPool } from '../config/database.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiSearchService, SemanticQueryResult } from '../services/ai-search.service.js';
+import { parseDbPageTypes } from '../services/canvas.service.js';
 import { sendInternalError, sendSuccess } from '../utils/http.util.js';
 
 interface ScoredTemplate {
@@ -39,6 +40,7 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit,
                 COALESCE(c.canvas_type, 'board') AS canvas_type,
+                JSON_EXTRACT(c.data, '$.pages[*].pageType') AS page_types,
                 c.preview_thumbnail,
                 c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
                 (uf.id IS NOT NULL) AS is_favorite
@@ -66,6 +68,7 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
           return {
             ...r,
             is_favorite: Boolean(r.is_favorite),
+            page_types: parseDbPageTypes(r.page_types, r.canvas_type),
             _score: score,
           };
         })
