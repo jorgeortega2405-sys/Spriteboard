@@ -1,4 +1,5 @@
 import { setupDropdown } from '../../utils/dom.util.js';
+import { BoardChartsCustomizeHelper } from './board-charts-customize.helper.js';
 import { BoardChartElement, ChartDataRow, ChartSeriesConfig, ChartType, DEFAULT_CHART_PALETTES } from './board.types.js';
 
 export interface ChartsPanelCallbacks {
@@ -46,6 +47,7 @@ export class BoardChartsPanelComponent {
   private colorByDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private containerEl: HTMLElement | null = null;
   private currentChart: BoardChartElement | null = null;
+  private customizeHelper = new BoardChartsCustomizeHelper();
   private externalBackBtn: HTMLElement | null = null;
   private numberStyleDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private panelEl: HTMLElement | null = null;
@@ -147,7 +149,13 @@ export class BoardChartsPanelComponent {
       this.renderDataTable();
       this.renderDataConfig();
     } else {
-      this.populateCustomizeTab();
+      this.customizeHelper.populateCustomizeTab(
+        this.panelEl,
+        this.currentChart,
+        (sel, val) => this.syncDropdownSelection(sel, val),
+        () => this.renderDataTable(),
+        (c) => this.callbacks.onChangeChart(c)
+      );
     }
   }
 
@@ -179,7 +187,13 @@ export class BoardChartsPanelComponent {
     tabCustomize?.addEventListener('click', () => {
       this.activeTab = 'customize';
       this.updateTabUI();
-      this.populateCustomizeTab();
+      this.customizeHelper.populateCustomizeTab(
+        this.panelEl,
+        this.currentChart,
+        (sel, val) => this.syncDropdownSelection(sel, val),
+        () => this.renderDataTable(),
+        (c) => this.callbacks.onChangeChart(c)
+      );
     });
 
     this.setupDropdowns();
@@ -268,7 +282,7 @@ export class BoardChartsPanelComponent {
       }
     });
 
-    this.bindCustomizeInputs();
+    this.customizeHelper.bindCustomizeInputs(this.panelEl, () => this.currentChart, (c) => this.callbacks.onChangeChart(c));
   }
 
   private updateTabUI(): void {
@@ -432,248 +446,7 @@ export class BoardChartsPanelComponent {
     this.syncDropdownSelection('[data-ref="dropdown-wrapper-color-by"]', this.currentChart.colorBy || 'category');
   }
 
-  private populateCustomizeTab(): void {
-    if (!this.panelEl || !this.currentChart) return;
-    const c = this.currentChart;
 
-    const toggleLegend = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-legend"]');
-    if (toggleLegend) toggleLegend.checked = !!c.showLegend;
-
-    const toggleDataLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-data-labels"]');
-    if (toggleDataLabels) toggleDataLabels.checked = !!c.showDataLabels;
-
-    const inputTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-title"]');
-    if (inputTitle) inputTitle.value = c.title || '';
-
-    const inputSubtitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-subtitle"]');
-    if (inputSubtitle) inputSubtitle.value = c.subtitle || '';
-
-    const inputSource = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-source"]');
-    if (inputSource) inputSource.value = c.sourceText || '';
-
-    const inputXTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-x-title"]');
-    if (inputXTitle) inputXTitle.value = c.xAxisTitle || '';
-
-    const toggleXLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-x-labels"]');
-    if (toggleXLabels) toggleXLabels.checked = c.showXAxisLabels !== false;
-
-    const inputYTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-y-title"]');
-    if (inputYTitle) inputYTitle.value = c.yAxisTitle || '';
-
-    const toggleYLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-y-labels"]');
-    if (toggleYLabels) toggleYLabels.checked = c.showYAxisLabels !== false;
-
-    this.syncDropdownSelection('[data-ref="dropdown-wrapper-number-style"]', c.numberFormatStyle || 'normal');
-    this.syncDropdownSelection('[data-ref="dropdown-wrapper-abbrev"]', c.numberAbbreviation || 'none');
-
-    const labelDecimals = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-label-decimals"]');
-    if (labelDecimals) labelDecimals.textContent = String(c.decimals || 0);
-
-    const inputPrefix = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-prefix"]');
-    if (inputPrefix) inputPrefix.value = c.prefix || '';
-
-    const inputSuffix = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-suffix"]');
-    if (inputSuffix) inputSuffix.value = c.suffix || '';
-
-    const sliderRadius = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-slider-radius"]');
-    if (sliderRadius) sliderRadius.value = String(c.barRadius !== undefined ? c.barRadius : 8);
-
-    const toggleGrid = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-gridlines"]');
-    if (toggleGrid) toggleGrid.checked = c.showGridLines !== false;
-
-    this.updateSegmentedPosition(c.dataLabelPosition || 'auto');
-    this.renderPaletteOptions();
-  }
-
-  private bindCustomizeInputs(): void {
-    if (!this.panelEl) return;
-
-    const toggleLegend = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-legend"]');
-    toggleLegend?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.showLegend = toggleLegend.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const toggleDataLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-data-labels"]');
-    toggleDataLabels?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.showDataLabels = toggleDataLabels.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-title"]');
-    inputTitle?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.title = inputTitle.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputSubtitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-subtitle"]');
-    inputSubtitle?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.subtitle = inputSubtitle.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputSource = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-source"]');
-    inputSource?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.sourceText = inputSource.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputXTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-x-title"]');
-    inputXTitle?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.xAxisTitle = inputXTitle.value;
-      this.currentChart.showXAxisTitle = !!inputXTitle.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const toggleXLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-x-labels"]');
-    toggleXLabels?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.showXAxisLabels = toggleXLabels.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputYTitle = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-y-title"]');
-    inputYTitle?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.yAxisTitle = inputYTitle.value;
-      this.currentChart.showYAxisTitle = !!inputYTitle.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const toggleYLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-y-labels"]');
-    toggleYLabels?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.showYAxisLabels = toggleYLabels.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const btnDecDec = this.panelEl.querySelector<HTMLButtonElement>('[data-ref="chart-btn-decimals-dec"]');
-    const btnDecInc = this.panelEl.querySelector<HTMLButtonElement>('[data-ref="chart-btn-decimals-inc"]');
-    const labelDec = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-label-decimals"]');
-
-    btnDecDec?.addEventListener('click', () => {
-      if (!this.currentChart) return;
-      const current = this.currentChart.decimals || 0;
-      if (current > 0) {
-        this.currentChart.decimals = current - 1;
-        if (labelDec) labelDec.textContent = String(this.currentChart.decimals);
-        this.callbacks.onChangeChart(this.currentChart);
-      }
-    });
-
-    btnDecInc?.addEventListener('click', () => {
-      if (!this.currentChart) return;
-      const current = this.currentChart.decimals || 0;
-      if (current < 6) {
-        this.currentChart.decimals = current + 1;
-        if (labelDec) labelDec.textContent = String(this.currentChart.decimals);
-        this.callbacks.onChangeChart(this.currentChart);
-      }
-    });
-
-    const inputPrefix = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-prefix"]');
-    inputPrefix?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.prefix = inputPrefix.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const inputSuffix = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-input-suffix"]');
-    inputSuffix?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.suffix = inputSuffix.value;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const sliderRadius = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-slider-radius"]');
-    sliderRadius?.addEventListener('input', () => {
-      if (!this.currentChart) return;
-      this.currentChart.barRadius = parseInt(sliderRadius.value, 10) || 0;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const toggleGrid = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-gridlines"]');
-    toggleGrid?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.showGridLines = toggleGrid.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const posBtns = this.panelEl.querySelectorAll<HTMLButtonElement>('[data-chart-pos]');
-    posBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (!this.currentChart) return;
-        const pos = btn.getAttribute('data-chart-pos') as 'auto' | 'inside' | 'outside';
-        this.currentChart.dataLabelPosition = pos;
-        this.updateSegmentedPosition(pos);
-        this.callbacks.onChangeChart(this.currentChart);
-      });
-    });
-
-    const accordions = this.panelEl.querySelectorAll<HTMLElement>('.chart-accordion__header');
-    accordions.forEach((header) => {
-      header.addEventListener('click', () => {
-        const item = header.closest('.chart-accordion__item');
-        item?.classList.toggle('is-collapsed');
-      });
-    });
-  }
-
-  private updateSegmentedPosition(pos: 'auto' | 'inside' | 'outside'): void {
-    if (!this.panelEl) return;
-    const posBtns = this.panelEl.querySelectorAll<HTMLButtonElement>('[data-chart-pos]');
-    posBtns.forEach((btn) => {
-      btn.classList.toggle('is-active', btn.getAttribute('data-chart-pos') === pos);
-    });
-  }
-
-  private renderPaletteOptions(): void {
-    if (!this.panelEl || !this.currentChart) return;
-    const container = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-palettes-list"]');
-    if (!container) return;
-
-    container.innerHTML = '';
-    const palettes = Object.values(DEFAULT_CHART_PALETTES);
-
-    for (const pal of palettes) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'chart-palette-bar-btn';
-      btn.setAttribute('data-ref', `chart-palette-${pal.id}`);
-      btn.setAttribute('aria-label', pal.name);
-
-      let dotsHtml = '';
-      for (const color of pal.colors.slice(0, 5)) {
-        dotsHtml += `<span class="chart-palette-dot" style="background-color: ${color};"></span>`;
-      }
-
-      btn.innerHTML = `
-        <span class="chart-palette-name">${pal.name}</span>
-        <div class="chart-palette-dots">${dotsHtml}</div>
-      `;
-
-      btn.addEventListener('click', () => {
-        if (!this.currentChart) return;
-        this.currentChart.palette = [...pal.colors];
-        for (let i = 0; i < this.currentChart.data.length; i++) {
-          this.currentChart.data[i].color = pal.colors[i % pal.colors.length];
-        }
-        for (let s = 0; s < this.currentChart.series.length; s++) {
-          this.currentChart.series[s].color = pal.colors[s % pal.colors.length];
-        }
-        this.renderDataTable();
-        this.callbacks.onChangeChart(this.currentChart);
-      });
-
-      container.appendChild(btn);
-    }
-  }
 
   private transposeData(): void {
     if (!this.currentChart || this.currentChart.data.length === 0) return;

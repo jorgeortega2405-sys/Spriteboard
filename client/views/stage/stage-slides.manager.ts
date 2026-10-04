@@ -6,7 +6,7 @@ import { generateThumbnail } from '../board/board-export.service.js';
 import { BackgroundType } from '../board/board.types.js';
 
 export interface StageSlidesHost {
-  abortController: AbortController;
+  abortController: AbortController | null;
   activeSlideId: string;
   addSlide(): void;
   canvasType: string;

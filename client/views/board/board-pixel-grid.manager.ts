@@ -1,27 +1,10 @@
 import { showToast } from '../../services/toast.service.js';
-import { encodeFramesToGif, GifFrameInput } from '../../utils/gif-encoder.util.js';
+import { BoardPixelExportManager, hexToRgba, rgbaToHex } from './board-pixel-export.manager.js';
+import { BoardPixelPaintManager } from './board-pixel-paint.manager.js';
+import { BoardPixelPlaybackManager } from './board-pixel-playback.manager.js';
 import { BoardElement, BoardPixelGridElement, BoardPoint, PixelFrameData, PixelLayerData, PixelSubtool } from './board.types.js';
 
-export function hexToRgba(hex: string): { a: number; b: number; g: number; r: number } {
-  let cleaned = hex.replace('#', '').trim();
-  if (cleaned.length === 3) {
-    cleaned = cleaned.split('').map((c) => c + c).join('');
-  }
-  const num = parseInt(cleaned, 16);
-  if (isNaN(num)) return { a: 255, b: 0, g: 0, r: 0 };
-  return {
-    a: 255,
-    b: num & 255,
-    g: (num >> 8) & 255,
-    r: (num >> 16) & 255,
-  };
-}
-
-export function rgbaToHex(r: number, g: number, b: number): string {
-  const clamp = (val: number) => Math.max(0, Math.min(255, Math.round(val)));
-  const toHex = (n: number) => clamp(n).toString(16).padStart(2, '0').toUpperCase();
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
+export { hexToRgba, rgbaToHex };
 
 export interface MemoryPixelLayer {
   canvas: HTMLCanvasElement;
@@ -56,7 +39,10 @@ export class BoardPixelGridManager {
   public activePixelPalette: 'classic' | 'pico8' | 'gameboy' = 'classic';
   public activePixelSubtool: PixelSubtool = 'pencil';
   public isPixelPainting = false;
+  private exportManager = new BoardPixelExportManager();
   private lastPaintedPixel: { px: number; py: number } | null = null;
+  private paintManager = new BoardPixelPaintManager();
+  private playbackManager = new BoardPixelPlaybackManager();
   private states = new Map<string, PixelGridState>();
 
   public getState(el: BoardPixelGridElement, onLoaded?: () => void): PixelGridState {
@@ -489,65 +475,35 @@ export class BoardPixelGridManager {
 
   public startPlayback(el: BoardPixelGridElement, onTick?: () => void): void {
     const state = this.getState(el);
-    if (state.playbackTimer !== null || state.frames.length <= 1) return;
-
-    state.isPlaying = true;
-    el.isPlaying = true;
-
-    const step = () => {
-      this.stepPlayback(el);
-      onTick?.();
-      const delay = Math.max(20, Math.round(1000 / state.fps));
-      state.playbackTimer = window.setTimeout(step, delay);
-    };
-
-    const delay = Math.max(20, Math.round(1000 / state.fps));
-    state.playbackTimer = window.setTimeout(step, delay);
+    this.playbackManager.startPlayback(el, state, onTick, (nextFrame) => {
+      this.compositeFrame(el, nextFrame);
+    });
   }
 
   public stopPlayback(el: BoardPixelGridElement): void {
     const state = this.getState(el);
-    if (state.playbackTimer !== null) {
-      clearTimeout(state.playbackTimer);
-      state.playbackTimer = null;
-    }
-    state.isPlaying = false;
-    el.isPlaying = false;
+    this.playbackManager.stopPlayback(el, state);
   }
 
   public togglePlayback(el: BoardPixelGridElement, onTick?: () => void): boolean {
     const state = this.getState(el);
-    if (state.isPlaying) {
-      this.stopPlayback(el);
-      return false;
-    }
-    this.startPlayback(el, onTick);
-    return true;
+    return this.playbackManager.togglePlayback(el, state, onTick, (nextFrame) => {
+      this.compositeFrame(el, nextFrame);
+    });
   }
 
   public stepPlayback(el: BoardPixelGridElement): void {
     const state = this.getState(el);
-    if (state.frames.length <= 1) return;
-
-    const curIdx = state.frames.findIndex((f) => f.id === state.activeFrameId);
-    const nextIdx = (curIdx + 1) % state.frames.length;
-    const nextFrame = state.frames[nextIdx];
-    if (nextFrame) {
-      state.activeFrameId = nextFrame.id;
+    this.playbackManager.stepPlayback(el, state, (nextFrame) => {
       this.compositeFrame(el, nextFrame);
-    }
+    });
   }
 
   public prevFrame(el: BoardPixelGridElement): void {
     const state = this.getState(el);
-    if (state.frames.length <= 1) return;
-    const curIdx = state.frames.findIndex((f) => f.id === state.activeFrameId);
-    const prevIdx = curIdx <= 0 ? state.frames.length - 1 : curIdx - 1;
-    const prevFrame = state.frames[prevIdx];
-    if (prevFrame) {
-      state.activeFrameId = prevFrame.id;
+    this.playbackManager.prevFrame(el, state, (prevFrame) => {
       this.compositeFrame(el, prevFrame);
-    }
+    });
   }
 
   public nextFrame(el: BoardPixelGridElement): void {
@@ -556,70 +512,40 @@ export class BoardPixelGridManager {
 
   public reorderFrames(el: BoardPixelGridElement, sourceId: string, targetId: string): boolean {
     const state = this.getState(el);
-    if (sourceId === targetId) return false;
-    const srcIdx = state.frames.findIndex((f) => f.id === sourceId);
-    const tgtIdx = state.frames.findIndex((f) => f.id === targetId);
-    if (srcIdx < 0 || tgtIdx < 0) return false;
-
-    const [item] = state.frames.splice(srcIdx, 1);
-    state.frames.splice(tgtIdx, 0, item);
-    this.serializeElementState(el);
-    return true;
+    return this.playbackManager.reorderFrames(el, state, sourceId, targetId, () => {
+      this.serializeElementState(el);
+    });
   }
 
   public reorderLayers(el: BoardPixelGridElement, sourceId: string, targetId: string): boolean {
     const frame = this.getActiveFrame(el);
-    if (!frame || sourceId === targetId) return false;
-    const srcIdx = frame.layers.findIndex((l) => l.id === sourceId);
-    const tgtIdx = frame.layers.findIndex((l) => l.id === targetId);
-    if (srcIdx < 0 || tgtIdx < 0) return false;
-
-    const [item] = frame.layers.splice(srcIdx, 1);
-    frame.layers.splice(tgtIdx, 0, item);
-    this.compositeFrame(el, frame);
-    this.serializeElementState(el);
-    return true;
+    return this.playbackManager.reorderLayers(
+      frame,
+      sourceId,
+      targetId,
+      (f) => this.compositeFrame(el, f),
+      () => this.serializeElementState(el)
+    );
   }
 
   public setFps(el: BoardPixelGridElement, fps: number): void {
     const state = this.getState(el);
-    state.fps = Math.max(1, Math.min(60, fps));
-    el.customFrameRate = state.fps;
+    this.playbackManager.setFps(el, state, fps);
   }
 
   public getFps(el: BoardPixelGridElement): number {
     const state = this.getState(el);
-    return state.fps;
+    return this.playbackManager.getFps(state);
   }
 
   public toggleOnionSkin(el: BoardPixelGridElement): boolean {
     const state = this.getState(el);
-    state.onionSkin = !state.onionSkin;
-    el.onionSkinEnabled = state.onionSkin;
-    return state.onionSkin;
+    return this.playbackManager.toggleOnionSkin(el, state);
   }
 
   public getOnionSkinCanvas(el: BoardPixelGridElement): HTMLCanvasElement | null {
     const state = this.getState(el);
-    if (!state.onionSkin || state.frames.length <= 1) return null;
-
-    const curIdx = state.frames.findIndex((f) => f.id === state.activeFrameId);
-    if (curIdx <= 0) return null;
-
-    const prevFrame = state.frames[curIdx - 1];
-    if (!prevFrame) return null;
-
-    const onionCanvas = document.createElement('canvas');
-    onionCanvas.width = el.gridWidth;
-    onionCanvas.height = el.gridHeight;
-    const onionCtx = onionCanvas.getContext('2d', { willReadFrequently: true })!;
-
-    for (const layer of prevFrame.layers) {
-      if (layer.visible) {
-        onionCtx.drawImage(layer.canvas, 0, 0);
-      }
-    }
-    return onionCanvas;
+    return this.playbackManager.getOnionSkinCanvas(el, state);
   }
 
   public deleteState(id: string): void {
@@ -729,225 +655,54 @@ export class BoardPixelGridManager {
   }
 
   public drawPixelLine(el: BoardPixelGridElement, x0: number, y0: number, x1: number, y1: number, erase: boolean, color: string): void {
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
-    let cx = x0;
-    let cy = y0;
-
-    while (true) {
-      this.applyPixelBrush(el, cx, cy, erase, color);
-      if (cx === x1 && cy === y1) break;
-      const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        cx += sx;
+    const layer = this.getActiveLayer(el);
+    this.paintManager.drawPixelLine(el, layer, this.activePixelBrushSize, x0, y0, x1, y1, erase, color, () => {
+      const activeFrame = this.getActiveFrame(el);
+      if (activeFrame) {
+        this.compositeFrame(el, activeFrame);
       }
-      if (e2 < dx) {
-        err += dx;
-        cy += sy;
-      }
-    }
+    });
   }
 
   public applyPixelBrush(grid: BoardPixelGridElement, px: number, py: number, isEraser: boolean, color: string): void {
     const layer = this.getActiveLayer(grid);
-    if (!layer) return;
-
-    const size = this.activePixelBrushSize;
-    const startX = Math.floor(px - (size - 1) / 2);
-    const startY = Math.floor(py - (size - 1) / 2);
-
-    for (let x = startX; x < startX + size; x++) {
-      for (let y = startY; y < startY + size; y++) {
-        if (x >= 0 && x < grid.gridWidth && y >= 0 && y < grid.gridHeight) {
-          if (isEraser) {
-            layer.ctx.clearRect(x, y, 1, 1);
-          } else {
-            layer.ctx.fillStyle = color;
-            layer.ctx.fillRect(x, y, 1, 1);
-          }
-        }
+    this.paintManager.applyPixelBrush(grid, layer, this.activePixelBrushSize, px, py, isEraser, color, () => {
+      const activeFrame = this.getActiveFrame(grid);
+      if (activeFrame) {
+        this.compositeFrame(grid, activeFrame);
       }
-    }
-
-    const activeFrame = this.getActiveFrame(grid);
-    if (activeFrame) {
-      this.compositeFrame(grid, activeFrame);
-    }
+    });
   }
 
   public floodFillPixelGrid(el: BoardPixelGridElement, startX: number, startY: number, fillColor: string): void {
     const layer = this.getActiveLayer(el);
-    if (!layer) return;
-
-    const w = el.gridWidth;
-    const h = el.gridHeight;
-    if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
-
-    const imgData = layer.ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-    const targetIdx = (startY * w + startX) * 4;
-    const targetR = data[targetIdx];
-    const targetG = data[targetIdx + 1];
-    const targetB = data[targetIdx + 2];
-    const targetA = data[targetIdx + 3];
-
-    const fillRgb = hexToRgba(fillColor);
-    if (targetR === fillRgb.r && targetG === fillRgb.g && targetB === fillRgb.b && targetA === fillRgb.a) {
-      return;
-    }
-
-    const matchTarget = (idx: number) =>
-      data[idx] === targetR &&
-      data[idx + 1] === targetG &&
-      data[idx + 2] === targetB &&
-      data[idx + 3] === targetA;
-
-    const stack: [number, number][] = [[startX, startY]];
-    const visited = new Uint8Array(w * h);
-
-    while (stack.length > 0) {
-      const [x, y] = stack.pop()!;
-      const pos = y * w + x;
-      if (visited[pos]) continue;
-      visited[pos] = 1;
-
-      const idx = pos * 4;
-      if (!matchTarget(idx)) continue;
-
-      data[idx] = fillRgb.r;
-      data[idx + 1] = fillRgb.g;
-      data[idx + 2] = fillRgb.b;
-      data[idx + 3] = fillRgb.a;
-
-      if (x > 0) stack.push([x - 1, y]);
-      if (x < w - 1) stack.push([x + 1, y]);
-      if (y > 0) stack.push([x, y - 1]);
-      if (y < h - 1) stack.push([x, y + 1]);
-    }
-
-    layer.ctx.putImageData(imgData, 0, 0);
-    const activeFrame = this.getActiveFrame(el);
-    if (activeFrame) {
-      this.compositeFrame(el, activeFrame);
-    }
-    this.serializeElementState(el);
+    this.paintManager.floodFillPixelGrid(el, layer, startX, startY, fillColor, () => {
+      const activeFrame = this.getActiveFrame(el);
+      if (activeFrame) {
+        this.compositeFrame(el, activeFrame);
+      }
+      this.serializeElementState(el);
+    });
   }
 
   public async exportGif(el: BoardPixelGridElement, scale = 8): Promise<void> {
     const state = this.getState(el);
-    if (state.frames.length === 0) return;
-
-    const delayMs = Math.max(20, Math.round(1000 / state.fps));
-    const gifFrames: GifFrameInput[] = [];
-
-    for (const frame of state.frames) {
-      const frameCanvas = document.createElement('canvas');
-      frameCanvas.width = el.gridWidth * scale;
-      frameCanvas.height = el.gridHeight * scale;
-      const fCtx = frameCanvas.getContext('2d')!;
-      fCtx.imageSmoothingEnabled = false;
-
-      if (el.backgroundColor !== 'transparent') {
-        fCtx.fillStyle = el.backgroundColor;
-        fCtx.fillRect(0, 0, frameCanvas.width, frameCanvas.height);
-      }
-
-      for (const layer of frame.layers) {
-        if (layer.visible) {
-          fCtx.globalAlpha = layer.opacity;
-          fCtx.drawImage(layer.canvas, 0, 0, frameCanvas.width, frameCanvas.height);
-        }
-      }
-
-      gifFrames.push({ canvas: frameCanvas, delayMs });
-    }
-
-    try {
-      const gifBlob = await encodeFramesToGif(gifFrames);
-      const url = URL.createObjectURL(gifBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `pixel_animation_${el.gridWidth}x${el.gridHeight}_${state.frames.length}f.gif`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('GIF animado exportado con éxito', 'success');
-    } catch {
-      showToast('Error al generar el archivo GIF', 'error');
-    }
+    await this.exportManager.exportGif(el, state, scale);
   }
 
   public exportSpriteSheet(el: BoardPixelGridElement, scale = 1): void {
     const state = this.getState(el);
-    if (state.frames.length === 0) return;
-
-    const frameW = el.gridWidth * scale;
-    const frameH = el.gridHeight * scale;
-    const sheetCanvas = document.createElement('canvas');
-    sheetCanvas.width = frameW * state.frames.length;
-    sheetCanvas.height = frameH;
-    const sheetCtx = sheetCanvas.getContext('2d')!;
-    sheetCtx.imageSmoothingEnabled = false;
-
-    for (let i = 0; i < state.frames.length; i++) {
-      const frame = state.frames[i];
-      const offsetX = i * frameW;
-
-      if (el.backgroundColor !== 'transparent') {
-        sheetCtx.fillStyle = el.backgroundColor;
-        sheetCtx.fillRect(offsetX, 0, frameW, frameH);
-      }
-
-      for (const layer of frame.layers) {
-        if (layer.visible) {
-          sheetCtx.globalAlpha = layer.opacity;
-          sheetCtx.drawImage(layer.canvas, offsetX, 0, frameW, frameH);
-        }
-      }
-    }
-
-    const a = document.createElement('a');
-    a.href = sheetCanvas.toDataURL('image/png');
-    a.download = `spritesheet_${el.gridWidth}x${el.gridHeight}_${state.frames.length}f.png`;
-    a.click();
-    showToast('Sprite Sheet descargado con éxito', 'success');
+    this.exportManager.exportSpriteSheet(el, state, scale);
   }
 
   public exportCurrentFramePng(el: BoardPixelGridElement, scale = 1): void {
-    const state = this.getState(el);
     const activeFrame = this.getActiveFrame(el);
-    if (!activeFrame) return;
-
-    const outCanvas = document.createElement('canvas');
-    outCanvas.width = el.gridWidth * scale;
-    outCanvas.height = el.gridHeight * scale;
-    const outCtx = outCanvas.getContext('2d')!;
-    outCtx.imageSmoothingEnabled = false;
-
-    if (el.backgroundColor !== 'transparent') {
-      outCtx.fillStyle = el.backgroundColor;
-      outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
-    }
-
-    for (const layer of activeFrame.layers) {
-      if (layer.visible) {
-        outCtx.globalAlpha = layer.opacity;
-        outCtx.drawImage(layer.canvas, 0, 0, outCanvas.width, outCanvas.height);
-      }
-    }
-
-    const a = document.createElement('a');
-    a.href = outCanvas.toDataURL('image/png');
-    a.download = `pixel_art_${el.gridWidth}x${el.gridHeight}_${activeFrame.name.replace(/\s+/g, '_')}.png`;
-    a.click();
-    showToast('Sprite PNG descargado');
+    this.exportManager.exportCurrentFramePng(el, activeFrame, scale);
   }
 
   public exportPixelGridSprite(el: BoardPixelGridElement): void {
-    this.exportCurrentFramePng(el, 1);
+    const activeFrame = this.getActiveFrame(el);
+    this.exportManager.exportPixelGridSprite(el, activeFrame);
   }
 
   public destroy(): void {

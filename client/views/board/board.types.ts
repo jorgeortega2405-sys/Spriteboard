@@ -1,1 +1,1 @@
-﻿export * from '../../engine-2d/types.js';
+export * from '../../core/canvas-engine.js';
