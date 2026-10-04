@@ -1,7 +1,18 @@
-import { generateVideoSubtitlesApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { setupDropdown } from '../../utils/dom.util.js';
 import { WebAudioPlaybackEngine } from './engine/audio-engine.js';
+import { TimelineContextMenuManager } from './timeline/timeline-context-menu.manager.js';
+import { TimelineInteractionsManager } from './timeline/timeline-interactions.manager.js';
+import { TimelineModalsManager } from './timeline/timeline-modals.manager.js';
+import {
+  addNewTrackToProject,
+  deleteClipsFromProject,
+  detachAudioFromClipInProject,
+  duplicateClipInProject,
+  recomputeProjectDurationUtil,
+  rippleDeleteClipsFromProject,
+  splitClipAtPlayhead,
+} from './timeline/timeline-operations.util.js';
+import { TimelineWaveformUtil } from './timeline/timeline-waveform.util.js';
 import { VideoPreviewManager } from './video-preview.manager.js';
 import { VideoClip, VideoProject, VideoTrack } from './video.types.js';
 
@@ -27,29 +38,20 @@ export class VideoTimelineManager {
   private _onSeek: (time: number, isScrubbing?: boolean) => void;
 
   private _pixelsPerSecond = 50;
-  private _zoomMode: 'timeline' | 'canvas' = 'timeline';
+  private _zoomMode: 'canvas' | 'timeline' = 'timeline';
   private _selectedClipId: string | null = null;
   private _selectedClipIds: Set<string> = new Set();
   private _selectedTrackId: string | null = null;
-  private _selectedTransitionType: string = 'none';
-  private _selectedSubtitleSourceClipId: string = '';
-  private _selectedSubtitleLang: string = 'auto';
-  private _selectedSubtitleStyle: string = 'karaoke_yellow';
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
-  private _playheadElement: HTMLElement | null = null;
-  private _hoverLineElement: HTMLElement | null = null;
-  private _hoverTooltipElement: HTMLElement | null = null;
-  private _marqueeElement: HTMLElement | null = null;
-  private _isDraggingMarquee = false;
-  private _isScrubbingPlayhead = false;
   private _clipBufferProgress: Map<string, number> = new Map();
   private _audioEngine: WebAudioPlaybackEngine = new WebAudioPlaybackEngine();
   private _waveformCache: Map<string, number[]> = new Map();
-  private _fetchingWaveforms: Set<string> = new Set();
-  private _contextMenuEl: HTMLElement | null = null;
 
-  private logDebug(_category: string, _message: string, _data?: unknown): void {}
+  private _waveformUtil: TimelineWaveformUtil;
+  private _modalsManager: TimelineModalsManager;
+  private _interactionsManager: TimelineInteractionsManager;
+  private _contextMenuManager: TimelineContextMenuManager;
 
   constructor(options: VideoTimelineManagerOptions) {
     this._container = options.container;
@@ -60,240 +62,226 @@ export class VideoTimelineManager {
     this._onScrubEnd = options.onScrubEnd;
     this._onScrubStart = options.onScrubStart;
     this._onSeek = options.onSeek;
+
+    this._waveformUtil = new TimelineWaveformUtil(this._audioEngine, this._waveformCache);
+
+    this._modalsManager = new TimelineModalsManager({
+      container: this._container,
+      getProject: this._getProject,
+      getSelectedClip: () => this.getSelectedClip(),
+      onClipSelected: this._onClipSelected,
+      onProjectChanged: this._onProjectChanged,
+      recomputeProjectDuration: () => this.recomputeProjectDuration(),
+      render: () => this.render(),
+      selectClip: (clipId) => this.selectClip(clipId),
+    });
+
+    this._interactionsManager = new TimelineInteractionsManager({
+      container: this._container,
+      deleteSelectedClip: () => this.deleteSelectedClip(),
+      duplicateSelectedClip: () => this.duplicateSelectedClip(),
+      getPixelsPerSecond: () => this._pixelsPerSecond,
+      getProject: this._getProject,
+      getSelectedClipId: () => this._selectedClipId,
+      getSelectedClipIds: () => this._selectedClipIds,
+      isSnappingEnabled: () => this._isSnappingEnabled,
+      onClipSelected: this._onClipSelected,
+      onProjectChanged: this._onProjectChanged,
+      onScrubEnd: this._onScrubEnd,
+      onScrubStart: this._onScrubStart,
+      onSeek: this._onSeek,
+      recomputeProjectDuration: () => this.recomputeProjectDuration(),
+      render: () => this.render(),
+      selectClip: (clipId, renderUi, isMulti) => this.selectClip(clipId, renderUi, isMulti),
+      selectClips: (clipIds) => this.selectClips(clipIds),
+      setPlayheadPosition: (time) => this.setPlayheadPosition(time),
+      showContextMenu: (e, clipId) => this.showContextMenu(e, clipId),
+      splitSelectedClip: () => this.splitSelectedClip(),
+    });
+
+    this._contextMenuManager = new TimelineContextMenuManager({
+      container: this._container,
+      deleteSelectedClip: () => this.deleteSelectedClip(),
+      detachAudioFromClip: () => this.detachAudioFromClip(),
+      duplicateSelectedClip: () => this.duplicateSelectedClip(),
+      getSelectedClip: () => this.getSelectedClip(),
+      rippleDeleteSelectedClip: () => this.rippleDeleteSelectedClip(),
+      selectClip: (clipId) => this.selectClip(clipId),
+      splitSelectedClip: () => this.splitSelectedClip(),
+    });
   }
 
   public init(): void {
     this._abortController = new AbortController();
-    const signal = this._abortController.signal;
-    this._playheadElement = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
+    const { signal } = this._abortController;
 
-    const btnSplit = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-split"]');
-    const btnDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-delete"]');
-    const btnRippleDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-ripple-delete"]');
-    const btnDetachAudio = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-detach-audio"]');
-    const btnDuplicate = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-duplicate"]');
-    const btnAddTrack = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-add-track"]');
-    const btnSnap = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-snap"]');
-    const btnFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-filters"]');
-    const btnTransitions = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-transitions"]');
-    const btnAudioFade = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-audio-fade"]');
-    const btnSubtitles = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-subtitles"]');
-    const btnZoomMode = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-mode"]');
-    const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
-    const btnZoomIn = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-in"]');
-    const btnZoomOut = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-out"]');
-    const btnFit = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-fit"]');
+    const btnZoomIn = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-zoom-in"]');
+    const btnZoomOut = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-zoom-out"]');
+    const zoomSlider = this._container.querySelector<HTMLInputElement>('[data-ref="timeline-zoom-slider"]');
+    const btnSnap = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-snap"]');
+    const btnFit = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-fit"]');
+    const btnSplit = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-split"]');
+    const btnDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-delete"]');
+    const btnAddTrack = this._container.querySelector<HTMLElement>('[data-ref="btn-timeline-add-track"]');
 
+    btnZoomIn?.addEventListener('click', () => this.zoomIn(), { signal });
+    btnZoomOut?.addEventListener('click', () => this.zoomOut(), { signal });
+
+    zoomSlider?.addEventListener(
+      'input',
+      () => {
+        const val = parseInt(zoomSlider.value, 10);
+        if (this._zoomMode === 'timeline') {
+          this._pixelsPerSecond = Math.max(10, Math.min(200, val));
+          this.render();
+          this.setPlayheadPosition(this._getProject().currentTime || 0);
+        } else {
+          const previewMgr = this._getPreviewManager?.();
+          if (previewMgr) {
+            const zoomRatio = val / 100;
+            previewMgr.setContentZoom(zoomRatio);
+          }
+        }
+      },
+      { signal }
+    );
+
+    const zoomTabTimeline = this._container.querySelector<HTMLElement>('[data-ref="btn-zoom-mode-timeline"]');
+    const zoomTabCanvas = this._container.querySelector<HTMLElement>('[data-ref="btn-zoom-mode-canvas"]');
+
+    zoomTabTimeline?.addEventListener(
+      'click',
+      () => {
+        this._zoomMode = 'timeline';
+        zoomTabTimeline.classList.add('is-active');
+        zoomTabCanvas?.classList.remove('is-active');
+        this.syncZoomUI();
+      },
+      { signal }
+    );
+
+    zoomTabCanvas?.addEventListener(
+      'click',
+      () => {
+        this._zoomMode = 'canvas';
+        zoomTabCanvas.classList.add('is-active');
+        zoomTabTimeline?.classList.remove('is-active');
+        this.syncZoomUI();
+      },
+      { signal }
+    );
+
+    btnSnap?.addEventListener(
+      'click',
+      () => {
+        this._isSnappingEnabled = !this._isSnappingEnabled;
+        btnSnap.classList.toggle('is-active', this._isSnappingEnabled);
+        showToast(
+          this._isSnappingEnabled ? 'Magnetismo (Snap) activado' : 'Magnetismo (Snap) desactivado',
+          'info'
+        );
+      },
+      { signal }
+    );
+
+    btnFit?.addEventListener('click', () => this.fitToWindow(), { signal });
     btnSplit?.addEventListener('click', () => this.splitSelectedClip(), { signal });
     btnDelete?.addEventListener('click', () => this.deleteSelectedClip(), { signal });
-    btnRippleDelete?.addEventListener('click', () => this.rippleDeleteSelectedClip(), { signal });
-    btnDetachAudio?.addEventListener('click', () => this.detachAudioFromClip(), { signal });
-    btnDuplicate?.addEventListener('click', () => this.duplicateSelectedClip(), { signal });
     btnAddTrack?.addEventListener('click', () => this.addNewTrack(), { signal });
 
-    btnSnap?.addEventListener('click', () => {
-      this._isSnappingEnabled = !this._isSnappingEnabled;
-      btnSnap.classList.toggle('is-active', this._isSnappingEnabled);
-    }, { signal });
+    this._contextMenuManager.bindContextMenu(signal);
+    this._modalsManager.bindModals(signal);
 
-    btnFilters?.addEventListener('click', () => this.openFiltersModal(), { signal });
-    btnTransitions?.addEventListener('click', () => this.openTransitionsModal(), { signal });
-    btnAudioFade?.addEventListener('click', () => this.openAudioFadeModal(), { signal });
-    btnSubtitles?.addEventListener('click', () => this.openSubtitlesModal(), { signal });
-
-    btnZoomMode?.addEventListener('click', () => {
-      this._zoomMode = this._zoomMode === 'timeline' ? 'canvas' : 'timeline';
-      this.syncZoomUI();
-      showToast(this._zoomMode === 'canvas' ? 'Control de Zoom: Lienzo de Video' : 'Control de Zoom: Línea de Tiempo', 'info');
-    }, { signal });
-
-    inputZoom?.addEventListener('input', () => {
-      if (this._zoomMode === 'timeline') {
-        this._pixelsPerSecond = parseInt(inputZoom.value, 10) || 50;
-        this.render();
-      } else {
-        const preview = this._getPreviewManager?.();
-        if (preview) {
-          const val = parseInt(inputZoom.value, 10) || 100;
-          preview.setContentZoom(val / 100);
-        }
-      }
-    }, { signal });
-
-    btnZoomIn?.addEventListener('click', () => {
-      if (this._zoomMode === 'timeline') {
-        this.zoomIn();
-      } else {
-        const preview = this._getPreviewManager?.();
-        if (preview) {
-          preview.zoomBy(0.15);
-          if (inputZoom) inputZoom.value = String(Math.round(preview.contentZoom * 100));
-        }
-      }
-    }, { signal });
-
-    btnZoomOut?.addEventListener('click', () => {
-      if (this._zoomMode === 'timeline') {
-        this.zoomOut();
-      } else {
-        const preview = this._getPreviewManager?.();
-        if (preview) {
-          preview.zoomBy(-0.15);
-          if (inputZoom) inputZoom.value = String(Math.round(preview.contentZoom * 100));
-        }
-      }
-    }, { signal });
-
-    btnFit?.addEventListener('click', () => {
-      if (this._zoomMode === 'timeline') {
-        this.fitToWindow();
-      } else {
-        const preview = this._getPreviewManager?.();
-        if (preview) {
-          preview.resetContentZoom();
-          if (inputZoom) inputZoom.value = '100';
-        }
-      }
-    }, { signal });
-
-    this.bindModals(signal);
-    this.bindPlayheadEvents(signal);
+    this.render();
     this.bindTimelineScroll(signal);
-    this.bindHoverPreview(signal);
-    this.bindMarqueeSelection(signal);
-    this.bindKeyboardShortcuts(signal);
-    this.bindContextMenu(signal);
-    window.addEventListener('themechange', () => this.render(), { signal });
-    this.syncZoomUI();
-    this.render();
-  }
+    this._interactionsManager.bindPlayheadEvents(signal);
+    this._interactionsManager.bindHoverPreview(signal);
+    this._interactionsManager.bindMarqueeSelection(signal);
+    this._interactionsManager.bindKeyboardShortcuts(signal);
 
-  public get selectedClipId(): string | null {
-    return this._selectedClipId;
-  }
-
-  public get selectedClipIds(): Set<string> {
-    return this._selectedClipIds;
-  }
-
-  public get pixelsPerSecond(): number {
-    return this._pixelsPerSecond;
-  }
-
-  public set pixelsPerSecond(v: number) {
-    this._pixelsPerSecond = Math.max(10, Math.min(200, v));
-    this.render();
-    this.syncZoomUI();
+    const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
+    lanesContainer?.addEventListener(
+      'click',
+      (e) => {
+        if (!(e.target as HTMLElement).closest('.video-clip-item')) {
+          this._selectedClipIds.clear();
+          this._selectedClipId = null;
+          this.render();
+          this._onClipSelected?.(null);
+        }
+      },
+      { signal }
+    );
   }
 
   public zoomIn(): void {
     this._pixelsPerSecond = Math.min(200, this._pixelsPerSecond + 15);
-    this.render();
     this.syncZoomUI();
+    this.render();
+    this.setPlayheadPosition(this._getProject().currentTime || 0);
   }
 
   public zoomOut(): void {
     this._pixelsPerSecond = Math.max(10, this._pixelsPerSecond - 15);
-    this.render();
     this.syncZoomUI();
+    this.render();
+    this.setPlayheadPosition(this._getProject().currentTime || 0);
   }
 
   public syncZoomUI(): void {
-    const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
-    const btnZoomMode = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-mode"]');
-    const iconTimeline = btnZoomMode?.querySelector<HTMLElement>('.icon-zoom-timeline');
-    const iconCanvas = btnZoomMode?.querySelector<HTMLElement>('.icon-zoom-canvas');
-    const preview = this._getPreviewManager?.();
+    const zoomSlider = this._container.querySelector<HTMLInputElement>('[data-ref="timeline-zoom-slider"]');
+    const zoomVal = this._container.querySelector<HTMLElement>('[data-ref="timeline-zoom-value"]');
+    if (!zoomSlider || !zoomVal) return;
 
     if (this._zoomMode === 'timeline') {
-      if (inputZoom) {
-        inputZoom.min = '10';
-        inputZoom.max = '200';
-        inputZoom.step = '5';
-        inputZoom.value = String(this._pixelsPerSecond);
-        inputZoom.setAttribute('aria-label', 'Zoom de línea de tiempo');
-      }
-      if (btnZoomMode) {
-        btnZoomMode.setAttribute('data-tooltip', 'Modo: Zoom de Línea de Tiempo (clic para alternar a Zoom de Lienzo)');
-      }
-      iconTimeline?.classList.remove('is-hidden');
-      iconCanvas?.classList.add('is-hidden');
+      zoomSlider.min = '10';
+      zoomSlider.max = '200';
+      zoomSlider.value = String(this._pixelsPerSecond);
+      const pct = Math.round((this._pixelsPerSecond / 50) * 100);
+      zoomVal.textContent = `${pct}%`;
     } else {
-      const zoomPct = preview ? Math.round(preview.contentZoom * 100) : 100;
-      if (inputZoom) {
-        inputZoom.min = '20';
-        inputZoom.max = '300';
-        inputZoom.step = '5';
-        inputZoom.value = String(zoomPct);
-        inputZoom.setAttribute('aria-label', 'Zoom de Lienzo de Video');
-      }
-      if (btnZoomMode) {
-        btnZoomMode.setAttribute('data-tooltip', 'Modo: Zoom de Lienzo de Video (clic para alternar a Línea de Tiempo)');
-      }
-      iconTimeline?.classList.add('is-hidden');
-      iconCanvas?.classList.remove('is-hidden');
+      zoomSlider.min = '10';
+      zoomSlider.max = '300';
+      const previewMgr = this._getPreviewManager?.();
+      const currentContentZoom = previewMgr ? (previewMgr as any)._contentZoom || 1 : 1;
+      const pct = Math.round(currentContentZoom * 100);
+      zoomSlider.value = String(pct);
+      zoomVal.textContent = `${pct}%`;
     }
   }
 
   public updateTimelineHeights(): void {
-    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
+    const project = this._getProject();
+    const tracks = project.tracks;
+    const headerList = this._container.querySelector<HTMLElement>('[data-ref="timeline-header-list"]');
     const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
-    const hoverLine = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-line"]');
-    const playheadLine = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
-    if (!tracksArea || !lanesList) return;
 
-    const totalH = Math.max(tracksArea.clientHeight, lanesList.scrollHeight + 32, lanesList.offsetHeight + 32);
-    if (hoverLine) {
-      hoverLine.style.height = `${totalH}px`;
-    }
-    if (playheadLine) {
-      playheadLine.style.height = `${totalH}px`;
+    if (headerList && lanesList) {
+      tracks.forEach((track) => {
+        const headerEl = headerList.querySelector<HTMLElement>(`[data-ref="track-header-${track.id}"]`);
+        const laneEl = lanesList.querySelector<HTMLElement>(`[data-ref="track-lane-${track.id}"]`);
+        const targetH = track.hidden ? 28 : ((track as any).height || (track.type === 'audio' ? 48 : 64));
+        if (headerEl) headerEl.style.height = `${targetH}px`;
+        if (laneEl) laneEl.style.height = `${targetH}px`;
+      });
     }
   }
 
-  private snapTime(time: number, ignoreClipId?: string, clipDuration = 0): number {
-    if (!this._isSnappingEnabled) return time;
-    const threshold = 10 / this._pixelsPerSecond;
-    const project = this._getProject();
-
-    const targets: number[] = [0, project.currentTime || 0];
-
-    for (const track of project.tracks) {
-      for (const c of track.clips) {
-        if (c.id === ignoreClipId) continue;
-        targets.push(c.startTime);
-        targets.push(c.startTime + c.duration);
-      }
-    }
-
-    for (const t of targets) {
-      if (Math.abs(time - t) <= threshold) {
-        return t;
-      }
-      if (clipDuration > 0 && Math.abs((time + clipDuration) - t) <= threshold) {
-        return Math.max(0, t - clipDuration);
-      }
-    }
-
-    return time;
+  public snapTime(time: number, ignoreClipId?: string, clipDuration = 0): number {
+    return this._interactionsManager.snapTime(time, ignoreClipId, clipDuration);
   }
 
   public setPlayheadPosition(time: number): void {
-    if (!this._playheadElement) {
-      this._playheadElement = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
-    }
-    if (this._playheadElement) {
-      const leftPx = time * this._pixelsPerSecond;
-      this._playheadElement.style.transform = `translateX(${leftPx}px)`;
-    }
+    const playhead = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-playhead"]');
+    if (!playhead) return;
+    const x = time * this._pixelsPerSecond;
+    playhead.style.transform = `translateX(${x}px)`;
   }
 
   public render(): void {
     this.renderRuler();
     this.renderTrackHeaders();
     this.renderTrackLanes();
-    const project = this._getProject();
-    this.setPlayheadPosition(project.currentTime || 0);
     this.updateTimelineHeights();
   }
 
@@ -309,7 +297,9 @@ export class VideoTimelineManager {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark-theme');
+    const isDark =
+      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      document.documentElement.classList.contains('dark-theme');
     const bgColor = isDark ? '#121215' : '#ffffff';
     const mainTickColor = isDark ? '#52525b' : '#a1a1aa';
     const subTickColor = isDark ? '#3f3f46' : '#e4e4e7';
@@ -321,7 +311,7 @@ export class VideoTimelineManager {
     ctx.font = '10px Roboto Condensed, monospace';
     ctx.textBaseline = 'top';
 
-    const stepSeconds = this._pixelsPerSecond >= 80 ? 1 : (this._pixelsPerSecond >= 30 ? 2 : 5);
+    const stepSeconds = this._pixelsPerSecond >= 80 ? 1 : this._pixelsPerSecond >= 30 ? 2 : 5;
 
     for (let s = 0; s <= project.duration + 5; s += stepSeconds) {
       const x = s * this._pixelsPerSecond;
@@ -351,11 +341,13 @@ export class VideoTimelineManager {
     if (!list) return;
 
     const project = this._getProject();
-    list.innerHTML = project.tracks.map((track) => `
+    list.innerHTML = project.tracks
+      .map(
+        (track) => `
       <div class="video-track-header-item" data-ref="track-header-${track.id}" data-track-id="${track.id}">
         <div class="video-track-header-title">
           <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true">
-            <use href="/icons.svg#${track.type === 'audio' ? 'music_note' : (track.type === 'overlay' ? 'layers' : 'movie')}"></use>
+            <use href="/icons.svg#${track.type === 'audio' ? 'music_note' : track.type === 'overlay' ? 'layers' : 'movie'}"></use>
           </svg>
           <span>${track.name}</span>
         </div>
@@ -368,7 +360,9 @@ export class VideoTimelineManager {
           </button>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     const headerItems = list.querySelectorAll<HTMLElement>('.video-track-header-item');
     headerItems.forEach((hEl) => {
@@ -403,26 +397,42 @@ export class VideoTimelineManager {
     const totalWidth = Math.max(1200, (project.duration + 5) * this._pixelsPerSecond);
     list.style.width = `${totalWidth}px`;
 
-    list.innerHTML = project.tracks.map((track) => `
+    list.innerHTML = project.tracks
+      .map(
+        (track) => `
       <div class="video-track-lane" data-ref="track-lane-${track.id}" data-track-id="${track.id}">
-        ${track.clips.map((clip) => {
-          const leftPx = clip.startTime * this._pixelsPerSecond;
-          const widthPx = Math.max(20, clip.duration * this._pixelsPerSecond);
-          const isSelected = this._selectedClipIds.has(clip.id) || clip.id === this._selectedClipId;
-          const clipTypeClass = clip.mediaType === 'audio' ? 'clip--audio' : (clip.mediaType === 'text' ? 'clip--text' : (clip.mediaType === 'image' ? 'clip--overlay' : ''));
+        ${track.clips
+          .map((clip) => {
+            const leftPx = clip.startTime * this._pixelsPerSecond;
+            const widthPx = Math.max(20, clip.duration * this._pixelsPerSecond);
+            const isSelected = this._selectedClipIds.has(clip.id) || clip.id === this._selectedClipId;
+            const clipTypeClass =
+              clip.mediaType === 'audio'
+                ? 'clip--audio'
+                : clip.mediaType === 'text'
+                  ? 'clip--text'
+                  : clip.mediaType === 'image'
+                    ? 'clip--overlay'
+                    : '';
 
-          const badges: string[] = [];
-          if (clip.filters?.preset && clip.filters.preset !== 'none') badges.push(clip.filters.preset);
-          if (clip.transition?.type && clip.transition.type !== 'none') badges.push(clip.transition.type.replace('_', ' '));
-          if ((clip.audioFadeIn && clip.audioFadeIn > 0) || (clip.audioFadeOut && clip.audioFadeOut > 0)) badges.push('Fade');
+            const badges: string[] = [];
+            if (clip.filters?.preset && clip.filters.preset !== 'none') badges.push(clip.filters.preset);
+            if (clip.transition?.type && clip.transition.type !== 'none')
+              badges.push(clip.transition.type.replace('_', ' '));
+            if ((clip.audioFadeIn && clip.audioFadeIn > 0) || (clip.audioFadeOut && clip.audioFadeOut > 0))
+              badges.push('Fade');
 
-          const waveformHtml = clip.mediaType === 'audio' ? this.renderWaveformSvg(clip, widthPx) : '';
-          const bufferedPct = this._clipBufferProgress.get(clip.id) || 0;
-          const bufferBarHtml = (clip.mediaType === 'video' || clip.mediaType === 'audio')
-            ? `<div class="video-clip-buffer-bar" data-ref="clip-buffer-${clip.id}" style="width: ${bufferedPct}%;"></div>`
-            : '';
+            const waveformHtml =
+              clip.mediaType === 'audio'
+                ? this._waveformUtil.renderWaveformSvg(clip, widthPx, this._pixelsPerSecond, this._container)
+                : '';
+            const bufferedPct = this._clipBufferProgress.get(clip.id) || 0;
+            const bufferBarHtml =
+              clip.mediaType === 'video' || clip.mediaType === 'audio'
+                ? `<div class="video-clip-buffer-bar" data-ref="clip-buffer-${clip.id}" style="width: ${bufferedPct}%;"></div>`
+                : '';
 
-          return `
+            return `
             <div class="video-clip-item ${clipTypeClass}${isSelected ? ' is-selected' : ''}" data-ref="clip-item-${clip.id}" data-clip-id="${clip.id}" style="left: ${leftPx}px; width: ${widthPx}px;">
               <div class="clip-trim-handle left" data-ref="trim-left-${clip.id}" data-handle="left"></div>
               ${waveformHtml}
@@ -435,88 +445,15 @@ export class VideoTimelineManager {
               <div class="clip-trim-handle right" data-ref="trim-right-${clip.id}" data-handle="right"></div>
             </div>
           `;
-        }).join('')}
+          })
+          .join('')}
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     this.bindTrackLaneEvents(list);
     this.bindClipEvents(list);
-  }
-
-  private renderWaveformSvg(clip: VideoClip, widthPx: number): string {
-    const barsCount = Math.max(10, Math.min(180, Math.floor(widthPx / 4)));
-    const peaks = (clip.assetUrl ? this._waveformCache.get(clip.assetUrl) : null) || clip.waveformPeaks;
-
-    if (!peaks && clip.assetUrl) {
-      void this.loadClipWaveform(clip);
-    }
-
-    let bars = '';
-    if (peaks && peaks.length > 0) {
-      const sourceDur = Math.max(0.1, clip.sourceDuration || clip.duration || 10);
-      const startRatio = Math.max(0, Math.min(1, (clip.trimStart || 0) / sourceDur));
-      const endRatio = Math.max(startRatio + 0.001, Math.min(1, ((clip.trimStart || 0) + clip.duration) / sourceDur));
-      const startIdx = Math.floor(startRatio * peaks.length);
-      const endIdx = Math.min(peaks.length, Math.ceil(endRatio * peaks.length));
-      const slice = peaks.slice(startIdx, Math.max(startIdx + 1, endIdx));
-
-      const step = slice.length / barsCount;
-      const sampledPeaks: number[] = [];
-      for (let i = 0; i < barsCount; i++) {
-        const idx = Math.min(slice.length - 1, Math.floor(i * step));
-        sampledPeaks.push(slice[idx] || 0.1);
-      }
-
-      bars = sampledPeaks.map((h, idx) => {
-        const x = idx * 4 + 2;
-        const barH = Math.max(3, Math.round(h * 38));
-        const y = Math.round((48 - barH) / 2);
-        return `<rect x="${x}" y="${y}" width="2" height="${barH}" rx="1" fill="currentColor" opacity="0.65" />`;
-      }).join('');
-    } else {
-      const placeholderPeaks = Array.from({ length: barsCount }, (_, idx) => 0.15 + (idx % 2 === 0 ? 0.08 : 0));
-      bars = placeholderPeaks.map((h, idx) => {
-        const x = idx * 4 + 2;
-        const barH = Math.round(h * 32);
-        const y = Math.round((48 - barH) / 2);
-        return `<rect x="${x}" y="${y}" width="2" height="${barH}" rx="1" fill="currentColor" opacity="0.35" />`;
-      }).join('');
-    }
-
-    return `
-      <svg class="video-clip-waveform-svg" data-ref="waveform-svg-${clip.id}" viewBox="0 0 ${barsCount * 4 + 4} 48" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; color: #818cf8;">
-        ${bars}
-      </svg>
-    `;
-  }
-
-  private async loadClipWaveform(clip: VideoClip): Promise<void> {
-    if (!clip.assetUrl || this._fetchingWaveforms.has(clip.assetUrl)) return;
-    this._fetchingWaveforms.add(clip.assetUrl);
-
-    try {
-      const peaks = await this._audioEngine.getAudioWaveformPeaks(clip.assetUrl);
-      if (peaks && peaks.length > 0) {
-        this._waveformCache.set(clip.assetUrl, peaks);
-        clip.waveformPeaks = peaks;
-
-        const clipEl = this._container.querySelector<HTMLElement>(`[data-clip-id="${clip.id}"]`);
-        if (clipEl) {
-          const widthPx = clipEl.clientWidth || Math.max(20, clip.duration * this._pixelsPerSecond);
-          const oldSvg = clipEl.querySelector<SVGElement>('.video-clip-waveform-svg');
-          if (oldSvg) {
-            const tempContainer = document.createElement('div');
-            tempContainer.innerHTML = this.renderWaveformSvg(clip, widthPx);
-            const newSvg = tempContainer.firstElementChild;
-            if (newSvg) {
-              oldSvg.replaceWith(newSvg);
-            }
-          }
-        }
-      }
-    } catch {} finally {
-      this._fetchingWaveforms.delete(clip.assetUrl);
-    }
   }
 
   private bindTrackLaneEvents(lanesList: HTMLElement): void {
@@ -558,8 +495,8 @@ export class VideoTimelineManager {
             clipData = {
               assetUrl: plainUrl,
               duration: 5,
-              mediaType: isAud ? 'audio' : (isImg ? 'image' : 'video'),
-              name: isAud ? 'Audio' : (isImg ? 'Foto' : 'Video'),
+              mediaType: isAud ? 'audio' : isImg ? 'image' : 'video',
+              name: isAud ? 'Audio' : isImg ? 'Foto' : 'Video',
               sourceDuration: 5,
               trimEnd: 5,
               trimStart: 0,
@@ -611,8 +548,8 @@ export class VideoTimelineManager {
           clipData = {
             assetUrl: plainUrl,
             duration: 5,
-            mediaType: isAud ? 'audio' : (isImg ? 'image' : 'video'),
-            name: isAud ? 'Audio' : (isImg ? 'Foto' : 'Video'),
+            mediaType: isAud ? 'audio' : isImg ? 'image' : 'video',
+            name: isAud ? 'Audio' : isImg ? 'Foto' : 'Video',
             sourceDuration: 5,
             trimEnd: 5,
             trimStart: 0,
@@ -659,630 +596,101 @@ export class VideoTimelineManager {
         this.showContextMenu(e, clipId);
       });
 
-      this.bindClipDragging(clipEl, clipId);
-      this.bindClipTrimming(clipEl, clipId);
-    });
-  }
-
-  private bindClipDragging(clipEl: HTMLElement, clipId: string): void {
-    clipEl.addEventListener('mousedown', (e) => {
-      if ((e.target as HTMLElement).classList.contains('clip-trim-handle')) return;
-      e.stopPropagation();
-
-      const isMultiKey = e.shiftKey || e.ctrlKey || e.metaKey;
-      if (!this._selectedClipIds.has(clipId) && !isMultiKey) {
-        this.selectClip(clipId);
-      } else if (isMultiKey) {
-        this.selectClip(clipId, true, true);
-      }
-
-      const project = this._getProject();
-      let sourceTrack: VideoTrack | null = null;
-      let targetClip: VideoClip | null = null;
-
-      for (const track of project.tracks) {
-        const found = track.clips.find((c) => c.id === clipId);
-        if (found) {
-          sourceTrack = track;
-          targetClip = found;
-          break;
-        }
-      }
-
-      if (!targetClip || !sourceTrack) return;
-
-      const initialMouseX = e.clientX;
-      const initialStartTime = targetClip.startTime;
-      let currentTrackId = sourceTrack.id;
-
-      const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
-      const lanes = lanesList ? Array.from(lanesList.querySelectorAll<HTMLElement>('.video-track-lane')) : [];
-
-      const isMultiDrag = this._selectedClipIds.size > 1 && this._selectedClipIds.has(clipId);
-      const multiClips: { clip: VideoClip; el: HTMLElement | null; initialStart: number }[] = [];
-
-      if (isMultiDrag) {
-        for (const track of project.tracks) {
-          for (const c of track.clips) {
-            if (this._selectedClipIds.has(c.id)) {
-              const el = lanesList?.querySelector<HTMLElement>(`[data-clip-id="${c.id}"]`) || null;
-              multiClips.push({ clip: c, el, initialStart: c.startTime });
-            }
-          }
-        }
-      }
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - initialMouseX;
-        const deltaSeconds = deltaX / this._pixelsPerSecond;
-
-        if (isMultiDrag && multiClips.length > 0) {
-          const minInitialStart = Math.min(...multiClips.map((m) => m.initialStart));
-          let clampedDelta = Math.max(-minInitialStart, deltaSeconds);
-          const snappedTargetStart = this.snapTime(initialStartTime + clampedDelta, clipId, targetClip!.duration);
-          clampedDelta = Math.max(-minInitialStart, snappedTargetStart - initialStartTime);
-
-          for (const item of multiClips) {
-            item.clip.startTime = Math.max(0, item.initialStart + clampedDelta);
-            if (item.el) {
-              item.el.style.left = `${item.clip.startTime * this._pixelsPerSecond}px`;
-            }
-          }
-        } else {
-          let newStartTime = Math.max(0, initialStartTime + deltaSeconds);
-          newStartTime = this.snapTime(newStartTime, clipId, targetClip!.duration);
-
-          targetClip!.startTime = newStartTime;
-          clipEl.style.left = `${newStartTime * this._pixelsPerSecond}px`;
-
-          for (const lane of lanes) {
-            const rect = lane.getBoundingClientRect();
-            if (moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) {
-              const laneTrackId = lane.getAttribute('data-track-id');
-              const candidateTrack = project.tracks.find((t) => t.id === laneTrackId);
-              if (candidateTrack) {
-                const isAudioClip = targetClip!.mediaType === 'audio';
-                const isAudioTrack = candidateTrack.type === 'audio';
-                if ((isAudioClip && isAudioTrack) || (!isAudioClip && !isAudioTrack)) {
-                  currentTrackId = candidateTrack.id;
-                }
-              }
-              break;
-            }
-          }
-
-          lanes.forEach((lane) => {
-            lane.classList.toggle('is-drag-target', lane.getAttribute('data-track-id') === currentTrackId && currentTrackId !== sourceTrack!.id);
-          });
-        }
-
-        this.recomputeProjectDuration();
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        lanes.forEach((lane) => lane.classList.remove('is-drag-target'));
-
-        if (!isMultiDrag && currentTrackId !== sourceTrack!.id) {
-          const destTrack = project.tracks.find((t) => t.id === currentTrackId);
-          if (destTrack) {
-            const idx = sourceTrack!.clips.findIndex((c) => c.id === clipId);
-            if (idx !== -1) {
-              sourceTrack!.clips.splice(idx, 1);
-              destTrack.clips.push(targetClip!);
-            }
-          }
-        }
-
-        this.render();
-        this._onProjectChanged();
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    });
-  }
-
-  private bindClipTrimming(clipEl: HTMLElement, clipId: string): void {
-    const leftHandle = clipEl.querySelector<HTMLElement>('.clip-trim-handle.left');
-    const rightHandle = clipEl.querySelector<HTMLElement>('.clip-trim-handle.right');
-
-    const project = this._getProject();
-    let targetClip: VideoClip | null = null;
-    for (const track of project.tracks) {
-      const found = track.clips.find((c) => c.id === clipId);
-      if (found) {
-        targetClip = found;
-        break;
-      }
-    }
-
-    if (!targetClip) return;
-
-    leftHandle?.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      const initialMouseX = e.clientX;
-      const initialStartTime = targetClip!.startTime;
-      const initialDuration = targetClip!.duration;
-      const initialTrimStart = targetClip!.trimStart;
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - initialMouseX;
-        const deltaSeconds = deltaX / this._pixelsPerSecond;
-
-        const maxLeftTrim = Math.min(initialTrimStart, initialStartTime);
-        const maxRightTrim = initialDuration - 0.2;
-
-        const clampedDelta = Math.max(-maxLeftTrim, Math.min(deltaSeconds, maxRightTrim));
-        let newStartTime = Math.max(0, initialStartTime + clampedDelta);
-        newStartTime = this.snapTime(newStartTime, clipId);
-
-        const effectiveDelta = newStartTime - initialStartTime;
-        const newDuration = Math.max(0.2, initialDuration - effectiveDelta);
-        const newTrimStart = Math.max(0, initialTrimStart + effectiveDelta);
-
-        targetClip!.startTime = newStartTime;
-        targetClip!.duration = newDuration;
-        targetClip!.trimStart = newTrimStart;
-
-        clipEl.style.left = `${newStartTime * this._pixelsPerSecond}px`;
-        clipEl.style.width = `${newDuration * this._pixelsPerSecond}px`;
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        this.render();
-        this._onProjectChanged();
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    });
-
-    rightHandle?.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      const initialMouseX = e.clientX;
-      const initialDuration = targetClip!.duration;
-      const initialTrimEnd = targetClip!.trimEnd;
-      const isStatic = targetClip!.mediaType === 'image' || targetClip!.mediaType === 'text';
-      const sourceDuration = isStatic ? 99999 : (targetClip!.sourceDuration || targetClip!.duration);
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - initialMouseX;
-        const deltaSeconds = deltaX / this._pixelsPerSecond;
-
-        const rawDuration = Math.max(0.2, Math.min(sourceDuration - targetClip!.trimStart, initialDuration + deltaSeconds));
-        const snappedEnd = this.snapTime(targetClip!.startTime + rawDuration, clipId);
-        const newDuration = Math.max(0.2, snappedEnd - targetClip!.startTime);
-
-        targetClip!.duration = newDuration;
-        targetClip!.trimEnd = targetClip!.trimStart + newDuration;
-
-        clipEl.style.width = `${newDuration * this._pixelsPerSecond}px`;
-        this.recomputeProjectDuration();
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        this.render();
-        this._onProjectChanged();
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
+      this._interactionsManager.bindClipDragging(clipEl, clipId);
+      this._interactionsManager.bindClipTrimming(clipEl, clipId);
     });
   }
 
   private bindTimelineScroll(signal: AbortSignal): void {
-    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-    const headersScrollable = this._container.querySelector<HTMLElement>('[data-ref="timeline-headers-scrollable"]');
-    const headersContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-headers"]');
-
-    if (tracksArea && headersScrollable) {
-      tracksArea.addEventListener('scroll', () => {
-        headersScrollable.scrollTop = tracksArea.scrollTop;
-        this.updateTimelineHeights();
-      }, { signal });
-    }
-
-    if (tracksArea && headersContainer) {
-      headersContainer.addEventListener('wheel', (e) => {
-        if (e.deltaY !== 0) {
-          e.preventDefault();
-          tracksArea.scrollTop += e.deltaY;
-          this.updateTimelineHeights();
-        }
-      }, { passive: false, signal });
-    }
-  }
-
-  private bindPlayheadEvents(signal: AbortSignal): void {
-    const ruler = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-ruler-wrapper"]');
-    const playheadHandle = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-handle"]');
-    const lanesArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
-
-    let scrubRafId: number | null = null;
-    let pendingScrubTime: number | null = null;
-
-    const getTimeFromClientX = (clientX: number): number => {
-      const scrollable = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-      if (!scrollable) return 0;
-      const rect = scrollable.getBoundingClientRect();
-      const scrollLeft = scrollable.scrollLeft || 0;
-      const x = clientX - rect.left + scrollLeft;
-      const project = this._getProject();
-      return Math.max(0, Math.min(x / this._pixelsPerSecond, project.duration));
-    };
-
-    const startScrubbing = (initialClientX: number) => {
-      this._isScrubbingPlayhead = true;
-      this._hoverLineElement?.classList.add('is-hidden');
-      this._onScrubStart?.();
-      const initialTime = getTimeFromClientX(initialClientX);
-      this.setPlayheadPosition(initialTime);
-      this._onSeek(initialTime, true);
-
-      const onMove = (me: MouseEvent) => {
-        const time = getTimeFromClientX(me.clientX);
-        this.setPlayheadPosition(time);
-        pendingScrubTime = time;
-
-        if (scrubRafId === null) {
-          scrubRafId = requestAnimationFrame(() => {
-            scrubRafId = null;
-            if (pendingScrubTime !== null) {
-              this._onSeek(pendingScrubTime, true);
-              pendingScrubTime = null;
-            }
-          });
-        }
-      };
-
-      const onUp = (me: MouseEvent) => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-        this._isScrubbingPlayhead = false;
-        if (scrubRafId !== null) {
-          cancelAnimationFrame(scrubRafId);
-          scrubRafId = null;
-        }
-        const finalTime = getTimeFromClientX(me.clientX);
-        this.setPlayheadPosition(finalTime);
-        this._onSeek(finalTime, false);
-        this._onScrubEnd?.();
-      };
-
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    };
-
-    ruler?.addEventListener('mousedown', (e) => {
-      startScrubbing(e.clientX);
-    }, { signal });
-
-    playheadHandle?.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      startScrubbing(e.clientX);
-    }, { signal });
-
-    lanesArea?.addEventListener('click', (e) => {
-      if (this._isDraggingMarquee) return;
-      if ((e.target as HTMLElement).closest('.video-clip-item')) return;
-      this.selectClip('');
-      const time = getTimeFromClientX(e.clientX);
-      this.setPlayheadPosition(time);
-      this._onSeek(time, false);
-    }, { signal });
-  }
-
-  private bindHoverPreview(signal: AbortSignal): void {
-    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-    this._hoverLineElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-line"]');
-    this._hoverTooltipElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-hover-tooltip"]');
-
-    if (!tracksArea || !this._hoverLineElement) return;
-
-    const formatHoverTime = (seconds: number): string => {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      const tenths = Math.floor((seconds % 1) * 10);
-      return `${mins}:${String(secs).padStart(2, '0')}.${tenths}`;
-    };
-
-    tracksArea.addEventListener('mousemove', (e) => {
-      if (this._isDraggingMarquee || this._isScrubbingPlayhead) {
-        this._hoverLineElement?.classList.add('is-hidden');
-        return;
-      }
-
-      const rect = tracksArea.getBoundingClientRect();
-      const x = e.clientX - rect.left + tracksArea.scrollLeft;
-      if (x < 0) {
-        this._hoverLineElement?.classList.add('is-hidden');
-        return;
-      }
-
-      const project = this._getProject();
-      const maxTotalWidth = Math.max(1200, (project.duration + 5) * this._pixelsPerSecond);
-      if (x > maxTotalWidth) {
-        this._hoverLineElement?.classList.add('is-hidden');
-        return;
-      }
-
-      const hoverTime = Math.max(0, x / this._pixelsPerSecond);
-      if (this._hoverTooltipElement) {
-        this._hoverTooltipElement.textContent = formatHoverTime(hoverTime);
-      }
-
-      this._hoverLineElement!.style.transform = `translateX(${x}px)`;
-      this._hoverLineElement!.classList.remove('is-hidden');
-    }, { signal });
-
-    tracksArea.addEventListener('mouseleave', () => {
-      this._hoverLineElement?.classList.add('is-hidden');
-    }, { signal });
-  }
-
-  private bindMarqueeSelection(signal: AbortSignal): void {
     const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
-    const tracksArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-    this._marqueeElement = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-marquee"]');
+    const rulerContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-ruler-container"]');
 
-    if (!lanesContainer || !tracksArea || !this._marqueeElement) return;
-
-    lanesContainer.addEventListener('mousedown', (e: MouseEvent) => {
-      if (e.button !== 0) return;
-      const target = e.target as HTMLElement;
-      if (target.closest('.video-clip-item') || target.closest('.clip-trim-handle') || target.closest('.video-playhead-handle')) {
-        return;
-      }
-
-      const containerRect = lanesContainer.getBoundingClientRect();
-      const startX = e.clientX - containerRect.left + (tracksArea.scrollLeft || 0);
-      const startY = e.clientY - containerRect.top + (tracksArea.scrollTop || 0);
-
-      const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
-      const initialSelectedIds = isAdditive ? new Set(this._selectedClipIds) : new Set<string>();
-      let newlySelectedIds = new Set<string>();
-      let hasDragged = false;
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const currX = moveEvent.clientX - containerRect.left + (tracksArea.scrollLeft || 0);
-        const currY = moveEvent.clientY - containerRect.top + (tracksArea.scrollTop || 0);
-        const dx = currX - startX;
-        const dy = currY - startY;
-
-        if (!hasDragged && Math.hypot(dx, dy) > 4) {
-          hasDragged = true;
-          this._isDraggingMarquee = true;
-          this._hoverLineElement?.classList.add('is-hidden');
-          this._marqueeElement?.classList.remove('is-hidden');
-        }
-
-        if (hasDragged && this._marqueeElement) {
-          const minX = Math.min(startX, currX);
-          const maxX = Math.max(startX, currX);
-          const minY = Math.min(startY, currY);
-          const maxY = Math.max(startY, currY);
-
-          this._marqueeElement.style.left = `${minX}px`;
-          this._marqueeElement.style.top = `${minY}px`;
-          this._marqueeElement.style.width = `${maxX - minX}px`;
-          this._marqueeElement.style.height = `${maxY - minY}px`;
-
-          newlySelectedIds = new Set(initialSelectedIds);
-          const project = this._getProject();
-          const lanesList = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-list"]');
-          const laneEls = lanesList ? Array.from(lanesList.querySelectorAll<HTMLElement>('.video-track-lane')) : [];
-
-          laneEls.forEach((laneEl) => {
-            const laneTop = laneEl.offsetTop;
-            const laneBottom = laneTop + laneEl.offsetHeight;
-
-            if (maxY >= laneTop && minY <= laneBottom) {
-              const trackId = laneEl.getAttribute('data-track-id');
-              const track = project.tracks.find((t) => t.id === trackId);
-              if (track) {
-                track.clips.forEach((clip) => {
-                  const clipLeft = clip.startTime * this._pixelsPerSecond;
-                  const clipRight = clipLeft + Math.max(20, clip.duration * this._pixelsPerSecond);
-
-                  if (maxX >= clipLeft && minX <= clipRight) {
-                    newlySelectedIds.add(clip.id);
-                  }
-                });
-              }
-            }
-          });
-
-          const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
-          allClipEls.forEach((el) => {
-            const id = el.getAttribute('data-clip-id') || '';
-            el.classList.toggle('is-selected', newlySelectedIds.has(id));
-          });
-        }
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-
-        if (hasDragged) {
-          this._isDraggingMarquee = false;
-          this._marqueeElement?.classList.add('is-hidden');
-          this.selectClips(Array.from(newlySelectedIds));
-        }
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    }, { signal });
+    if (lanesContainer && rulerContainer) {
+      lanesContainer.addEventListener(
+        'scroll',
+        () => {
+          rulerContainer.scrollLeft = lanesContainer.scrollLeft;
+        },
+        { signal }
+      );
+    }
   }
 
-  private bindKeyboardShortcuts(signal: AbortSignal): void {
-    window.addEventListener('keydown', (e) => {
-      if (['input', 'textarea', 'select'].includes((e.target as HTMLElement).tagName?.toLowerCase())) return;
+  public selectClip(clipId: string | null, renderUi = true, isMulti = false): void {
+    if (!clipId) {
+      this._selectedClipId = null;
+      this._selectedClipIds.clear();
+      if (renderUi) this.render();
+      this._onClipSelected?.(null);
+      return;
+    }
 
-      if (e.key === 's' || e.key === 'S' || e.key === 'c' || e.key === 'C') {
-        e.preventDefault();
-        this.splitSelectedClip();
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        this.deleteSelectedClip();
-      } else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        this.duplicateSelectedClip();
-      }
-    }, { signal });
-  }
-
-  public selectClip(clipId: string, emit = true, multi = false): void {
-    if (multi && clipId) {
+    if (isMulti) {
       if (this._selectedClipIds.has(clipId)) {
         this._selectedClipIds.delete(clipId);
+        if (this._selectedClipId === clipId) {
+          this._selectedClipId = this._selectedClipIds.size > 0 ? Array.from(this._selectedClipIds)[0] : null;
+        }
       } else {
-        this._selectedClipIds.add(clipId);
-      }
-      const ids = Array.from(this._selectedClipIds);
-      this._selectedClipId = ids.length > 0 ? ids[ids.length - 1] : null;
-    } else {
-      this._selectedClipIds.clear();
-      if (clipId) {
         this._selectedClipIds.add(clipId);
         this._selectedClipId = clipId;
-      } else {
-        this._selectedClipId = null;
       }
+    } else {
+      this._selectedClipIds.clear();
+      this._selectedClipIds.add(clipId);
+      this._selectedClipId = clipId;
     }
 
-    const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
-    allClipEls.forEach((el) => {
-      const id = el.getAttribute('data-clip-id') || '';
-      el.classList.toggle('is-selected', this._selectedClipIds.has(id));
-    });
-
-    if (emit) {
-      this._onClipSelected?.(this._selectedClipId);
-    }
+    if (renderUi) this.render();
+    this._onClipSelected?.(this._selectedClipId);
   }
 
-  public selectClips(clipIds: string[], emit = true): void {
-    this._selectedClipIds = new Set(clipIds);
-    this._selectedClipId = clipIds.length > 0 ? clipIds[clipIds.length - 1] : null;
-
-    const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
-    allClipEls.forEach((el) => {
-      const id = el.getAttribute('data-clip-id') || '';
-      el.classList.toggle('is-selected', this._selectedClipIds.has(id));
-    });
-
-    if (emit) {
-      this._onClipSelected?.(this._selectedClipId);
-    }
+  public selectClips(clipIds: string[]): void {
+    this._selectedClipIds.clear();
+    clipIds.forEach((id) => this._selectedClipIds.add(id));
+    this._selectedClipId = clipIds.length > 0 ? clipIds[0] : null;
+    this.render();
+    this._onClipSelected?.(this._selectedClipId);
   }
 
   public addClipToTrack(trackId: string, clipData: Partial<VideoClip>): void {
     const project = this._getProject();
-    let track = project.tracks.find((t) => t.id === trackId);
-    if (!track && project.tracks.length > 0) {
-      track = project.tracks[0];
-    }
+    const track = project.tracks.find((t) => t.id === trackId);
     if (!track) return;
 
-    const dur = clipData.duration || 5;
+    const clipId = clipData.id || `clip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newClip: VideoClip = {
-      assetUrl: clipData.assetUrl,
-      duration: dur,
-      id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      assetUrl: clipData.assetUrl || '',
+      duration: clipData.duration || 5,
+      id: clipId,
       mediaType: clipData.mediaType || 'video',
-      muted: clipData.muted ?? false,
-      name: clipData.name || 'Clip',
-      sourceDuration: clipData.sourceDuration || dur,
-      startTime: clipData.startTime !== undefined ? clipData.startTime : (project.currentTime || 0),
-      textConfig: clipData.textConfig,
+      name: clipData.name || 'Nuevo Clip',
+      sourceDuration: clipData.sourceDuration || clipData.duration || 5,
+      speed: clipData.speed || 1,
+      startTime: clipData.startTime || 0,
       thumbnailUrl: clipData.thumbnailUrl,
-      transform: clipData.transform,
-      trimEnd: clipData.trimEnd || dur,
+      trimEnd: clipData.trimEnd || clipData.duration || 5,
       trimStart: clipData.trimStart || 0,
       volume: clipData.volume ?? 1,
+      ...clipData,
     };
 
     track.clips.push(newClip);
-    this._selectedClipId = newClip.id;
+    this.selectClip(newClip.id);
     this.recomputeProjectDuration();
     this.render();
-    this._onClipSelected?.(newClip.id);
     this._onProjectChanged();
   }
 
   public splitSelectedClip(): void {
     const project = this._getProject();
     const playheadTime = project.currentTime || 0;
-
-    let targetTrack: VideoTrack | null = null;
-    let targetClip: VideoClip | null = null;
-    let clipIndex = -1;
-
-    for (const track of project.tracks) {
-      const idx = track.clips.findIndex((c) => {
-        const isUnderPlayhead = playheadTime > (c.startTime + 0.05) && playheadTime < (c.startTime + c.duration - 0.05);
-        if (this._selectedClipId) {
-          return c.id === this._selectedClipId && isUnderPlayhead;
-        }
-        return isUnderPlayhead;
-      });
-      if (idx !== -1) {
-        targetTrack = track;
-        targetClip = track.clips[idx];
-        clipIndex = idx;
-        break;
-      }
+    const { newSelectedClipId, splitDone } = splitClipAtPlayhead(project, playheadTime, this._selectedClipId);
+    if (splitDone) {
+      this._selectedClipId = newSelectedClipId;
+      this.render();
+      this._onProjectChanged();
     }
-
-    if (!targetTrack || !targetClip) {
-      for (const track of project.tracks) {
-        const idx = track.clips.findIndex((c) => playheadTime > (c.startTime + 0.05) && playheadTime < (c.startTime + c.duration - 0.05));
-        if (idx !== -1) {
-          targetTrack = track;
-          targetClip = track.clips[idx];
-          clipIndex = idx;
-          break;
-        }
-      }
-    }
-
-    if (!targetTrack || !targetClip) return;
-
-    const clipStart = targetClip.startTime;
-    const splitOffset = playheadTime - clipStart;
-    const firstDuration = splitOffset;
-    const secondDuration = targetClip.duration - splitOffset;
-
-    const clip1: VideoClip = {
-      ...targetClip,
-      duration: firstDuration,
-      id: targetClip.id,
-      name: `${targetClip.name} (Parte 1)`,
-      trimEnd: targetClip.trimStart + firstDuration,
-    };
-
-    const clip2: VideoClip = {
-      ...targetClip,
-      duration: secondDuration,
-      id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: `${targetClip.name} (Parte 2)`,
-      startTime: playheadTime,
-      trimEnd: targetClip.trimEnd,
-      trimStart: targetClip.trimStart + firstDuration,
-    };
-
-    targetTrack.clips.splice(clipIndex, 1, clip1, clip2);
-    this._selectedClipId = clip2.id;
-    this.render();
-    this._onProjectChanged();
   }
 
   public deleteSelectedClip(): void {
@@ -1290,16 +698,7 @@ export class VideoTimelineManager {
     const project = this._getProject();
     const idsToDelete = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
 
-    let modified = false;
-    for (const track of project.tracks) {
-      const initialCount = track.clips.length;
-      track.clips = track.clips.filter((c) => !idsToDelete.has(c.id));
-      if (track.clips.length !== initialCount) {
-        modified = true;
-      }
-    }
-
-    if (modified) {
+    if (deleteClipsFromProject(project, idsToDelete)) {
       this._selectedClipIds.clear();
       this._selectedClipId = null;
       this.recomputeProjectDuration();
@@ -1314,28 +713,7 @@ export class VideoTimelineManager {
     const project = this._getProject();
     const idsToDelete = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
 
-    let modified = false;
-    for (const track of project.tracks) {
-      const toDelete = track.clips.filter((c) => idsToDelete.has(c.id)).sort((a, b) => a.startTime - b.startTime);
-      if (toDelete.length > 0) {
-        modified = true;
-        for (const del of toDelete) {
-          const delStart = del.startTime;
-          const delDur = del.duration;
-          const idx = track.clips.findIndex((c) => c.id === del.id);
-          if (idx !== -1) {
-            track.clips.splice(idx, 1);
-            for (const c of track.clips) {
-              if (c.startTime > delStart) {
-                c.startTime = Math.max(0, c.startTime - delDur);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (modified) {
+    if (rippleDeleteClipsFromProject(project, idsToDelete)) {
       this._selectedClipIds.clear();
       this._selectedClipId = null;
       this.recomputeProjectDuration();
@@ -1348,807 +726,100 @@ export class VideoTimelineManager {
 
   public detachAudioFromClip(clipId?: string): void {
     const targetId = clipId || this._selectedClipId;
-    if (!targetId) {
-      showToast('Selecciona un clip de video para separar su audio.', 'info');
-      return;
-    }
-
+    if (!targetId) return;
     const project = this._getProject();
-    let sourceTrack: VideoTrack | null = null;
-    let sourceClip: VideoClip | null = null;
-
-    for (const t of project.tracks) {
-      const found = t.clips.find((c) => c.id === targetId);
-      if (found) {
-        sourceTrack = t;
-        sourceClip = found;
-        break;
-      }
+    const { audioClipId, modified } = detachAudioFromClipInProject(project, targetId);
+    if (modified) {
+      this._selectedClipId = audioClipId;
+      this.render();
+      this._onProjectChanged();
+      showToast('Audio extraído a una pista independiente.', 'success');
     }
-
-    if (!sourceClip || !sourceTrack) return;
-    if (sourceClip.mediaType !== 'video' || !sourceClip.assetUrl) {
-      showToast('El clip seleccionado no es un video con audio separable.', 'warning');
-      return;
-    }
-
-    sourceClip.muted = true;
-
-    let targetAudioTrack = project.tracks.find((t) => t.type === 'audio');
-    if (!targetAudioTrack) {
-      const count = project.tracks.filter((t) => t.type === 'audio').length + 1;
-      targetAudioTrack = {
-        clips: [],
-        id: `track-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        name: `Pista de Audio ${count}`,
-        type: 'audio',
-      };
-      project.tracks.push(targetAudioTrack);
-    }
-
-    const newAudioClip: VideoClip = {
-      assetUrl: sourceClip.assetUrl,
-      audioFadeIn: sourceClip.audioFadeIn,
-      audioFadeOut: sourceClip.audioFadeOut,
-      duration: sourceClip.duration,
-      id: `clip-audio-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      mediaType: 'audio',
-      name: `${sourceClip.name} (Audio)`,
-      sourceDuration: sourceClip.sourceDuration || sourceClip.duration,
-      startTime: sourceClip.startTime,
-      trimEnd: sourceClip.trimEnd,
-      trimStart: sourceClip.trimStart,
-      volume: sourceClip.volume ?? 1,
-    };
-
-    targetAudioTrack.clips.push(newAudioClip);
-    this._selectedClipId = newAudioClip.id;
-    this._selectedClipIds.clear();
-    this._selectedClipIds.add(newAudioClip.id);
-    this.recomputeProjectDuration();
-    this.render();
-    this._onClipSelected?.(newAudioClip.id);
-    this._onProjectChanged();
-    showToast('Audio separado del video con éxito.', 'success');
   }
 
   public duplicateSelectedClip(): void {
-    if (this._selectedClipIds.size === 0 && !this._selectedClipId) return;
+    if (!this._selectedClipId) return;
     const project = this._getProject();
-    const idsToDup = this._selectedClipIds.size > 0 ? this._selectedClipIds : new Set([this._selectedClipId!]);
-    const newSelectedIds: string[] = [];
-
-    for (const track of project.tracks) {
-      const matched = track.clips.filter((c) => idsToDup.has(c.id));
-      for (const found of matched) {
-        const copy: VideoClip = {
-          ...found,
-          id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          name: `${found.name} (Copia)`,
-          startTime: found.startTime + found.duration,
-        };
-        track.clips.push(copy);
-        newSelectedIds.push(copy.id);
-      }
-    }
-
-    if (newSelectedIds.length > 0) {
-      this.selectClips(newSelectedIds);
+    const { duplicateClipId } = duplicateClipInProject(project, this._selectedClipId);
+    if (duplicateClipId) {
+      this._selectedClipId = duplicateClipId;
       this.recomputeProjectDuration();
       this.render();
       this._onProjectChanged();
+      showToast('Clip duplicado con éxito.', 'info');
     }
   }
 
-  private bindContextMenu(signal: AbortSignal): void {
-    this._contextMenuEl = this._container.querySelector<HTMLElement>('[data-ref="video-clip-context-menu"]');
-    if (!this._contextMenuEl) return;
-
-    window.addEventListener('click', (e) => {
-      if (this._contextMenuEl && !this._contextMenuEl.contains(e.target as Node)) {
-        this.hideContextMenu();
-      }
-    }, { signal });
-
-    const btnDetach = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-detach-audio"]');
-    const btnSplit = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-split"]');
-    const btnDuplicate = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-duplicate"]');
-    const btnRipple = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-ripple-delete"]');
-    const btnDelete = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-delete"]');
-
-    btnDetach?.addEventListener('click', () => {
-      this.hideContextMenu();
-      this.detachAudioFromClip();
-    }, { signal });
-
-    btnSplit?.addEventListener('click', () => {
-      this.hideContextMenu();
-      this.splitSelectedClip();
-    }, { signal });
-
-    btnDuplicate?.addEventListener('click', () => {
-      this.hideContextMenu();
-      this.duplicateSelectedClip();
-    }, { signal });
-
-    btnRipple?.addEventListener('click', () => {
-      this.hideContextMenu();
-      this.rippleDeleteSelectedClip();
-    }, { signal });
-
-    btnDelete?.addEventListener('click', () => {
-      this.hideContextMenu();
-      this.deleteSelectedClip();
-    }, { signal });
+  public showContextMenu(e: MouseEvent, clipId: string): void {
+    this._contextMenuManager.showContextMenu(e, clipId);
   }
 
-  private showContextMenu(e: MouseEvent, clipId: string): void {
-    if (!this._contextMenuEl) {
-      this._contextMenuEl = this._container.querySelector<HTMLElement>('[data-ref="video-clip-context-menu"]');
-    }
-    if (!this._contextMenuEl) return;
-
-    this.selectClip(clipId);
-    const clip = this.getSelectedClip();
-
-    const btnDetach = this._contextMenuEl.querySelector<HTMLElement>('[data-ref="ctx-btn-detach-audio"]');
-    if (btnDetach) {
-      btnDetach.style.display = (clip && clip.mediaType === 'video' && clip.assetUrl) ? 'flex' : 'none';
-    }
-
-    const menuW = 220;
-    const menuH = 180;
-    const x = Math.min(window.innerWidth - menuW - 10, Math.max(10, e.clientX));
-    const y = Math.min(window.innerHeight - menuH - 10, Math.max(10, e.clientY));
-
-    this._contextMenuEl.style.left = `${x}px`;
-    this._contextMenuEl.style.top = `${y}px`;
-    this._contextMenuEl.style.display = 'flex';
-  }
-
-  private hideContextMenu(): void {
-    if (this._contextMenuEl) {
-      this._contextMenuEl.style.display = 'none';
-    }
+  public hideContextMenu(): void {
+    this._contextMenuManager.hideContextMenu();
   }
 
   public addNewTrack(type: 'audio' | 'overlay' | 'video' = 'video'): void {
     const project = this._getProject();
-    const count = project.tracks.filter((t) => t.type === type).length + 1;
-    const name = type === 'audio' ? `Pista de Audio ${count}` : (type === 'overlay' ? `Pista de Superposición ${count}` : `Pista de Video ${count}`);
-
-    const newTrack: VideoTrack = {
-      clips: [],
-      id: `track-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name,
-      type,
-    };
-
-    project.tracks.push(newTrack);
+    const newTrack = addNewTrackToProject(project, type);
+    this._selectedTrackId = newTrack.id;
     this.render();
     this._onProjectChanged();
   }
 
-  private getSelectedClip(): VideoClip | null {
-    const id = this._selectedClipId || (this._selectedClipIds.size > 0 ? Array.from(this._selectedClipIds)[0] : null);
-    if (!id) return null;
+  public getSelectedClip(): VideoClip | null {
+    if (!this._selectedClipId) return null;
     const project = this._getProject();
     for (const track of project.tracks) {
-      const found = track.clips.find((c) => c.id === id);
-      if (found) return found;
+      const c = track.clips.find((clip) => clip.id === this._selectedClipId);
+      if (c) return c;
     }
     return null;
   }
 
-  private openFiltersModal(): void {
-    let clip = this.getSelectedClip();
-    if (!clip) {
-      const project = this._getProject();
-      const playheadTime = project.currentTime || 0;
-      for (const track of project.tracks) {
-        const c = track.clips.find((cl) => playheadTime >= cl.startTime && playheadTime <= cl.startTime + cl.duration);
-        if (c) {
-          clip = c;
-          this.selectClip(c.id);
-          break;
-        }
-      }
-    }
-    if (!clip) {
-      showToast('Selecciona un clip en la línea de tiempo para ajustar filtros.', 'info');
-      return;
-    }
-    const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-filters-backdrop"]');
-    if (!backdrop) return;
-
-    const inBrightness = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-brightness"]');
-    const inContrast = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-contrast"]');
-    const inSaturate = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-saturate"]');
-    const valBrightness = this._container.querySelector<HTMLElement>('[data-ref="val-filter-brightness"]');
-    const valContrast = this._container.querySelector<HTMLElement>('[data-ref="val-filter-contrast"]');
-    const valSaturate = this._container.querySelector<HTMLElement>('[data-ref="val-filter-saturate"]');
-    const presetBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-filter-preset-"]');
-
-    const f = clip.filters || {};
-    if (inBrightness) inBrightness.value = String(f.brightness ?? 1);
-    if (inContrast) inContrast.value = String(f.contrast ?? 1);
-    if (inSaturate) inSaturate.value = String(f.saturate ?? 1);
-    if (valBrightness) valBrightness.textContent = `${Math.round((f.brightness ?? 1) * 100)}%`;
-    if (valContrast) valContrast.textContent = `${Math.round((f.contrast ?? 1) * 100)}%`;
-    if (valSaturate) valSaturate.textContent = `${Math.round((f.saturate ?? 1) * 100)}%`;
-
-    const curPreset = f.preset || 'none';
-    presetBtns.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-preset') === curPreset));
-
-    backdrop.classList.add('is-visible');
+  public openFiltersModal(): void {
+    this._modalsManager.openFiltersModal();
   }
 
-  private openTransitionsModal(): void {
-    let clip = this.getSelectedClip();
-    if (!clip) {
-      const project = this._getProject();
-      const playheadTime = project.currentTime || 0;
-      for (const track of project.tracks) {
-        const c = track.clips.find((cl) => playheadTime >= cl.startTime && playheadTime <= cl.startTime + cl.duration);
-        if (c) {
-          clip = c;
-          this.selectClip(c.id);
-          break;
-        }
-      }
-    }
-    if (!clip) {
-      showToast('Selecciona un clip en la línea de tiempo para configurar la transición.', 'info');
-      return;
-    }
-    const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-transitions-backdrop"]');
-    if (!backdrop) return;
-
-    const selectType = this._container.querySelector<HTMLSelectElement>('[data-ref="select-transition-type"]');
-    const inDuration = this._container.querySelector<HTMLInputElement>('[data-ref="input-transition-duration"]');
-    const valDuration = this._container.querySelector<HTMLElement>('[data-ref="val-transition-duration"]');
-
-    const trans = clip.transition || { duration: 1.0, type: 'none' as const };
-    this._selectedTransitionType = trans.type;
-    const textEl = this._container.querySelector<HTMLElement>('[data-ref="transition-type-selected-text"]');
-    const typeNames: Record<string, string> = {
-      none: 'Ninguna (Corte Directo)',
-      fade: 'Fundido a Negro (Fade Out/In)',
-      dissolve: 'Disolución Cruzada (Cross Dissolve)',
-      slide_left: 'Deslizar a la Izquierda (Slide)',
-      wipe_left: 'Barrido a la Izquierda (Wipe)',
-    };
-    if (textEl) textEl.textContent = typeNames[this._selectedTransitionType] || 'Ninguna (Corte Directo)';
-    this._container.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-transition-type"] .menu-item').forEach((item) => {
-      item.classList.toggle('is-active', item.getAttribute('data-value') === this._selectedTransitionType);
-    });
-    if (inDuration) inDuration.value = String(trans.duration || 1.0);
-    if (valDuration) valDuration.textContent = `${(trans.duration || 1.0).toFixed(1)}s`;
-
-    backdrop.classList.add('is-visible');
+  public openTransitionsModal(): void {
+    this._modalsManager.openTransitionsModal();
   }
 
-  private openAudioFadeModal(): void {
-    let clip = this.getSelectedClip();
-    if (!clip) {
-      const project = this._getProject();
-      const playheadTime = project.currentTime || 0;
-      for (const track of project.tracks) {
-        const c = track.clips.find((cl) => playheadTime >= cl.startTime && playheadTime <= cl.startTime + cl.duration);
-        if (c) {
-          clip = c;
-          this.selectClip(c.id);
-          break;
-        }
-      }
-    }
-    if (!clip) {
-      showToast('Selecciona un clip en la línea de tiempo para configurar fundidos.', 'info');
-      return;
-    }
-    const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-audio-fade-backdrop"]');
-    if (!backdrop) return;
-
-    const inFadeIn = this._container.querySelector<HTMLInputElement>('[data-ref="input-audio-fade-in"]');
-    const inFadeOut = this._container.querySelector<HTMLInputElement>('[data-ref="input-audio-fade-out"]');
-    const valFadeIn = this._container.querySelector<HTMLElement>('[data-ref="val-audio-fade-in"]');
-    const valFadeOut = this._container.querySelector<HTMLElement>('[data-ref="val-audio-fade-out"]');
-
-    if (inFadeIn) inFadeIn.value = String(clip.audioFadeIn || 0);
-    if (inFadeOut) inFadeOut.value = String(clip.audioFadeOut || 0);
-    if (valFadeIn) valFadeIn.textContent = `${(clip.audioFadeIn || 0).toFixed(1)}s`;
-    if (valFadeOut) valFadeOut.textContent = `${(clip.audioFadeOut || 0).toFixed(1)}s`;
-
-    backdrop.classList.add('is-visible');
+  public openAudioFadeModal(): void {
+    this._modalsManager.openAudioFadeModal();
   }
 
-  private openSubtitlesModal(): void {
+  public openSubtitlesModal(): void {
+    this._modalsManager.openSubtitlesModal();
+  }
+
+  public recomputeProjectDuration(): void {
     const project = this._getProject();
-    const eligibleClips: { clip: VideoClip; trackName: string }[] = [];
-
-    for (const track of project.tracks) {
-      for (const clip of track.clips) {
-        if ((clip.mediaType === 'video' || clip.mediaType === 'audio') && clip.assetUrl) {
-          eligibleClips.push({ clip, trackName: track.name });
-        }
-      }
-    }
-
-    if (eligibleClips.length === 0) {
-      showToast('No hay clips de video o audio en el proyecto para generar subtítulos.', 'info');
-      return;
-    }
-
-    const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-subtitles-backdrop"]');
-    const sourceList = this._container.querySelector<HTMLElement>('[data-ref="list-subtitles-source"]');
-    const sourceText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-source-selected-text"]');
-    const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
-
-    if (errorBanner) errorBanner.style.display = 'none';
-
-    const selectedClip = this.getSelectedClip();
-    let initialClip = eligibleClips[0];
-    if (selectedClip) {
-      const match = eligibleClips.find((i) => i.clip.id === selectedClip.id);
-      if (match) initialClip = match;
-    }
-    this._selectedSubtitleSourceClipId = initialClip.clip.id;
-    const startFmt = `${Math.floor(initialClip.clip.startTime / 60)}:${Math.floor(initialClip.clip.startTime % 60).toString().padStart(2, '0')}`;
-    const endFmt = `${Math.floor((initialClip.clip.startTime + initialClip.clip.duration) / 60)}:${Math.floor((initialClip.clip.startTime + initialClip.clip.duration) % 60).toString().padStart(2, '0')}`;
-    if (sourceText) sourceText.textContent = `${initialClip.clip.name} (${initialClip.trackName}) [${startFmt} - ${endFmt}]`;
-
-    if (sourceList) {
-      sourceList.innerHTML = eligibleClips.map((item) => {
-        const startFormatted = `${Math.floor(item.clip.startTime / 60)}:${Math.floor(item.clip.startTime % 60).toString().padStart(2, '0')}`;
-        const endFormatted = `${Math.floor((item.clip.startTime + item.clip.duration) / 60)}:${Math.floor((item.clip.startTime + item.clip.duration) % 60).toString().padStart(2, '0')}`;
-        const isSel = item.clip.id === this._selectedSubtitleSourceClipId;
-        return `<button type="button" class="menu-item${isSel ? ' is-active' : ''}" data-ref="btn-sub-src-${item.clip.id}" data-value="${item.clip.id}">
-          <span class="menu-item__text">${item.clip.name} (${item.trackName}) [${startFormatted} - ${endFormatted}]</span>
-        </button>`;
-      }).join('');
-    }
-
-    if (backdrop) {
-      backdrop.classList.add('is-visible');
-    }
+    recomputeProjectDurationUtil(project);
   }
 
-  private bindModals(signal: AbortSignal): void {
-    const filtersBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-filters-backdrop"]');
-    const btnCloseFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-close-filters-modal"]');
-    const btnApplyFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-apply-filters"]');
-    const btnResetFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-reset-filters"]');
-
-    const inBrightness = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-brightness"]');
-    const inContrast = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-contrast"]');
-    const inSaturate = this._container.querySelector<HTMLInputElement>('[data-ref="input-filter-saturate"]');
-    const valBrightness = this._container.querySelector<HTMLElement>('[data-ref="val-filter-brightness"]');
-    const valContrast = this._container.querySelector<HTMLElement>('[data-ref="val-filter-contrast"]');
-    const valSaturate = this._container.querySelector<HTMLElement>('[data-ref="val-filter-saturate"]');
-    const presetBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-filter-preset-"]');
-
-    inBrightness?.addEventListener('input', () => {
-      if (valBrightness) valBrightness.textContent = `${Math.round(parseFloat(inBrightness.value) * 100)}%`;
-    }, { signal });
-
-    inContrast?.addEventListener('input', () => {
-      if (valContrast) valContrast.textContent = `${Math.round(parseFloat(inContrast.value) * 100)}%`;
-    }, { signal });
-
-    inSaturate?.addEventListener('input', () => {
-      if (valSaturate) valSaturate.textContent = `${Math.round(parseFloat(inSaturate.value) * 100)}%`;
-    }, { signal });
-
-    presetBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        presetBtns.forEach((b) => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-      }, { signal });
-    });
-
-    const closeFilters = () => {
-      if (filtersBackdrop) {
-        filtersBackdrop.classList.remove('is-visible');
-      }
-    };
-
-    btnCloseFilters?.addEventListener('click', closeFilters, { signal });
-    filtersBackdrop?.addEventListener('click', (e) => {
-      if (e.target === filtersBackdrop) closeFilters();
-    }, { signal });
-
-    btnResetFilters?.addEventListener('click', () => {
-      if (inBrightness) inBrightness.value = '1';
-      if (inContrast) inContrast.value = '1';
-      if (inSaturate) inSaturate.value = '1';
-      if (valBrightness) valBrightness.textContent = '100%';
-      if (valContrast) valContrast.textContent = '100%';
-      if (valSaturate) valSaturate.textContent = '100%';
-      presetBtns.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-preset') === 'none'));
-    }, { signal });
-
-    btnApplyFilters?.addEventListener('click', () => {
-      const clip = this.getSelectedClip();
-      if (clip) {
-        const activePresetBtn = this._container.querySelector<HTMLElement>('[data-ref^="btn-filter-preset-"].is-active');
-        const preset = (activePresetBtn?.getAttribute('data-preset') || 'none') as any;
-        clip.filters = {
-          brightness: inBrightness ? parseFloat(inBrightness.value) : 1,
-          contrast: inContrast ? parseFloat(inContrast.value) : 1,
-          preset,
-          saturate: inSaturate ? parseFloat(inSaturate.value) : 1,
-        };
-        this.render();
-        this._onProjectChanged();
-      }
-      closeFilters();
-    }, { signal });
-
-    const transBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-transitions-backdrop"]');
-    const btnCloseTrans = this._container.querySelector<HTMLElement>('[data-ref="btn-close-transitions-modal"]');
-    const btnApplyTrans = this._container.querySelector<HTMLElement>('[data-ref="btn-apply-transition"]');
-    const inTransDur = this._container.querySelector<HTMLInputElement>('[data-ref="input-transition-duration"]');
-    const valTransDur = this._container.querySelector<HTMLElement>('[data-ref="val-transition-duration"]');
-
-    const transWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-transition-type"]');
-    const transTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-transition-type"]');
-    const transMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-transition-type"]');
-    const transBackdropEl = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-transition-type"]');
-    const transText = this._container.querySelector<HTMLElement>('[data-ref="transition-type-selected-text"]');
-
-    if (transWrapper && transTrigger && transMenu) {
-      setupDropdown(transWrapper, { backdrop: transBackdropEl || undefined, menu: transMenu, trigger: transTrigger });
-      transMenu.addEventListener('click', (e) => {
-        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
-        if (!item) return;
-        const val = item.getAttribute('data-value');
-        if (val) {
-          this._selectedTransitionType = val;
-          transMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
-          if (transText) {
-            const spanText = item.querySelector('.menu-item__text')?.textContent;
-            if (spanText) transText.textContent = spanText;
-          }
-        }
-      }, { signal });
-    }
-
-    inTransDur?.addEventListener('input', () => {
-      if (valTransDur) valTransDur.textContent = `${parseFloat(inTransDur.value).toFixed(1)}s`;
-    }, { signal });
-
-    const closeTrans = () => {
-      if (transBackdrop) {
-        transBackdrop.classList.remove('is-visible');
-      }
-    };
-
-    btnCloseTrans?.addEventListener('click', closeTrans, { signal });
-    transBackdrop?.addEventListener('click', (e) => {
-      if (e.target === transBackdrop) closeTrans();
-    }, { signal });
-
-    btnApplyTrans?.addEventListener('click', () => {
-      const clip = this.getSelectedClip();
-      if (clip && inTransDur) {
-        clip.transition = {
-          duration: parseFloat(inTransDur.value) || 1.0,
-          type: this._selectedTransitionType as any,
-        };
-        this.render();
-        this._onProjectChanged();
-      }
-      closeTrans();
-    }, { signal });
-
-    const fadeBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-audio-fade-backdrop"]');
-    const btnCloseFade = this._container.querySelector<HTMLElement>('[data-ref="btn-close-audio-fade-modal"]');
-    const btnApplyFade = this._container.querySelector<HTMLElement>('[data-ref="btn-apply-audio-fade"]');
-    const inFadeIn = this._container.querySelector<HTMLInputElement>('[data-ref="input-audio-fade-in"]');
-    const inFadeOut = this._container.querySelector<HTMLInputElement>('[data-ref="input-audio-fade-out"]');
-    const valFadeIn = this._container.querySelector<HTMLElement>('[data-ref="val-audio-fade-in"]');
-    const valFadeOut = this._container.querySelector<HTMLElement>('[data-ref="val-audio-fade-out"]');
-
-    inFadeIn?.addEventListener('input', () => {
-      if (valFadeIn) valFadeIn.textContent = `${parseFloat(inFadeIn.value).toFixed(1)}s`;
-    }, { signal });
-
-    inFadeOut?.addEventListener('input', () => {
-      if (valFadeOut) valFadeOut.textContent = `${parseFloat(inFadeOut.value).toFixed(1)}s`;
-    }, { signal });
-
-    const closeFade = () => {
-      if (fadeBackdrop) {
-        fadeBackdrop.classList.remove('is-visible');
-      }
-    };
-
-    btnCloseFade?.addEventListener('click', closeFade, { signal });
-    fadeBackdrop?.addEventListener('click', (e) => {
-      if (e.target === fadeBackdrop) closeFade();
-    }, { signal });
-
-    btnApplyFade?.addEventListener('click', () => {
-      const clip = this.getSelectedClip();
-      if (clip && inFadeIn && inFadeOut) {
-        clip.audioFadeIn = parseFloat(inFadeIn.value) || 0;
-        clip.audioFadeOut = parseFloat(inFadeOut.value) || 0;
-        this.render();
-        this._onProjectChanged();
-      }
-      closeFade();
-    }, { signal });
-
-    const subBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-subtitles-backdrop"]');
-    const btnCloseSub = this._container.querySelector<HTMLElement>('[data-ref="btn-close-subtitles-modal"]');
-    const btnGenSub = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles"]');
-    const btnGenSubText = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles-text"]');
-    const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
-    const errorText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-error-text"]');
-
-    const subSrcWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-source"]');
-    const subSrcTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-source"]');
-    const subSrcMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-source"]');
-    const subSrcBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-source"]');
-    const subSrcText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-source-selected-text"]');
-
-    if (subSrcWrapper && subSrcTrigger && subSrcMenu) {
-      setupDropdown(subSrcWrapper, { backdrop: subSrcBackdrop || undefined, menu: subSrcMenu, trigger: subSrcTrigger });
-      subSrcMenu.addEventListener('click', (e) => {
-        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
-        if (!item) return;
-        const val = item.getAttribute('data-value');
-        if (val) {
-          this._selectedSubtitleSourceClipId = val;
-          subSrcMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
-          if (subSrcText) {
-            const spanText = item.querySelector('.menu-item__text')?.textContent;
-            if (spanText) subSrcText.textContent = spanText;
-          }
-        }
-      }, { signal });
-    }
-
-    const subLangWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-lang"]');
-    const subLangTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-lang"]');
-    const subLangMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-lang"]');
-    const subLangBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-lang"]');
-    const subLangText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-lang-selected-text"]');
-
-    if (subLangWrapper && subLangTrigger && subLangMenu) {
-      setupDropdown(subLangWrapper, { backdrop: subLangBackdrop || undefined, menu: subLangMenu, trigger: subLangTrigger });
-      subLangMenu.addEventListener('click', (e) => {
-        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
-        if (!item) return;
-        const val = item.getAttribute('data-value');
-        if (val) {
-          this._selectedSubtitleLang = val;
-          subLangMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
-          if (subLangText) {
-            const spanText = item.querySelector('.menu-item__text')?.textContent;
-            if (spanText) subLangText.textContent = spanText;
-          }
-        }
-      }, { signal });
-    }
-
-    const subStyleWrapper = this._container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-subtitles-style"]');
-    const subStyleTrigger = this._container.querySelector<HTMLElement>('[data-ref="btn-trigger-subtitles-style"]');
-    const subStyleMenu = this._container.querySelector<HTMLElement>('[data-ref="dropdown-menu-subtitles-style"]');
-    const subStyleBackdrop = this._container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-subtitles-style"]');
-    const subStyleText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-style-selected-text"]');
-
-    if (subStyleWrapper && subStyleTrigger && subStyleMenu) {
-      setupDropdown(subStyleWrapper, { backdrop: subStyleBackdrop || undefined, menu: subStyleMenu, trigger: subStyleTrigger });
-      subStyleMenu.addEventListener('click', (e) => {
-        const item = (e.target as HTMLElement).closest<HTMLElement>('.menu-item');
-        if (!item) return;
-        const val = item.getAttribute('data-value');
-        if (val) {
-          this._selectedSubtitleStyle = val;
-          subStyleMenu.querySelectorAll('.menu-item').forEach((m) => m.classList.toggle('is-active', m === item));
-          if (subStyleText) {
-            const spanText = item.querySelector('.menu-item__text')?.textContent;
-            if (spanText) subStyleText.textContent = spanText;
-          }
-        }
-      }, { signal });
-    }
-
-    const closeSub = () => {
-      if (subBackdrop) {
-        subBackdrop.classList.remove('is-visible');
-      }
-    };
-
-    btnCloseSub?.addEventListener('click', closeSub, { signal });
-    subBackdrop?.addEventListener('click', (e) => {
-      if (e.target === subBackdrop) closeSub();
-    }, { signal });
-
-    btnGenSub?.addEventListener('click', async () => {
-      const project = this._getProject();
-      const clipId = this._selectedSubtitleSourceClipId;
-      let targetClip: VideoClip | null = null;
-
-      for (const track of project.tracks) {
-        const found = track.clips.find((c) => c.id === clipId);
-        if (found) {
-          targetClip = found;
-          break;
-        }
-      }
-
-      if (!targetClip || !targetClip.assetUrl) {
-        if (errorBanner && errorText) {
-          errorText.textContent = 'Selecciona un clip válido con audio para transcribir.';
-          errorBanner.style.display = 'flex';
-        }
-        return;
-      }
-
-      if (btnGenSub) (btnGenSub as HTMLButtonElement).disabled = true;
-      if (btnGenSubText) btnGenSubText.textContent = 'Transcribiendo con Gemini IA...';
-      if (errorBanner) errorBanner.style.display = 'none';
-
-      try {
-        const language = this._selectedSubtitleLang || 'auto';
-        const style = this._selectedSubtitleStyle || 'karaoke_yellow';
-
-        const result = await generateVideoSubtitlesApi(targetClip.assetUrl, {
-          language,
-          offsetSeconds: targetClip.startTime,
-        });
-
-        if (!result.success || !result.subtitles) {
-          if (errorBanner && errorText) {
-            errorText.textContent = result.error || 'No se pudieron generar los subtítulos. Intenta nuevamente.';
-            errorBanner.style.display = 'flex';
-          }
-          return;
-        }
-
-        if (result.subtitles.length === 0) {
-          showToast('No se detectó voz ni diálogo inteligible en el audio del clip seleccionado.', 'info');
-          closeSub();
-          return;
-        }
-
-        let subtitleTrack = project.tracks.find((t) => t.name === 'Subtítulos IA' && t.type === 'overlay');
-        if (!subtitleTrack) {
-          subtitleTrack = {
-            clips: [],
-            id: `track_${Date.now()}_subtitles`,
-            name: 'Subtítulos IA',
-            type: 'overlay',
-          };
-          project.tracks.push(subtitleTrack);
-        }
-
-        const isKaraokeYellow = style === 'karaoke_yellow';
-        const isKaraokeWhite = style === 'karaoke_white';
-        const isKaraoke = isKaraokeYellow || isKaraokeWhite;
-
-        const baseColor = isKaraokeWhite ? '#fde047' : (style === 'yellow' ? '#fde047' : '#ffffff');
-        const highlightColor = isKaraokeWhite ? '#ffffff' : '#facc15';
-        const highlightStyle = isKaraoke ? 'karaoke' : 'none';
-        const bgColor = style === 'boxed' ? 'rgba(0, 0, 0, 0.75)' : undefined;
-        const strokeColor = '#000000';
-        const strokeWidth = isKaraoke ? 5 : (style === 'standard' || style === 'yellow' ? 4 : 0);
-        const fontSize = 46;
-
-        for (let i = 0; i < result.subtitles.length; i++) {
-          const item = result.subtitles[i] as { end: number; start: number; text: string; words?: Array<{ end: number; start: number; word: string }> };
-          const dur = Math.max(0.4, item.end - item.start);
-
-          const words = (item.words && item.words.length > 0)
-            ? item.words.map((w: any) => ({
-                end: Math.min(dur, Math.max(0.05, w.end)),
-                start: Math.max(0, w.start),
-                word: w.word,
-              }))
-            : undefined;
-
-          const subClip: VideoClip = {
-            duration: dur,
-            id: `sub_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-            mediaType: 'text',
-            name: item.text.slice(0, 20),
-            sourceDuration: dur,
-            startTime: item.start,
-            textConfig: {
-              backgroundColor: bgColor,
-              color: baseColor,
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontSize,
-              fontWeight: '800',
-              highlightColor: isKaraoke ? highlightColor : undefined,
-              highlightStyle,
-              strokeColor,
-              strokeWidth,
-              text: item.text,
-              textAlign: 'center',
-              words,
-            },
-            transform: {
-              x: project.width ? project.width / 2 : 960,
-              y: project.height ? Math.round(project.height * 0.85) : 920,
-            },
-            trimEnd: dur,
-            trimStart: 0,
-            volume: 1,
-          };
-
-          subtitleTrack.clips.push(subClip);
-        }
-
-        this.recomputeProjectDuration();
-        this.render();
-        this._onProjectChanged();
-        closeSub();
-        showToast(`Se generaron ${result.subtitles.length} subtítulos con IA exitosamente.`, 'success');
-      } catch {
-        if (errorBanner && errorText) {
-          errorText.textContent = 'Ocurrió un error inesperado al procesar los subtítulos.';
-          errorBanner.style.display = 'flex';
-        }
-      } finally {
-        if (btnGenSub) (btnGenSub as HTMLButtonElement).disabled = false;
-        if (btnGenSubText) btnGenSubText.textContent = 'Generar Subtítulos';
-      }
-    }, { signal });
-  }
-
-  private recomputeProjectDuration(): void {
+  public fitToWindow(): void {
+    const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
+    if (!lanesContainer) return;
     const project = this._getProject();
-    let maxEnd = 10;
-    for (const track of project.tracks) {
-      for (const clip of track.clips) {
-        const end = clip.startTime + clip.duration;
-        if (end > maxEnd) {
-          maxEnd = end;
-        }
-      }
-    }
-    project.duration = Math.ceil(maxEnd);
-  }
-
-  private fitToWindow(): void {
-    const project = this._getProject();
-    const scrollable = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-    if (!scrollable) return;
-    const availWidth = scrollable.clientWidth - 40;
-    if (availWidth > 0 && project.duration > 0) {
-      this._pixelsPerSecond = Math.max(10, Math.min(200, Math.floor(availWidth / project.duration)));
-      const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
-      if (inputZoom) inputZoom.value = String(this._pixelsPerSecond);
+    const w = lanesContainer.clientWidth - 40;
+    if (w > 0 && project.duration > 0) {
+      this._pixelsPerSecond = Math.max(10, Math.min(200, Math.floor(w / project.duration)));
+      this.syncZoomUI();
       this.render();
     }
   }
 
   public updateClipBuffer(clipId: string, percent: number): void {
-    const clamped = Math.max(0, Math.min(100, percent));
-    this._clipBufferProgress.set(clipId, clamped);
+    this._clipBufferProgress.set(clipId, percent);
     const bar = this._container.querySelector<HTMLElement>(`[data-ref="clip-buffer-${clipId}"]`);
     if (bar) {
-      bar.style.width = `${clamped}%`;
+      bar.style.width = `${percent}%`;
     }
   }
 
   public destroy(): void {
-    if (this._abortController) {
-      this._abortController.abort();
-      this._abortController = null;
-    }
-    this._playheadElement = null;
-    this._hoverLineElement = null;
-    this._hoverTooltipElement = null;
-    this._marqueeElement = null;
-    this._contextMenuEl = null;
-    this._selectedClipIds.clear();
-    this._clipBufferProgress.clear();
-    this._waveformCache.clear();
-    this._fetchingWaveforms.clear();
+    this._abortController?.abort();
+    this._abortController = null;
     this._audioEngine.destroy();
   }
 }
