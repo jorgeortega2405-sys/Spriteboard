@@ -4,12 +4,14 @@ import { currentUser } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { loadStylesheet } from '../utils/dom.util.js';
 
 type PlanTier = 'free' | 'pro' | 'business' | 'enterprise';
 
 let activeUpgradeModal: { close: () => void } | null = null;
 
 export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => void } {
+  void loadStylesheet('/css/components/component-pricing.css');
   if (activeUpgradeModal) {
     activeUpgradeModal.close();
   }

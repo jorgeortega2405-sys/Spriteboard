@@ -6,6 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasMetricsData, CanvasPageMetric, CanvasPublicLinkItem, CanvasPublicLinkMetricsData, CanvasPublicLinksSummary } from '../types/canvas.types.js';
 import { ChartController, createBarChart, createLineChart } from '../utils/charts.util.js';
+import { loadStylesheet } from '../utils/dom.util.js';
 
 let activeCanvasMetricsModal: { close: () => void } | null = null;
 
@@ -44,6 +45,7 @@ function formatDateTime(isoStr: string): string {
 }
 
 export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): void {
+  void loadStylesheet('/css/components/component-profile.css');
   if (activeCanvasMetricsModal) {
     activeCanvasMetricsModal.close();
   }

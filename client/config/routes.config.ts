@@ -134,6 +134,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         openUpgradeModal('business');
         return null;
       }
+      await loadStylesheet('/css/components/component-canvas-collaboration.css');
       const { createTeamsView } = await import('../views/teams.view.js');
       return [await createTeamsView()];
     },
@@ -145,6 +146,7 @@ export const APP_ROUTES: RouteDefinition[] = [
       if (!currentUser || !canPublishTemplates(currentUser)) {
         window.history.replaceState({}, '', '/templates');
       }
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createTemplatesView } = await import('../views/templates.view.js');
       return [await createTemplatesView()];
     },
@@ -164,6 +166,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         const { createCreatorsView } = await import('../views/creators.view.js');
         return [await createCreatorsView()];
       }
+      await loadStylesheet('/css/components/component-creators.css');
       const canvasUuid = ctx.query.get('canvas') || '';
       const { createPublishTemplateView } = await import('../views/publish-template.view.js');
       return [await createPublishTemplateView(canvasUuid)];
@@ -173,6 +176,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'templates',
     match: (path) => path === '/templates',
     handler: async () => {
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createTemplatesView } = await import('../views/templates.view.js');
       return [await createTemplatesView()];
     },
@@ -192,6 +196,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         const { createCreatorsView } = await import('../views/creators.view.js');
         return [await createCreatorsView()];
       }
+      await loadStylesheet('/css/components/component-creators.css');
       const { createDesignerView } = await import('../views/designer.view.js');
       return [await createDesignerView()];
     },
@@ -223,6 +228,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'search',
     match: (path) => path === '/search',
     handler: async () => {
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createSearchView } = await import('../views/search.view.js');
       return [await createSearchView()];
     },
@@ -236,6 +242,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         const { createLoginView } = await import('../views/auth.view.js');
         return [await createLoginView()];
       }
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createSharedView } = await import('../views/shared.view.js');
       return [await createSharedView()];
     },
@@ -244,6 +251,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'your-apps',
     match: (path) => path === '/your-apps',
     handler: async () => {
+      await loadStylesheet('/css/components/component-canvas-features.css');
       const { createYourAppsView } = await import('../views/your-apps.view.js');
       return [await createYourAppsView()];
     },
@@ -252,6 +260,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'trash',
     match: (path) => path === '/trash',
     handler: async () => {
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createTrashView } = await import('../views/trash.view.js');
       return [await createTrashView()];
     },
@@ -260,6 +269,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'upgrade',
     match: (path) => path === '/upgrade',
     handler: async () => {
+      await loadStylesheet('/css/components/component-pricing.css');
       const { createUpgradeView } = await import('../views/upgrade.view.js');
       return [await createUpgradeView()];
     },
@@ -268,6 +278,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'sales-contact',
     match: (path) => path === '/contact/sales' || path === '/sales',
     handler: async () => {
+      await loadStylesheet('/css/components/component-creators.css');
       const { createSalesContactView } = await import('../views/sales-contact.view.js');
       return [await createSalesContactView()];
     },
@@ -276,6 +287,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'settings',
     match: (path) => path.startsWith('/settings'),
     handler: async ({ path }) => {
+      await loadStylesheet('/css/components/component-settings.css');
       const { createAccessibilityView, createBillingView, createGuestSettingsView, createPublicProfileSettingsView, createPurchasesView, createSecurityView, createYourAccountView } = await import('../views/settings.view.js');
       if (!currentUser) {
         if (path !== '/settings/guest') {
@@ -311,6 +323,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'help-legal',
     match: (path) => path.startsWith('/help') || path.startsWith('/legal'),
     handler: async ({ path }) => {
+      await loadStylesheet('/css/components/component-settings.css');
       const { createHelpView } = await import('../views/help.view.js');
       let tab = 'terms';
       if (path === '/help/privacy' || path === '/legal/privacy') tab = 'privacy';
@@ -345,6 +358,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'home',
     match: (path) => path === '/' || path === '',
     handler: async () => {
+      await loadStylesheet('/css/components/component-dashboard.css');
       const { createHomeView } = await import('../views/home.view.js');
       return [await createHomeView()];
     },
@@ -353,6 +367,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'folder',
     match: (path) => path.startsWith('/folder/'),
     handler: async ({ path }) => {
+      await loadStylesheet('/css/components/component-dashboard.css');
       const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
       const { createFolderView } = await import('../views/folder.view.js');
       return [await createFolderView(folderUuid)];
@@ -370,12 +385,18 @@ export const APP_ROUTES: RouteDefinition[] = [
       const canvasUuid = match?.[1] || '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');
+        await loadStylesheet('/css/components/component-dashboard.css');
         const { createHomeView } = await import('../views/home.view.js');
         return [await createHomeView()];
       }
       if (!path.startsWith(`/design/${canvasUuid}`)) {
         window.history.replaceState({}, '', `/design/${canvasUuid}`);
       }
+      await Promise.all([
+        loadStylesheet('/css/components/component-canvas-workspace.css'),
+        loadStylesheet('/css/components/component-canvas-features.css'),
+        loadStylesheet('/css/components/component-canvas-collaboration.css'),
+      ]);
       const { createDesignView } = await import('../views/design.view.js');
       return [await createDesignView(canvasUuid)];
     },
@@ -387,9 +408,11 @@ export const APP_ROUTES: RouteDefinition[] = [
       const username = path.substring(3).split('/')[0].trim();
       if (!username) {
         window.history.replaceState({}, '', '/templates');
+        await loadStylesheet('/css/components/component-dashboard.css');
         const { createTemplatesView } = await import('../views/templates.view.js');
         return [await createTemplatesView()];
       }
+      await loadStylesheet('/css/components/component-profile.css');
       const { createProfileView } = await import('../views/profile.view.js');
       return [await createProfileView(username)];
     },
@@ -417,6 +440,11 @@ export const APP_ROUTES: RouteDefinition[] = [
       if (resolvedUuid) {
         const targetPath = `/design/${resolvedUuid}`;
         window.history.replaceState({}, '', targetPath);
+        await Promise.all([
+          loadStylesheet('/css/components/component-canvas-workspace.css'),
+          loadStylesheet('/css/components/component-canvas-features.css'),
+          loadStylesheet('/css/components/component-canvas-collaboration.css'),
+        ]);
         const { createDesignView } = await import('../views/design.view.js');
         return [await createDesignView(resolvedUuid)];
       }
