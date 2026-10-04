@@ -5855,57 +5855,39 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    if (shape.type === 'vector') {
-      const isLineOrArrow = shape.id.includes('arrow') || shape.id.includes('line');
-      const elWidth = isLineOrArrow ? 160 : 140;
-      const elHeight = isLineOrArrow ? 40 : 140;
-      const cleanId = shape.id.replace(/^shape_/, '');
-
-      const shapeMap: Record<string, ShapeType> = {
-        arrow_down: 'arrow',
-        arrow_left: 'arrow',
-        arrow_ribbon: 'arrow',
-        arrow_right: 'arrow',
-        arrow_up: 'arrow',
-        chamfer_square: 'rect',
-        circle: 'circle',
-        cloud: 'cloud',
-        cylinder: 'cylinder',
-        diamond: 'diamond',
-        document: 'document',
-        flow_database: 'cylinder',
-        flow_decision: 'diamond',
-        flow_document: 'document',
-        flow_input_output: 'parallelogram',
-        flow_process: 'rect',
-        flow_start_end: 'pill',
-        parallelogram: 'parallelogram',
-        pill: 'pill',
-        quarter_circle: 'circle',
-        rounded_rectangle: 'round-rect',
-        semi_circle: 'circle',
-        square: 'rect',
-        star_4_sparkle: 'star',
-        star_5: 'star',
-        star_6: 'star',
-        star_7: 'star',
-        star_8: 'star',
-        triangle_down: 'triangle',
-        triangle_right_angle: 'triangle',
-        triangle_up: 'triangle',
+    if (shape.isLine || shape.type === 'line' || shape.section === 'lines') {
+      const lineEl: BoardConnectorElement = {
+        arrowEnd: shape.arrowEnd || 'none',
+        arrowStart: shape.arrowStart || 'none',
+        color: '#000000',
+        endPoint: { x: Math.round(centerWorld.x + 80), y: Math.round(centerWorld.y) },
+        id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        startPoint: { x: Math.round(centerWorld.x - 80), y: Math.round(centerWorld.y) },
+        strokeStyle: shape.strokeStyle || 'solid',
+        strokeWidth: 2,
+        style: 'straight',
+        type: 'connector',
       };
+      this.elements.push(lineEl);
+      this.collaborationManager.broadcastAddElement(lineEl);
+      this.selectedElementId = lineEl.id;
+      this.selectedElementIds = [lineEl.id];
+      this.updateSelectionToolbar();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      return;
+    }
 
-      const directShape: ShapeType = shapeMap[cleanId] || (isLineOrArrow ? 'line' : 'rect');
+    if (shape.type === 'vector') {
+      const elWidth = shape.width || 140;
+      const elHeight = shape.height || 140;
 
-      const isSvgXml = !!(shape.pathD && shape.pathD.trim().startsWith('<svg'));
-      const isNativeBasic = ['circle', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle'].includes(cleanId);
-      const shapeEl = createShapeElement(directShape, {
-        fillColor: isLineOrArrow ? 'transparent' : (color || this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR),
+      const shapeEl = createShapeElement('rect', {
+        fillColor: '#000000',
         height: elHeight,
-        strokeColor: isLineOrArrow ? (color || this.currentColor || CANVAS_DEFAULTS.LINE_STROKE_COLOR) : CANVAS_DEFAULTS.STROKE_COLOR,
-        strokeWidth: isLineOrArrow ? 2 : 0,
-        svgContent: isSvgXml ? shape.pathD : undefined,
-        svgPath: (isNativeBasic || isSvgXml) ? undefined : (shape.pathD || undefined),
+        strokeColor: '#000000',
+        strokeWidth: 0,
+        svgPath: shape.pathD,
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
         y: Math.round(centerWorld.y - elHeight / 2),
@@ -6021,7 +6003,7 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
+    const isNativeBasic = ['circle', 'cloud', 'cylinder', 'diamond', 'document', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
     const shapeEl = createShapeElement(config.shapeType || 'rect', {
       fillColor: config.fillColor || '#000000',
       fontSize: 14,

@@ -4412,50 +4412,52 @@ export class StageCanvasController {
   }
 
   public insertShapeOrSticker(shape: PixelShape): void {
+    if (shape.isLine || shape.type === 'line' || shape.section === 'lines') {
+      const lineEl: BoardConnectorElement = {
+        arrowEnd: shape.arrowEnd || 'none',
+        arrowStart: shape.arrowStart || 'none',
+        color: '#000000',
+        endPoint: { x: 580, y: 360 },
+        id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        startPoint: { x: 420, y: 360 },
+        strokeStyle: shape.strokeStyle || 'solid',
+        strokeWidth: 2,
+        style: 'straight',
+        type: 'connector',
+      };
+      this.saveHistoryState();
+      this.getActiveSlide().elements.push(lineEl);
+      this.selectedElementIds = new Set([lineEl.id]);
+      this.syncPanels();
+      this.updateSelectionToolbar();
+      this.render();
+      this.scheduleAutoSave();
+      this.collaborationManager.broadcastAddElement(lineEl, this.activeSlideId);
+      return;
+    }
+
+    if (shape.type === 'vector') {
+      const shapeEl = createShapeElement('rect', {
+        fillColor: '#000000',
+        height: shape.height || 140,
+        strokeColor: '#000000',
+        strokeWidth: 0,
+        svgPath: shape.pathD,
+        width: shape.width || 140,
+      });
+      this.saveHistoryState();
+      this.getActiveSlide().elements.push(shapeEl);
+      this.selectedElementIds = new Set([shapeEl.id]);
+      this.syncPanels();
+      this.updateSelectionToolbar();
+      this.render();
+      this.scheduleAutoSave();
+      this.collaborationManager.broadcastAddElement(shapeEl, this.activeSlideId);
+      return;
+    }
+
     if (shape.type === 'sticker' && shape.file) {
       this.insertImage(`/assets/img/stickers/${shape.file}`, 160, 160, shape.name);
-    } else {
-      const cleanId = shape.id.replace(/^shape_/, '');
-      const shapeMap: Record<string, ShapeType> = {
-        chamfer_square: 'rect',
-        circle: 'circle',
-        cloud: 'cloud',
-        cylinder: 'cylinder',
-        diamond: 'diamond',
-        document: 'document',
-        flow_database: 'cylinder',
-        flow_decision: 'diamond',
-        flow_document: 'document',
-        flow_input_output: 'parallelogram',
-        flow_process: 'rect',
-        flow_start_end: 'pill',
-        parallelogram: 'parallelogram',
-        pill: 'pill',
-        quarter_circle: 'circle',
-        rounded_rectangle: 'round-rect',
-        semi_circle: 'circle',
-        square: 'rect',
-        star_4_sparkle: 'star',
-        star_5: 'star',
-        star_6: 'star',
-        star_7: 'star',
-        star_8: 'star',
-        triangle_down: 'triangle',
-        triangle_right_angle: 'triangle',
-        triangle_up: 'triangle',
-      };
-      const directShape: ShapeType = shapeMap[cleanId] || ((shape as any).shapeType || 'rect');
-      const isNativeBasic = ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle', 'star', 'triangle'].includes(cleanId) || ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(directShape);
-      const isSvgXml = !!(shape.pathD && shape.pathD.trim().startsWith('<svg'));
-      this.insertShape(
-        directShape,
-        (isNativeBasic || isSvgXml) ? undefined : shape.pathD,
-        (shape as any).fillColor,
-        (shape as any).strokeColor,
-        undefined,
-        undefined,
-        isSvgXml ? shape.pathD : undefined
-      );
     }
   }
 
@@ -4625,7 +4627,7 @@ export class StageCanvasController {
     textColor?: string;
     width?: number;
   }): void {
-    const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
+    const isNativeBasic = ['circle', 'cloud', 'cylinder', 'diamond', 'document', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
     const shapeEl = createShapeElement(config.shapeType || 'rect', {
       fillColor: config.fillColor || '#3b82f6',
       fontSize: 14,

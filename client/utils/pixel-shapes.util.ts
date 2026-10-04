@@ -1,28 +1,250 @@
+import { ABSTRACT_SHAPES_PRESETS } from '../config/abstract-shapes.config.js';
+import { ARROW_PRESETS } from '../config/arrows.config.js';
+import { ASTERISK_PRESETS } from '../config/asterisks.config.js';
+import { BANNER_PRESETS } from '../config/banners.config.js';
+import { BASIC_SHAPES_PRESETS } from '../config/basic-shapes.config.js';
+import { CALLOUT_PRESETS } from '../config/callouts.config.js';
+import { CLOUD_PRESETS } from '../config/clouds.config.js';
+import { GEAR_PRESETS } from '../config/gears.config.js';
+import { HEART_PRESETS } from '../config/hearts.config.js';
+import { LINE_PRESETS } from '../config/lines.config.js';
+import { ORGANIC_SHAPES_PRESETS } from '../config/organic-shapes.config.js';
+import { POLYGON_PRESETS } from '../config/polygons.config.js';
+import { STAR_PRESETS } from '../config/stars.config.js';
+import { TEAR_PRESETS } from '../config/tears.config.js';
+import { MarkerType, StrokeStyle } from '../engine-2d/types.js';
+
 export type ShapeCategory = 'shapes' | 'templates';
 export type CanvasShapeCategory = ShapeCategory;
 export type ShapeColorMode = 'original' | 'primary';
 
 export interface PixelShape {
+  arrowEnd?: MarkerType;
+  arrowStart?: MarkerType;
   category: ShapeCategory;
   file?: string;
   height: number;
   id: string;
+  isLine?: boolean;
   name: string;
   pathD?: string;
-  type: 'vector' | 'sticker';
+  previewSvg?: string;
+  section?: 'lines' | 'basic' | 'polygons' | 'stars' | 'arrows' | 'callouts' | 'clouds' | 'hearts' | 'banners' | 'tears' | 'gears' | 'asterisks' | 'organic' | 'abstract';
+  strokeStyle?: StrokeStyle;
+  type: 'vector' | 'sticker' | 'line';
   url?: string;
   width: number;
 }
 
 export type CanvasShape = PixelShape;
 
-export const SHAPE_SVG_PATHS: Record<string, string> = {};
+export const SHAPE_SVG_PATHS: Record<string, string> = Object.fromEntries([
+  ...BASIC_SHAPES_PRESETS.map((s) => [s.id, s.pathD]),
+  ...POLYGON_PRESETS.map((s) => [s.id, s.pathD]),
+  ...STAR_PRESETS.map((s) => [s.id, s.pathD]),
+  ...ARROW_PRESETS.map((s) => [s.id, s.pathD]),
+  ...CALLOUT_PRESETS.map((s) => [s.id, s.pathD]),
+  ...CLOUD_PRESETS.map((s) => [s.id, s.pathD]),
+  ...HEART_PRESETS.map((s) => [s.id, s.pathD]),
+  ...BANNER_PRESETS.map((s) => [s.id, s.pathD]),
+  ...TEAR_PRESETS.map((s) => [s.id, s.pathD]),
+  ...GEAR_PRESETS.map((s) => [s.id, s.pathD]),
+  ...ASTERISK_PRESETS.map((s) => [s.id, s.pathD]),
+  ...ORGANIC_SHAPES_PRESETS.map((s) => [s.id, s.pathD]),
+  ...ABSTRACT_SHAPES_PRESETS.map((s) => [s.id, s.pathD]),
+]);
 
-export const GEOMETRIC_SHAPE_NAMES: Record<string, string> = {};
+export const GEOMETRIC_SHAPE_NAMES: Record<string, string> = Object.fromEntries([
+  ...LINE_PRESETS.map((l) => [l.id, l.name]),
+  ...BASIC_SHAPES_PRESETS.map((s) => [s.id, s.name]),
+  ...POLYGON_PRESETS.map((s) => [s.id, s.name]),
+  ...STAR_PRESETS.map((s) => [s.id, s.name]),
+  ...ARROW_PRESETS.map((s) => [s.id, s.name]),
+  ...CALLOUT_PRESETS.map((s) => [s.id, s.name]),
+  ...CLOUD_PRESETS.map((s) => [s.id, s.name]),
+  ...HEART_PRESETS.map((s) => [s.id, s.name]),
+  ...BANNER_PRESETS.map((s) => [s.id, s.name]),
+  ...TEAR_PRESETS.map((s) => [s.id, s.name]),
+  ...GEAR_PRESETS.map((s) => [s.id, s.name]),
+  ...ASTERISK_PRESETS.map((s) => [s.id, s.name]),
+  ...ORGANIC_SHAPES_PRESETS.map((s) => [s.id, s.name]),
+  ...ABSTRACT_SHAPES_PRESETS.map((s) => [s.id, s.name]),
+]);
 
 export const STICKERS_CATALOG_DATA: Array<{ file: string; id: string; name: string }> = [];
 
-export const PIXEL_SHAPES: PixelShape[] = [];
+export const PIXEL_SHAPES: PixelShape[] = [
+  ...LINE_PRESETS.map((line): PixelShape => ({
+    arrowEnd: line.arrowEnd,
+    arrowStart: line.arrowStart,
+    category: 'shapes',
+    height: 40,
+    id: line.id,
+    isLine: true,
+    name: line.name,
+    previewSvg: line.previewSvg,
+    section: 'lines',
+    strokeStyle: line.strokeStyle,
+    type: 'line',
+    width: 160,
+  })),
+  ...BASIC_SHAPES_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'basic',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...POLYGON_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'polygons',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...STAR_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'stars',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...ARROW_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'arrows',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...CALLOUT_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'callouts',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...CLOUD_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'clouds',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...HEART_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'hearts',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...BANNER_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'banners',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...TEAR_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'tears',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...GEAR_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'gears',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...ASTERISK_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'asterisks',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...ORGANIC_SHAPES_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'organic',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+  ...ABSTRACT_SHAPES_PRESETS.map((s): PixelShape => ({
+    category: 'shapes',
+    height: s.defaultHeight,
+    id: s.id,
+    isLine: false,
+    name: s.name,
+    pathD: s.pathD,
+    previewSvg: s.previewSvg,
+    section: 'abstract',
+    type: 'vector',
+    width: s.defaultWidth,
+  })),
+];
 
 export const CANVAS_SHAPES: CanvasShape[] = PIXEL_SHAPES;
 
@@ -203,6 +425,16 @@ export async function preloadShapeImage(shape: PixelShape): Promise<HTMLImageEle
 }
 
 export function renderShapeThumbnail(shape: PixelShape): HTMLElement | SVGElement {
+  if (shape.previewSvg) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 48 48');
+    svg.setAttribute('width', '24');
+    svg.setAttribute('height', '24');
+    svg.style.display = 'block';
+    svg.innerHTML = shape.previewSvg;
+    return svg;
+  }
+
   if (shape.type === 'vector' && shape.pathD) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 48 48');

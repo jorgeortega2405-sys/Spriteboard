@@ -1772,7 +1772,7 @@ export class DocController implements ViewController {
     this.insertImageElement(src, width, alt);
   }
 
-  public insertShapeSvg(pathD: string, name = 'Figura', color = '#1e293b'): void {
+  public insertShapeSvg(pathD: string, name = 'Figura', color = '#000000'): void {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="160" height="160"><path d="${pathD}" fill="${color}" /></svg>`;
     const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     this.insertImageElement(dataUrl, '160px', name);

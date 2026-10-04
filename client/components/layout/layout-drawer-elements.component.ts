@@ -15,7 +15,7 @@ import { CHART_GROUPS } from '../../views/board/board-charts-panel.component.js'
 import { ChartType, Shape3DType, ShapeType } from '../../views/board/board.types.js';
 import { getActiveCanvasController, getActiveCanvasType, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
 
-let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid' = 'root';
+let activeElementsCategory: 'root' | 'shapes' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid' = 'root';
 let activeShapeSection: string | null = null;
 let activeFramesFilter: FrameCategory | 'all' = 'all';
 let activeMockupsFilter: MockupGeneralCategory | 'all' = 'all';
@@ -38,28 +38,26 @@ interface TablePresetItem {
 }
 
 const TABLE_THEMES = [
-  { borderColor: '#52525b', headerBg: '#52525b', id: 'slate', name: 'Gris pizarra', tintBg: '#f4f4f5' },
-  { borderColor: '#ef4444', headerBg: '#ef4444', id: 'red', name: 'Rojo coral', tintBg: '#fee2e2' },
-  { borderColor: '#f59e0b', headerBg: '#f59e0b', id: 'amber', name: 'Ámbar', tintBg: '#fef3c7' },
-  { borderColor: '#3b82f6', headerBg: '#3b82f6', id: 'blue', name: 'Azul', tintBg: '#dbeafe' },
-  { borderColor: '#8b5cf6', headerBg: '#8b5cf6', id: 'purple', name: 'Púrpura', tintBg: '#ede9fe' },
+  { borderColor: '#f59e0b', headerBg: '#fccb07', headerTextColor: '#202229', id: 'yellow', name: 'Amarillo', tintBg: '#fef9c3' },
+  { borderColor: '#ea580c', headerBg: '#f9a850', headerTextColor: '#202229', id: 'orange', name: 'Naranja', tintBg: '#ffedd5' },
+  { borderColor: '#f43f5e', headerBg: '#fc778c', headerTextColor: '#ffffff', id: 'pink', name: 'Rosa', tintBg: '#ffe4e6' },
 ];
 
 function buildTablePreviewSvg(theme: typeof TABLE_THEMES[0], style: 'wireframe' | 'header' | 'filled'): string {
   if (style === 'wireframe') {
-    return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="34" height="42" rx="2" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><line x1="2" y1="12.5" x2="36" y2="12.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="23" x2="36" y2="23" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="33.5" x2="36" y2="33.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="13.3" y1="2" x2="13.3" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="24.6" y1="2" x2="24.6" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
+    return `<svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;"><rect x="4" y="4" width="36" height="36" rx="4" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><line x1="4" y1="16" x2="40" y2="16" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="4" y1="28" x2="40" y2="28" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="16" y1="4" x2="16" y2="40" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="28" y1="4" x2="28" y2="40" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
   }
   if (style === 'header') {
-    return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="34" height="42" rx="2" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><path d="M2 4 C2 2.9 2.9 2 4 2 H34 C35.1 2 36 2.9 36 4 V12.5 H2 Z" fill="${theme.headerBg}" /><line x1="2" y1="12.5" x2="36" y2="12.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="23" x2="36" y2="23" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="33.5" x2="36" y2="33.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="13.3" y1="12.5" x2="13.3" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="24.6" y1="12.5" x2="24.6" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
+    return `<svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;"><rect x="4" y="4" width="36" height="36" rx="4" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><path d="M4 8 C4 5.8 5.8 4 8 4 H36 C38.2 4 40 5.8 40 8 V16 H4 Z" fill="${theme.headerBg}" /><line x1="4" y1="16" x2="40" y2="16" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="4" y1="28" x2="40" y2="28" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="16" y1="4" x2="16" y2="40" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="28" y1="4" x2="28" y2="40" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
   }
-  return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="14.2" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="26.5" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="2" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="2" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="2" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /></svg>`;
+  return `<svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;"><rect x="4" y="4" width="10.5" height="10.5" rx="2" fill="${theme.headerBg}" /><rect x="16.75" y="4" width="10.5" height="10.5" rx="2" fill="${theme.headerBg}" /><rect x="29.5" y="4" width="10.5" height="10.5" rx="2" fill="${theme.headerBg}" /><rect x="4" y="16.75" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /><rect x="16.75" y="16.75" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /><rect x="29.5" y="16.75" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /><rect x="4" y="29.5" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /><rect x="16.75" y="29.5" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /><rect x="29.5" y="29.5" width="10.5" height="10.5" rx="2" fill="${theme.tintBg}" stroke="${theme.borderColor}" stroke-width="0.8" /></svg>`;
 }
 
 const TABLE_PRESETS: TablePresetItem[] = TABLE_THEMES.flatMap((theme) => [
   {
     borderColor: theme.borderColor,
     cellBg: '#ffffff',
-    cellText: '#1e293b',
+    cellText: '#202229',
     cols: 3,
     description: `Tabla 3×3 ${theme.name} (Bordes)`,
     headerBg: '#ffffff',
@@ -72,11 +70,11 @@ const TABLE_PRESETS: TablePresetItem[] = TABLE_THEMES.flatMap((theme) => [
   {
     borderColor: theme.borderColor,
     cellBg: '#ffffff',
-    cellText: '#1e293b',
+    cellText: '#202229',
     cols: 3,
     description: `Tabla 3×3 ${theme.name} (Encabezado)`,
     headerBg: theme.headerBg,
-    headerText: '#ffffff',
+    headerText: theme.headerTextColor,
     id: `table_${theme.id}_header`,
     name: `${theme.name} - Encabezado`,
     previewSvg: buildTablePreviewSvg(theme, 'header'),
@@ -85,11 +83,11 @@ const TABLE_PRESETS: TablePresetItem[] = TABLE_THEMES.flatMap((theme) => [
   {
     borderColor: theme.borderColor,
     cellBg: theme.tintBg,
-    cellText: '#1e293b',
+    cellText: '#202229',
     cols: 3,
     description: `Tabla 3×3 ${theme.name} (Celdas rellenas)`,
     headerBg: theme.headerBg,
-    headerText: '#ffffff',
+    headerText: theme.headerTextColor,
     id: `table_${theme.id}_filled`,
     name: `${theme.name} - Rellena`,
     previewSvg: buildTablePreviewSvg(theme, 'filled'),
@@ -154,75 +152,62 @@ function addRecentElement(item: RecentElementItem): void {
   } catch {}
 }
 
-const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> = [
+const SHAPE_SECTIONS: Array<{ key: 'lines' | 'basic' | 'polygons' | 'stars' | 'arrows' | 'callouts' | 'clouds' | 'hearts' | 'banners' | 'tears' | 'gears' | 'asterisks' | 'organic' | 'abstract'; label: string }> = [
+  {
+    key: 'lines',
+    label: 'Líneas',
+  },
   {
     key: 'basic',
     label: 'Formas básicas',
-    prefixes: [
-      'square', 'rounded_rectangle', 'chamfer_square', 'circle', 'semi_circle',
-      'quarter_circle', 'quadrant_ring', 'semi_ring', 'diamond', 'triangle_up',
-      'triangle_down', 'triangle_right_angle', 'trapezoid_up', 'trapezoid_down',
-      'parallelogram_left', 'parallelogram_right'
-    ],
   },
   {
     key: 'polygons',
     label: 'Polígonos',
-    prefixes: ['pentagon', 'hexagon_flat', 'hexagon_pointy', 'heptagon', 'octagon', 'decagon'],
   },
   {
     key: 'stars',
-    label: 'Estrellas y Destellos',
-    prefixes: [
-      'star_4_sparkle', 'star_5', 'star_6', 'star_7', 'star_8', 'sparkle_8',
-      'sparkle_12', 'sunburst_16', 'burst_10', 'burst_12', 'burst_16', 'burst_20', 'burst_24', 'seal_scallop_32'
-    ],
+    label: 'Estrellas y destellos',
   },
   {
     key: 'arrows',
-    label: 'Flechas y Líneas',
-    prefixes: [
-      'arrow_right', 'arrow_left', 'arrow_up', 'arrow_down', 'arrow_double_horizontal',
-      'arrow_double_vertical', 'arrow_pointed_double', 'arrow_pointed_left', 'arrow_ribbon',
-      'chevron_right', 'wave_multi_ribbon', 'wave_s_curve'
-    ],
+    label: 'Flechas',
   },
   {
     key: 'callouts',
-    label: 'Llamadas y Nubes',
-    prefixes: [
-      'callout_rectangular', 'callout_rounded_rect', 'callout_oval', 'callout_cloud',
-      'callout_curved_tail', 'cloud_fluffy_soft', 'cloud_flat_base_multi', 'cloud_flat_base_triple',
-      'cloud_round_dome', 'cloud_puffy_full'
-    ],
+    label: 'Globos de diálogo',
+  },
+  {
+    key: 'clouds',
+    label: 'Nubes',
+  },
+  {
+    key: 'hearts',
+    label: 'Corazones',
   },
   {
     key: 'banners',
-    label: 'Banners y Cintas',
-    prefixes: [
-      'banner_horizontal_ribbon', 'banner_rounded_notch', 'banner_rounded_point',
-      'banner_vertical_notch', 'banner_vertical_point'
-    ],
+    label: 'Banners',
   },
   {
-    key: 'flow',
-    label: 'Símbolos de Flujo',
-    prefixes: [
-      'flow_process', 'flow_decision', 'flow_data', 'flow_document', 'flow_terminator',
-      'flow_preparation', 'flow_delay', 'flow_manual', 'flow_merge', 'flow_offpage', 'flow_shield'
-    ],
+    key: 'tears',
+    label: 'Lágrimas',
   },
   {
-    key: 'symbols',
-    label: 'Símbolos y Naturaleza',
-    prefixes: [
-      'heart_classic', 'heart_rounded', 'heart_narrow', 'heart_wide', 'heart_playful',
-      'cross', 'leaf_curved', 'clover_4_leaves', 'flower_4_petals_cross', 'flower_6_petals_center_hole',
-      'flower_6_petals_drop', 'flower_8_petals_round', 'flower_8_petals_sharp', 'shield_u', 'ticket',
-      'arch', 'barrel', 'gear_12_teeth_large_hole', 'gear_12_teeth_pointed', 'gear_12_teeth_small_hole',
-      'gear_14_teeth_pointed', 'gear_16_teeth_large_hole', 'gear_16_teeth_pointed', 'tear_curved_flame',
-      'tear_narrow', 'tear_straight', 'tear_tilted', 'tear_wide'
-    ],
+    key: 'gears',
+    label: 'Engranajes',
+  },
+  {
+    key: 'asterisks',
+    label: 'Asteriscos',
+  },
+  {
+    key: 'organic',
+    label: 'Formas orgánicas',
+  },
+  {
+    key: 'abstract',
+    label: 'Formas abstractas',
   },
 ];
 
@@ -311,10 +296,13 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
   addRecentElement({
     category: shape.category,
     file: shape.file,
+    fillColor: '#000000',
     id: shape.id,
     name: shape.name,
     pathD: shape.pathD,
-    type: shape.type,
+    previewSvg: shape.previewSvg,
+    strokeColor: '#000000',
+    type: 'vector',
   });
 
   if (canvasType === 'video') {
@@ -336,8 +324,12 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
       return;
     }
 
-    if (shape.type === 'vector' && shape.pathD) {
-      controller.insertShapeSvg(shape.pathD, shape.name, '#1e293b');
+    if (shape.isLine && shape.previewSvg) {
+      const lineSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="160" height="40" style="color: #000000;">${shape.previewSvg}</svg>`;
+      const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(lineSvg)}`;
+      controller.insertImageElement?.(dataUrl, '160px', shape.name);
+    } else if (shape.type === 'vector' && shape.pathD) {
+      controller.insertShapeSvg(shape.pathD, shape.name, '#000000');
     } else if (shape.type === 'sticker' && shape.file) {
       controller.insertImage(`/assets/img/stickers/${shape.file}`, shape.name);
     }
@@ -729,20 +721,12 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       }
 
       if (matchingShapes.length > 0) {
-        html += '<div class="elements-section-title">Figuras y Formas</div>';
-        html += matchingShapes.map((item) => {
-          let previewHtml = '';
-          if (item.type === 'vector' && item.pathD) {
-            previewHtml = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD}" fill="currentColor" /></svg>`;
-          } else if (item.type === 'sticker' && item.file) {
-            previewHtml = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />`;
-          }
-          return `
-            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-              ${previewHtml}
-            </button>
-          `;
-        }).join('');
+        html += '<div class="elements-section-title">Formas</div>';
+        html += matchingShapes.map((item) => `
+          <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg || `<path d="${item.pathD || ''}" fill="currentColor" />`}</svg>
+          </button>
+        `).join('');
       }
 
       html += '</div>';
@@ -760,10 +744,10 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
           <div class="elements-grid elements-recents-grid" data-ref="elements-recents-grid">
             ${recents.map((item) => {
               let preview = '';
-              if (item.type === 'vector' && item.pathD) {
+              if (item.previewSvg) {
+                preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;">${item.previewSvg}</svg>`;
+              } else if (item.type === 'vector' && item.pathD) {
                 preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;"><path d="${item.pathD}" fill="currentColor" /></svg>`;
-              } else if (item.type === 'sticker' && item.file) {
-                preview = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" style="width: 26px; height: 26px; object-fit: contain;" />`;
               } else if (item.type === 'diagram' && item.previewSvg) {
                 preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;">${item.previewSvg}</svg>`;
               } else if (item.type === 'sticky') {
@@ -793,7 +777,7 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
 
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid';
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid';
           if (cat) {
             activeElementsCategory = cat;
             renderContent('');
@@ -807,7 +791,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     }
 
     let backTitle = 'Formas';
-    if (activeElementsCategory === 'stickers') backTitle = 'Figuras';
     if (activeElementsCategory === 'stickies') backTitle = 'Notas adhesivas';
     if (activeElementsCategory === 'diagrams') backTitle = 'Diagramas';
     if (activeElementsCategory === 'tables') backTitle = 'Tablas';
@@ -830,85 +813,31 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     let html = '<div class="elements-grid" data-ref="elements-grid">';
 
     if (activeElementsCategory === 'shapes') {
-      const vectorShapes = PIXEL_SHAPES.filter((s) => s.category === 'shapes' && s.type === 'vector');
-      const assignedShapeIds = new Set<string>();
-
       if (activeShapeSection) {
-        let matching: PixelShape[] = [];
-        if (activeShapeSection === 'other') {
-          SHAPE_SECTIONS.forEach((sec) => {
-            vectorShapes.forEach((s) => {
-              const rawKey = s.id.replace(/^shape_/, '');
-              if (sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p))) {
-                assignedShapeIds.add(s.id);
-              }
-            });
-          });
-          matching = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
-        } else {
-          const sec = SHAPE_SECTIONS.find((s) => s.key === activeShapeSection);
-          if (sec) {
-            matching = vectorShapes.filter((s) => {
-              const rawKey = s.id.replace(/^shape_/, '');
-              return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
-            });
-          }
-        }
-
+        const matching = PIXEL_SHAPES.filter((s) => s.section === activeShapeSection);
         html += matching.map((item) => `
           <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg || `<path d="${item.pathD || ''}" fill="currentColor" />`}</svg>
           </button>
         `).join('');
       } else {
         SHAPE_SECTIONS.forEach((sec) => {
-          const matching = vectorShapes.filter((s) => {
-            const rawKey = s.id.replace(/^shape_/, '');
-            return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
-          });
-
+          const matching = PIXEL_SHAPES.filter((s) => s.section === sec.key);
           if (matching.length > 0) {
-            matching.forEach((s) => assignedShapeIds.add(s.id));
             html += `
               <div class="elements-section-header" data-ref="section-header-${sec.key}">
                 <span class="elements-section-title">${escapeHtml(sec.label)}</span>
-                ${matching.length > 6 ? `
-                  <button type="button" class="elements-section-header__action" data-ref="btn-see-all-${sec.key}" data-shape-section="${sec.key}">Ver todo</button>
-                ` : ''}
+                <button type="button" class="elements-section-header__action" data-ref="btn-see-all-${sec.key}" data-shape-section="${sec.key}">Ver todo</button>
               </div>
             `;
-            html += matching.slice(0, 6).map((item) => `
+            html += matching.map((item) => `
               <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-                <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+                <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg || `<path d="${item.pathD || ''}" fill="currentColor" />`}</svg>
               </button>
             `).join('');
           }
         });
-
-        const remainingShapes = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
-        if (remainingShapes.length > 0) {
-          html += `
-            <div class="elements-section-header" data-ref="section-header-other">
-              <span class="elements-section-title">Otras formas</span>
-              ${remainingShapes.length > 6 ? `
-                <button type="button" class="elements-section-header__action" data-ref="btn-see-all-other" data-shape-section="other">Ver todo</button>
-              ` : ''}
-            </div>
-          `;
-          html += remainingShapes.slice(0, 6).map((item) => `
-            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-              <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
-            </button>
-          `).join('');
-        }
       }
-    } else if (activeElementsCategory === 'stickers') {
-      const stickers = PIXEL_SHAPES.filter((s) => s.type === 'sticker');
-      html += stickers.map((item) => `
-        <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-          <img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />
-        </button>
-      `).join('');
     } else if (activeElementsCategory === 'stickies') {
       html += STICKY_NOTE_PRESETS.map((item) => `
         <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-sticky-item-${item.id}" data-sticky-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">

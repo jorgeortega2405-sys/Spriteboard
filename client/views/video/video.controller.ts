@@ -478,40 +478,12 @@ export class VideoController {
     let assetUrl = '';
     const size = Math.min(360, Math.round(this._project.width * 0.25));
 
-    if (shape.type === 'vector' && shape.pathD) {
-      const isArrowOrLine = shape.id.includes('arrow') || shape.id.includes('line') || shape.id.includes('chevron');
-      const isHeart = shape.id.includes('heart');
-      const isStarOrBurst = shape.id.includes('star') || shape.id.includes('sparkle') || shape.id.includes('burst');
-      const isNature = shape.id.includes('leaf') || shape.id.includes('clover') || shape.id.includes('flower');
-      const isCallout = shape.id.includes('callout') || shape.id.includes('cloud');
-
-      let fill = '#ffffff';
-      let stroke = '#1e293b';
-      let strokeWidth = 2;
-
-      if (isHeart) {
-        fill = '#f43f5e';
-        stroke = '#e11d48';
-      } else if (isStarOrBurst) {
-        fill = '#f59e0b';
-        stroke = '#d97706';
-      } else if (isNature) {
-        fill = '#10b981';
-        stroke = '#059669';
-      } else if (isArrowOrLine) {
-        fill = '#3b82f6';
-        stroke = '#2563eb';
-      } else if (isCallout) {
-        fill = '#ffffff';
-        stroke = '#6366f1';
-      } else {
-        fill = '#ffffff';
-        stroke = '#334155';
-        strokeWidth = 2;
-      }
-
+    if (shape.isLine && shape.previewSvg) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${Math.round(size / 3)}" style="color: #000000;">${shape.previewSvg}</svg>`;
+      assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    } else if (shape.type === 'vector' && shape.pathD) {
       const isSvgXml = shape.pathD.trim().startsWith('<svg');
-      const svg = isSvgXml ? shape.pathD : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="${size}" height="${size}"><defs><filter id="shape-shadow" x="-20%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.35)"/></filter></defs><g transform="translate(2, 2)" filter="url(#shape-shadow)"><path d="${shape.pathD}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g></svg>`;
+      const svg = isSvgXml ? shape.pathD : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${size}"><path d="${shape.pathD}" fill="#000000" /></svg>`;
       assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     } else if (shape.type === 'sticker' && shape.file) {
       assetUrl = `/assets/img/stickers/${shape.file}`;

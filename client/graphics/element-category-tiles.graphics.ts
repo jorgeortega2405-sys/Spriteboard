@@ -106,58 +106,6 @@ export const ELEMENT_CATEGORY_TILES: ElementCategoryTile[] = [
     label: 'Formas',
   },
   {
-    category: 'stickers',
-    dataRef: 'btn-category-stickers',
-    html: `
-      <div class="element-category-card__stack" data-ref="category-stack-stickers">
-        <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--stickers-back">
-          <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-back)" />
-            <path d="M48 14L49.8 19.2L55 21L49.8 22.8L48 28L46.2 22.8L41 21L46.2 19.2Z" fill="#FFFFFF" />
-            <path d="M56 32L57.2 35.5L60.5 36.5L57.2 37.5L56 41L54.8 37.5L51.5 36.5L54.8 35.5Z" fill="#FEF08A" />
-            <defs>
-              <linearGradient id="cva-grad-stickers-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FDE047" />
-                <stop offset="0.5" stop-color="#FBBF24" />
-                <stop offset="1" stop-color="#F59E0B" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--stickers-front">
-          <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-front)" />
-            <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-            <path d="M22 47C26 43 32 45 36 49C29 53 23 51 22 47Z" fill="#10B981" />
-            <path d="M50 47C46 43 40 45 36 49C43 53 49 51 50 47Z" fill="#10B981" />
-            <circle cx="36" cy="33" r="14" fill="#FBBF24" />
-            <path d="M36 17L38.5 22.5L44.5 21L43.5 27L49 28.5L45.5 33L49 37.5L43.5 39L44.5 45L38.5 43.5L36 49L33.5 43.5L27.5 45L28.5 39L23 37.5L26.5 33L23 28.5L28.5 27L27.5 21L33.5 22.5Z" fill="url(#cva-grad-sunflower-petals)" />
-            <circle cx="36" cy="33" r="7.5" fill="url(#cva-grad-sunflower-center)" />
-            <circle cx="36" cy="33" r="5.5" fill="#78350F" opacity="0.6" />
-            <defs>
-              <linearGradient id="cva-grad-stickers-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FB923C" />
-                <stop offset="0.4" stop-color="#F97316" />
-                <stop offset="1" stop-color="#EF4444" />
-              </linearGradient>
-              <linearGradient id="cva-grad-sunflower-petals" x1="23" y1="17" x2="49" y2="49" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FEF08A" />
-                <stop offset="0.5" stop-color="#FDE047" />
-                <stop offset="1" stop-color="#F59E0B" />
-              </linearGradient>
-              <linearGradient id="cva-grad-sunflower-center" x1="30" y1="27" x2="42" y2="39" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#92400E" />
-                <stop offset="1" stop-color="#451A03" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-      </div>
-      <span class="element-category-card__label">Figuras</span>
-    `,
-    label: 'Figuras',
-  },
-  {
     category: 'diagrams',
     dataRef: 'btn-category-diagrams',
     html: `
