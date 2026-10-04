@@ -37,8 +37,8 @@ export interface PlanBenefitDefinition {
 export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition> = {
   free: {
     id: 'free',
-    name: 'Spriteboard Gratis',
-    tagline: 'Ideal para iniciar en el pixel art y proyectos personales',
+    name: 'Spriteboard Free',
+    tagline: 'Ideal for getting started with pixel art and personal projects',
     priceMonthly: 0,
     priceYearly: 0,
     currency: 'USD',
@@ -63,7 +63,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
   pro: {
     id: 'pro',
     name: 'Spriteboard Pro',
-    tagline: 'Para profesionales y creadores exigentes',
+    tagline: 'For professionals and demanding creators',
     priceMonthly: 9.99,
     priceYearly: 95.9,
     currency: 'USD',
@@ -89,8 +89,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
   },
   business: {
     id: 'business',
-    name: 'Spriteboard Negocios',
-    tagline: 'Máxima potencia, colaboración y equipos centralizados',
+    name: 'Spriteboard Business',
+    tagline: 'Maximum power, collaboration, and centralized teams',
     priceMonthly: 19.99,
     priceYearly: 191.9,
     currency: 'USD',
@@ -118,8 +118,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Spriteboard Empresas',
-    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala',
+    name: 'Spriteboard Enterprise',
+    tagline: 'Corporate security, access control, and large-scale solutions',
     priceMonthly: 0,
     priceYearly: 0,
     currency: 'USD',
@@ -149,10 +149,10 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
 };
 
 export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: SubscriptionTierId; name: string }> = {
-  teams: { minTier: 'business', name: 'Gestión de equipos' },
-  live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
-  enterprise_sso: { minTier: 'enterprise', name: 'Autenticación empresarial (SSO / SCIM)' },
-  brand_kits: { minTier: 'business', name: 'Kits de marca' },
+  teams: { minTier: 'business', name: 'Team Management' },
+  live_collaborators_extended: { minTier: 'pro', name: 'Extended Live Collaboration' },
+  enterprise_sso: { minTier: 'enterprise', name: 'Enterprise Authentication (SSO / SCIM)' },
+  brand_kits: { minTier: 'business', name: 'Brand Kits' },
 };
 
 export const TIER_RANK: Record<SubscriptionTierId, number> = {
@@ -194,7 +194,19 @@ export function hasTier(requiredTier: SubscriptionTierId, user?: { subscription_
   return userRank >= requiredRank;
 }
 
-export function hasFeature(feature: PlanFeatureKey, user?: { subscription_tier?: string } | null): boolean {
+export function hasFeature(
+  feature: PlanFeatureKey,
+  user?: { subscription_tier?: string; permissions?: string[] } | null
+): boolean {
+  if (user?.permissions && Array.isArray(user.permissions) && user.permissions.length > 0) {
+    if (
+      user.permissions.includes('*') ||
+      user.permissions.includes(`subscription:feature:${feature}`) ||
+      user.permissions.includes('subscription:feature:all')
+    ) {
+      return true;
+    }
+  }
   const req = FEATURE_REQUIREMENTS[feature];
   if (!req) return false;
   return hasTier(req.minTier, user);

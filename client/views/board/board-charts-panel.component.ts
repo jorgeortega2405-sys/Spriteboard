@@ -7,6 +7,22 @@ export interface ChartsPanelCallbacks {
   onCreateChart: (type: ChartType) => void;
 }
 
+export interface ChartGroupItem {
+  description: string;
+  id: string;
+  name: string;
+  svg: string;
+  type: ChartType;
+}
+
+export interface ChartGroup {
+  id: string;
+  items: ChartGroupItem[];
+  label: string;
+}
+
+export const CHART_GROUPS: ChartGroup[] = [];
+
 export interface ChartCatalogItem {
   description: string;
   iconSvg: string;
@@ -14,86 +30,14 @@ export interface ChartCatalogItem {
   type: ChartType;
 }
 
-export const CHART_CATALOG: ChartCatalogItem[] = [
-  {
-    description: 'Barras individuales para comparar valores entre categorías',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="14" width="6" height="20" rx="3" fill="#3b82f6"/><rect x="17" y="8" width="6" height="26" rx="3" fill="#3b82f6"/><rect x="28" y="20" width="6" height="14" rx="3" fill="#3b82f6"/></svg>',
-    name: 'Barras verticales',
-    type: 'bar-vertical',
-  },
-  {
-    description: 'Filas horizontales ideales para etiquetas largas',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="8" width="26" height="6" rx="3" fill="#3b82f6"/><rect x="6" y="17" width="20" height="6" rx="3" fill="#3b82f6"/><rect x="6" y="26" width="14" height="6" rx="3" fill="#3b82f6"/></svg>',
-    name: 'Barras horizontales',
-    type: 'bar-horizontal',
-  },
-  {
-    description: 'Barras verticales con color distintivo por categoría',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="14" width="6" height="20" rx="3" fill="#3b82f6"/><rect x="14" y="20" width="6" height="14" rx="3" fill="#a855f7"/><rect x="22" y="8" width="6" height="26" rx="3" fill="#f59e0b"/><rect x="30" y="24" width="6" height="10" rx="3" fill="#facc15"/></svg>',
-    name: 'Barras categóricas',
-    type: 'bar-categorical',
-  },
-  {
-    description: 'Filas horizontales con color distintivo por categoría',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="8" width="26" height="6" rx="3" fill="#3b82f6"/><rect x="6" y="16" width="18" height="6" rx="3" fill="#a855f7"/><rect x="6" y="24" width="24" height="6" rx="3" fill="#f59e0b"/><rect x="6" y="32" width="12" height="6" rx="3" fill="#facc15"/></svg>',
-    name: 'Filas categóricas',
-    type: 'bar-categorical-horizontal',
-  },
-  {
-    description: 'Grupos de barras para comparar múltiples series',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="16" width="4" height="18" rx="2" fill="#3b82f6"/><rect x="11" y="22" width="4" height="12" rx="2" fill="#a855f7"/><rect x="20" y="10" width="4" height="24" rx="2" fill="#3b82f6"/><rect x="25" y="18" width="4" height="16" rx="2" fill="#a855f7"/></svg>',
-    name: 'Barras agrupadas',
-    type: 'bar-grouped-vertical',
-  },
-  {
-    description: 'Filas agrupadas para comparar múltiples series',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="8" width="24" height="4" rx="2" fill="#3b82f6"/><rect x="6" y="13" width="18" height="4" rx="2" fill="#a855f7"/><rect x="6" y="22" width="20" height="4" rx="2" fill="#3b82f6"/><rect x="6" y="27" width="14" height="4" rx="2" fill="#a855f7"/></svg>',
-    name: 'Filas agrupadas',
-    type: 'bar-grouped-horizontal',
-  },
-  {
-    description: 'Barras apiladas para ver composición y acumulado',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="8" y="24" width="6" height="10" fill="#3b82f6"/><rect x="8" y="16" width="6" height="8" fill="#a855f7"/><rect x="8" y="10" width="6" height="6" rx="3" fill="#f59e0b"/><rect x="20" y="20" width="6" height="14" fill="#3b82f6"/><rect x="20" y="12" width="6" height="8" fill="#a855f7"/><rect x="20" y="6" width="6" height="6" rx="3" fill="#f59e0b"/></svg>',
-    name: 'Barras apiladas',
-    type: 'bar-stacked-vertical',
-  },
-  {
-    description: 'Filas apiladas para ver composición acumulada',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="6" y="10" width="10" height="6" fill="#3b82f6"/><rect x="16" y="10" width="8" height="6" fill="#a855f7"/><rect x="24" y="10" width="6" height="6" rx="3" fill="#f59e0b"/><rect x="6" y="22" width="12" height="6" fill="#3b82f6"/><rect x="18" y="22" width="6" height="6" fill="#a855f7"/><rect x="24" y="22" width="8" height="6" rx="3" fill="#f59e0b"/></svg>',
-    name: 'Filas apiladas',
-    type: 'bar-stacked-horizontal',
-  },
-  {
-    description: 'Barras apiladas normalizadas al 100% para porcentajes',
-    iconSvg: '<svg viewBox="0 0 40 40"><rect x="8" y="22" width="6" height="12" fill="#3b82f6"/><rect x="8" y="14" width="6" height="8" fill="#a855f7"/><rect x="8" y="6" width="6" height="8" rx="2" fill="#f59e0b"/><rect x="20" y="24" width="6" height="10" fill="#3b82f6"/><rect x="20" y="16" width="6" height="8" fill="#a855f7"/><rect x="20" y="6" width="6" height="10" rx="2" fill="#f59e0b"/></svg>',
-    name: 'Barras 100% apiladas',
-    type: 'bar-stacked-100-vertical',
-  },
-  {
-    description: 'Líneas continuas para tendencias en el tiempo',
-    iconSvg: '<svg viewBox="0 0 40 40"><polyline points="6,28 16,16 26,22 34,8" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="28" r="2.5" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/><circle cx="16" cy="16" r="2.5" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/><circle cx="26" cy="22" r="2.5" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/><circle cx="34" cy="8" r="2.5" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/></svg>',
-    name: 'Líneas',
-    type: 'line',
-  },
-  {
-    description: 'Área bajo la curva rellena para volumen acumulado',
-    iconSvg: '<svg viewBox="0 0 40 40"><polygon points="6,32 6,24 16,14 26,20 34,10 34,32" fill="rgba(59,130,246,0.3)"/><polyline points="6,24 16,14 26,20 34,10" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    name: 'Área',
-    type: 'area',
-  },
-  {
-    description: 'Gráfica circular para distribución de partes de un total',
-    iconSvg: '<svg viewBox="0 0 40 40"><path d="M20,20 L20,6 A14,14 0 0,1 34,20 Z" fill="#3b82f6"/><path d="M20,20 L34,20 A14,14 0 0,1 20,34 Z" fill="#a855f7"/><path d="M20,20 L20,34 A14,14 0 0,1 6,20 Z" fill="#f59e0b"/><path d="M20,20 L6,20 A14,14 0 0,1 20,6 Z" fill="#facc15"/></svg>',
-    name: 'Circular (Pastel)',
-    type: 'pie',
-  },
-  {
-    description: 'Gráfica de anillo con espacio central limpio',
-    iconSvg: '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="25 65"/><circle cx="20" cy="20" r="14" fill="none" stroke="#a855f7" stroke-width="6" stroke-dasharray="25 65" stroke-dashoffset="-25"/><circle cx="20" cy="20" r="14" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="20 70" stroke-dashoffset="-50"/><circle cx="20" cy="20" r="14" fill="none" stroke="#facc15" stroke-width="6" stroke-dasharray="18 72" stroke-dashoffset="-70"/></svg>',
-    name: 'Anillo (Donut)',
-    type: 'donut',
-  },
-];
+export const CHART_CATALOG: ChartCatalogItem[] = CHART_GROUPS.flatMap((g) =>
+  g.items.map((item) => ({
+    description: item.description,
+    iconSvg: item.svg,
+    name: item.name,
+    type: item.type,
+  }))
+);
 
 export class BoardChartsPanelComponent {
   private abbrevDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
@@ -353,19 +297,26 @@ export class BoardChartsPanelComponent {
     if (!grid) return;
 
     grid.innerHTML = '';
-    for (const item of CHART_CATALOG) {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'chart-gallery-card';
-      card.setAttribute('data-ref', `btn-create-chart-${item.type}`);
-      card.innerHTML = `
-        <div class="chart-gallery-card__icon">${item.iconSvg}</div>
-        <div class="chart-gallery-card__name">${item.name}</div>
-      `;
-      card.addEventListener('click', () => {
-        this.callbacks.onCreateChart(item.type);
-      });
-      grid.appendChild(card);
+    for (const group of CHART_GROUPS) {
+      const titleEl = document.createElement('div');
+      titleEl.className = 'elements-section-title';
+      titleEl.textContent = group.label;
+      grid.appendChild(titleEl);
+
+      for (const item of group.items) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'element-grid-item element-grid-item--diagram';
+        card.setAttribute('data-ref', `btn-create-chart-${item.id}`);
+        card.setAttribute('data-chart-type', item.type);
+        card.setAttribute('data-tooltip', item.name);
+        card.setAttribute('aria-label', item.name);
+        card.innerHTML = item.svg;
+        card.addEventListener('click', () => {
+          this.callbacks.onCreateChart(item.type);
+        });
+        grid.appendChild(card);
+      }
     }
   }
 

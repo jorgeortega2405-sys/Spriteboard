@@ -10,6 +10,7 @@ import { SlideshowPlayerComponent } from '../../components/slideshow-player.comp
 import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
+import { DEFAULT_STICKY_COLOR } from '../../config/sticky-notes.config.js';
 import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
 import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
@@ -1637,7 +1638,7 @@ export class StageCanvasController {
       btn.addEventListener('click', () => {
         stickyButtons.forEach((b) => b.classList.remove('is-active'));
         btn.classList.add('is-active');
-        const color = btn.getAttribute('data-color') || '#fef08a';
+        const color = btn.getAttribute('data-color') || DEFAULT_STICKY_COLOR;
         if (this.selectedElementIds.size > 0) {
           this.applySelectedProperty('color', color);
         } else {

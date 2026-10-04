@@ -51,8 +51,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const freeTier = rawTiers.find((tier) => tier.id === 'free') || {
     id: 'free',
-    name: 'Spriteboard Gratis',
-    tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
+    name: 'Spriteboard Free',
+    tagline: 'Ideal for getting started exploring, sketching, and designing at no cost.',
     storage: '5 GB de almacenamiento',
     price: 0,
     priceMonthly: 0,
@@ -60,16 +60,16 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     currency: 'USD',
     billingPeriod: 'monthly',
     icon: 'brush',
-    buttonText: 'Plan actual',
+    buttonText: 'Current plan',
     features: [
       {
-        title: '5 GB de almacenamiento en la nube',
-        desc: 'Guarda tus proyectos y lienzos de forma segura',
+        title: '5 GB cloud storage',
+        desc: 'Keep your projects and canvases secure',
         icon: 'cloud',
       },
       {
-        title: 'Colaboración en vivo (hasta 3 personas)',
-        desc: 'Tú y 2 colegas editando simultáneamente con cursores activos',
+        title: 'Live collaboration (up to 3 people)',
+        desc: 'You and 2 colleagues editing simultaneously with active cursors',
         icon: 'group',
       },
     ],
@@ -78,7 +78,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
   const proTier = rawTiers.find((tier) => tier.id === 'pro') || {
     id: 'pro',
     name: 'Spriteboard Pro',
-    tagline: 'El plan más equilibrado para profesionales y creadores independientes.',
+    tagline: 'The most balanced plan for professionals and independent creators.',
     storage: '100 GB de almacenamiento',
     price: 9.99,
     priceMonthly: 9.99,
@@ -86,18 +86,18 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     currency: 'USD',
     billingPeriod: 'monthly',
     icon: 'auto_awesome',
-    badge: 'Más Popular',
+    badge: 'Most Popular',
     isPopular: true,
-    buttonText: 'Obtén Spriteboard Pro',
+    buttonText: 'Get Spriteboard Pro',
     features: [
       {
-        title: '100 GB de almacenamiento en la nube',
-        desc: '20x más espacio para proyectos de alta demanda y archivos pesados',
+        title: '100 GB cloud storage',
+        desc: '20x more space for high-demand projects and large assets',
         icon: 'cloud',
       },
       {
-        title: 'Colaboración en vivo extendida (hasta 6 personas)',
-        desc: 'Salas de trabajo colaborativo para grupos de diseño',
+        title: 'Extended live collaboration (up to 6 people)',
+        desc: 'Collaborative rooms for design teams',
         icon: 'groups',
       },
     ],
@@ -105,8 +105,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const businessTier = rawTiers.find((tier) => tier.id === 'business' || tier.id === 'negocios') || {
     id: 'business',
-    name: 'Spriteboard Negocios',
-    tagline: 'Máxima potencia, colaboración avanzada para equipos y estudios de desarrollo.',
+    name: 'Spriteboard Business',
+    tagline: 'Maximum power and advanced collaboration for studios and teams.',
     storage: '500 GB de almacenamiento',
     price: 19.99,
     priceMonthly: 19.99,
@@ -114,28 +114,28 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     currency: 'USD',
     billingPeriod: 'monthly',
     icon: 'business_center',
-    badge: 'Para Equipos',
+    badge: 'For Teams',
     isPopular: false,
-    buttonText: 'Obtén Spriteboard Negocios',
+    buttonText: 'Get Spriteboard Business',
     features: [
       {
-        title: '500 GB de almacenamiento masivo',
-        desc: 'Capacidad para proyectos a gran escala y archivo histórico de estudio',
+        title: '500 GB massive storage',
+        desc: 'Capacity for large-scale projects and historic studio archive',
         icon: 'cloud',
       },
       {
-        title: 'Gestión centralizada de equipos',
-        desc: 'Crea y administra múltiples equipos de trabajo, roles y lienzos compartidos',
+        title: 'Centralized team management',
+        desc: 'Create and manage multiple teams, roles, and shared canvases',
         icon: 'domain',
       },
       {
-        title: 'Colaboración masiva (hasta 50 personas en vivo)',
-        desc: 'Salas de lienzo masivas para todo tu equipo de artistas y animadores',
+        title: 'Massive collaboration (up to 50 people live)',
+        desc: 'Large canvas rooms for your entire team of artists and animators',
         icon: 'groups_3',
       },
       {
-        title: 'Kits de marca y paletas centralizadas',
-        desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+        title: 'Brand kits and centralized palettes',
+        desc: 'Official logos, fonts, and colors shared with your whole organization',
         icon: 'palette',
       },
     ],
@@ -143,8 +143,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const enterpriseTier = rawTiers.find((tier) => tier.id === 'enterprise' || tier.id === 'empresas') || {
     id: 'enterprise',
-    name: 'Spriteboard Empresas',
-    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala.',
+    name: 'Spriteboard Enterprise',
+    tagline: 'Corporate security, access control, and large-scale solutions.',
     storage: '5 TB de almacenamiento',
     price: 0,
     priceMonthly: 0,
@@ -152,34 +152,34 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     currency: 'USD',
     billingPeriod: 'monthly',
     icon: 'corporate_fare',
-    badge: 'Para Empresas',
+    badge: 'For Enterprises',
     isPopular: false,
     isCustomPrice: true,
-    buttonText: 'Hablar con ventas',
+    buttonText: 'Contact sales',
     features: [
       {
-        title: '5 TB de almacenamiento masivo',
-        desc: 'Máxima capacidad para almacenamiento corporativo y proyectos a gran escala',
+        title: '5 TB massive storage',
+        desc: 'Maximum capacity for corporate storage and enterprise-scale projects',
         icon: 'cloud',
       },
       {
-        title: 'Colaboración masiva para organizaciones',
-        desc: 'Salas de lienzo masivas para toda tu empresa y departamentos',
+        title: 'Enterprise-wide collaboration',
+        desc: 'Large canvas rooms across your entire company and departments',
         icon: 'groups_3',
       },
       {
-        title: 'Gestión centralizada de equipos',
-        desc: 'Crea y administra múltiples equipos de trabajo, roles y lienzos compartidos',
+        title: 'Centralized team management',
+        desc: 'Create and manage multiple teams, roles, and shared canvases',
         icon: 'domain',
       },
       {
-        title: 'Kits de marca y paletas centralizadas',
-        desc: 'Logotipos, fuentes y colores oficiales compartidos con toda tu organización',
+        title: 'Brand kits and centralized palettes',
+        desc: 'Official logos, fonts, and colors shared with your whole organization',
         icon: 'palette',
       },
       {
-        title: 'Autenticación empresarial (SSO y SAML)',
-        desc: 'Inicio de sesión centralizado corporativo SAML 2.0 y aprovisionamiento SCIM',
+        title: 'Enterprise authentication (SSO & SAML)',
+        desc: 'Centralized corporate login via SAML 2.0 and SCIM provisioning',
         icon: 'vpn_key',
       },
     ],
@@ -229,7 +229,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
               <hr class="component-divider component-card-feature-divider" />
-              <p class="component-card-feature-divider-text">Todo lo del plan anterior, más:</p>
+              <p class="component-card-feature-divider-text">${t('upgrade.all_previous_plus')}</p>
             </div>
           `;
         }
@@ -239,8 +239,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           <div class="component-card-feature-item ${isHidden ? 'component-card-feature-item--hidden' : ''}" data-ref="feature-item-${tier.id}" data-hidden="${isHidden ? 'true' : 'false'}">
             <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#${escapeHtml(feat.icon || 'check_circle')}"></use></svg>
             <div class="component-card-feature-text-container">
-              <span class="component-card-feature-title">${escapeHtml(feat.title || feat.label || '')}</span>
-              <span class="component-card-feature-desc">${escapeHtml(feat.desc || '')}</span>
+              <span class="component-card-feature-title">${escapeHtml(t(`upgrade.plans.${tier.id}.features.${idx}.title`) || feat.title || feat.label || '')}</span>
+              <span class="component-card-feature-desc">${escapeHtml(t(`upgrade.plans.${tier.id}.features.${idx}.desc`) || feat.desc || '')}</span>
             </div>
           </div>
         `;
@@ -260,16 +260,16 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ${isCurrentPlan ? `
             <div class="component-card-current-badge" data-ref="current-badge-${tier.id}">
               <svg class="component-icon" aria-hidden="true" style="font-size: 14px;"><use href="/icons.svg#check_circle"></use></svg>
-              <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
+              <span>${escapeHtml(t('upgrade.plans.free.button') || t('upgrade.current_plan') || 'Tu plan actual')}</span>
             </div>
           ` : (tier.badge ? `
-            <div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(tier.badge)}</div>
+            <div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(t(`upgrade.plans.${tier.id}.badge`) || tier.badge)}</div>
           ` : '')}
-          <h2 class="component-card-title" data-ref="card-title-${tier.id}">${escapeHtml(tier.name)}</h2>
-          <p class="component-card-desc" data-ref="card-desc-${tier.id}">${escapeHtml(tier.tagline)}</p>
+          <h2 class="component-card-title" data-ref="card-title-${tier.id}">${escapeHtml(t(`upgrade.plans.${tier.id}.name`) || tier.name)}</h2>
+          <p class="component-card-desc" data-ref="card-desc-${tier.id}">${escapeHtml(t(`upgrade.plans.${tier.id}.tagline`) || tier.tagline)}</p>
           <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-${tier.id}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-            <span>${escapeHtml(tier.storage || 'Almacenamiento en la nube')}</span>
+            <span>${escapeHtml(t(`upgrade.plans.${tier.id}.storage`) || tier.storage || 'Almacenamiento en la nube')}</span>
           </span>
         </div>
 
@@ -292,7 +292,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ${isCurrentPlan ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--current" data-ref="btn-subscribe-${tier.id}" data-action="current-plan" disabled>
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-right: 6px;"><use href="/icons.svg#check_circle"></use></svg>
-              <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
+              <span>${escapeHtml(t('upgrade.plans.free.button') || t('upgrade.current_plan') || 'Tu plan actual')}</span>
             </button>
           ` : isDowngrade ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--downgrade" data-ref="btn-subscribe-${tier.id}" data-action="downgrade" disabled>
@@ -310,19 +310,19 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ` : tier.id === 'enterprise' ? `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="contact-sales" data-tier="${tier.id}">
               <span class="component-button__default-text">
-                ${escapeHtml(tier.buttonText || 'Hablar con ventas')}
+                ${escapeHtml(t(`upgrade.plans.${tier.id}.button`) || tier.buttonText || 'Hablar con ventas')}
               </span>
               <span class="component-button__hover-text">
-                Contactar
+                ${t('upgrade.contact')}
               </span>
             </button>
           ` : `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="subscribe" data-tier="${tier.id}">
               <span class="component-button__default-text">
-                ${escapeHtml(tier.buttonText || `Obtén ${tier.name}`)}
+                ${escapeHtml(t(`upgrade.plans.${tier.id}.button`) || tier.buttonText || `Obtén ${tier.name}`)}
               </span>
               <span class="component-button__hover-text">
-                Mejorar plan
+                ${t('upgrade.upgrade_plan')}
               </span>
             </button>
           `}

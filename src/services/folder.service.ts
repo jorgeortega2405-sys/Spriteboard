@@ -10,7 +10,7 @@ import { getPublicUrl } from './s3.service.js';
 export async function ensureUploadsDefaultFolder(userId: number): Promise<FolderItem> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      "SELECT id, uuid, user_id, name, color, is_default, deleted_at, created_at, updated_at FROM folders WHERE user_id = ? AND name = 'Subidos' AND deleted_at IS NULL LIMIT 1",
+      "SELECT id, uuid, user_id, name, color, is_default, deleted_at, created_at, updated_at FROM folders WHERE user_id = ? AND (name = 'Uploads' OR name = 'Subidos') AND deleted_at IS NULL LIMIT 1",
       [userId]
     );
 
@@ -24,7 +24,7 @@ export async function ensureUploadsDefaultFolder(userId: number): Promise<Folder
     const uuid = crypto.randomUUID();
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
       'INSERT INTO folders (uuid, user_id, name, color, is_default) VALUES (?, ?, ?, ?, TRUE)',
-      [uuid, userId, 'Subidos', '#ec4899']
+      [uuid, userId, 'Uploads', '#ec4899']
     );
 
     const insertedId = result.insertId;
@@ -39,7 +39,7 @@ export async function ensureUploadsDefaultFolder(userId: number): Promise<Folder
       items_count: 0,
     } as FolderItem;
   } catch (err) {
-    logger.db.error(`Error al asegurar carpeta predeterminada Subidos para usuario ${userId}`, err);
+    logger.db.error(`Error al asegurar carpeta predeterminada Uploads para usuario ${userId}`, err);
     throw new Error('No se pudo verificar la carpeta predeterminada de subidos.');
   }
 }
@@ -47,7 +47,7 @@ export async function ensureUploadsDefaultFolder(userId: number): Promise<Folder
 export async function ensureDefaultFolder(userId: number): Promise<FolderItem> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      "SELECT id, uuid, user_id, name, color, is_default, deleted_at, created_at, updated_at FROM folders WHERE user_id = ? AND (name = 'Mis proyectos' OR is_default = TRUE) AND deleted_at IS NULL LIMIT 1",
+      "SELECT id, uuid, user_id, name, color, is_default, deleted_at, created_at, updated_at FROM folders WHERE user_id = ? AND (name = 'My Projects' OR name = 'Mis proyectos' OR is_default = TRUE) AND deleted_at IS NULL LIMIT 1",
       [userId]
     );
 
@@ -62,7 +62,7 @@ export async function ensureDefaultFolder(userId: number): Promise<FolderItem> {
       const uuid = crypto.randomUUID();
       const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
         'INSERT INTO folders (uuid, user_id, name, color, is_default) VALUES (?, ?, ?, ?, TRUE)',
-        [uuid, userId, 'Mis proyectos', '#6366f1']
+        [uuid, userId, 'My Projects', '#6366f1']
       );
 
       const insertedId = result.insertId;
@@ -98,10 +98,11 @@ export async function getOrCreateFolderByName(userId: number, folderName: string
     return ensureUploadsDefaultFolder(userId);
   }
 
-  if (cleanName.toLowerCase() === 'subidos') {
+  const lowerName = cleanName.toLowerCase();
+  if (lowerName === 'subidos' || lowerName === 'uploads') {
     return ensureUploadsDefaultFolder(userId);
   }
-  if (cleanName.toLowerCase() === 'mis proyectos') {
+  if (lowerName === 'mis proyectos' || lowerName === 'my projects') {
     return ensureDefaultFolder(userId);
   }
 

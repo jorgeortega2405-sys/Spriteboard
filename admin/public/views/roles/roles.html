@@ -3,14 +3,14 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="roles-scrollable">
       <div class="view-header" data-ref="roles-floating-top">
         <div class="view-header__left" data-ref="roles-floating-left">
-          <h1 class="view-header__title" data-ref="roles-title">Roles y Permisos</h1>
+          <h1 class="view-header__title" data-ref="roles-title" data-i18n="admin.roles.title">Roles y Permisos</h1>
         </div>
 
         <div class="view-header__right" data-ref="roles-floating-right">
           <div class="view-header__actions" data-ref="roles-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-roles" data-tooltip="Exportar matriz de permisos" aria-label="Exportar matriz de permisos">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-roles" data-i18n-aria="admin.roles.export_matrix_aria" data-i18n-tooltip="admin.roles.export_matrix_tooltip" data-tooltip="Exportar matriz de permisos" aria-label="Exportar matriz de permisos">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>Exportar Matriz</span>
+              <span data-i18n="admin.roles.export_matrix">Exportar Matriz</span>
             </button>
           </div>
         </div>
@@ -24,9 +24,9 @@
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
               </div>
               <div class="component-search__input-box" data-ref="search-input-box">
-                <input class="component-search__input" data-ref="input-search-roles" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por nombre de rol, categoría o permiso..." />
+                <input class="component-search__input" data-ref="input-search-roles" type="text" maxlength="100" autocomplete="off" data-i18n-placeholder="admin.roles.search_placeholder" placeholder="Buscar por nombre de rol, categoría o permiso..." />
               </div>
-              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" data-i18n-aria="admin.roles.clear_search_aria" aria-label="Limpiar búsqueda">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
               </button>
             </div>
@@ -34,35 +34,35 @@
 
           <div class="support-search-container__filters-wrap" data-ref="roles-filters-wrap" style="padding: 8px 12px;">
             <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="roles-tags-carousel-wrapper">
-              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-i18n-aria="admin.roles.scroll_left_aria" data-i18n-tooltip="admin.roles.scroll_left_tooltip" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
               </button>
 
               <div class="component-tags-carousel" data-ref="roles-category-tabs">
                 <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-cat-all" data-category="all">
-                  <span>Todos los Roles (32)</span>
+                  <span data-i18n="admin.roles.tab_all">Todos los Roles (32)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-platform" data-category="platform">
-                  <span>Platform (7)</span>
+                  <span data-i18n="admin.roles.tab_platform">Platform (7)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-support" data-category="support">
-                  <span>Support (6)</span>
+                  <span data-i18n="admin.roles.tab_support">Support (6)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-engineering" data-category="engineering">
-                  <span>Engineering (5)</span>
+                  <span data-i18n="admin.roles.tab_engineering">Engineering (5)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-data" data-category="data">
-                  <span>Data (5)</span>
+                  <span data-i18n="admin.roles.tab_data">Data (5)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-finance" data-category="finance">
-                  <span>Finance (4)</span>
+                  <span data-i18n="admin.roles.tab_finance">Finance (4)</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-operations" data-category="operations">
-                  <span>Operations (4)</span>
+                  <span data-i18n="admin.roles.tab_operations">Operations (4)</span>
                 </button>
               </div>
 
-              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-i18n-aria="admin.roles.scroll_right_aria" data-i18n-tooltip="admin.roles.scroll_right_tooltip" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
               </button>
             </div>
@@ -73,12 +73,12 @@
           <table class="component-table" data-ref="roles-table">
             <thead>
               <tr>
-                <th>Rol / Clave</th>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Usuarios</th>
-                <th>Permisos Asignados</th>
-                <th style="text-align: right;">Acciones</th>
+                <th data-i18n="admin.roles.th_role">Rol / Clave</th>
+                <th data-i18n="admin.roles.th_category">Categoría</th>
+                <th data-i18n="admin.roles.th_description">Descripción</th>
+                <th data-i18n="admin.roles.th_users">Usuarios</th>
+                <th data-i18n="admin.roles.th_permissions">Permisos Asignados</th>
+                <th data-i18n="admin.roles.th_actions" style="text-align: right;">Acciones</th>
               </tr>
             </thead>
             <tbody data-ref="roles-tbody">
@@ -92,7 +92,7 @@
 
   <div class="modal-backdrop" data-ref="modal-role-backdrop" style="display: none;">
     <div class="modal-container" data-ref="modal-role-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-role-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-role-modal" data-i18n-aria="admin.roles.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--md" data-ref="modal-role">
@@ -100,18 +100,18 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title" data-ref="modal-role-title">Detalle del Rol</h2>
+          <h2 class="modal-card__title" data-ref="modal-role-title" data-i18n="admin.roles.modal_title">Detalle del Rol</h2>
           <p class="modal-card__desc" data-ref="modal-role-desc"></p>
         </div>
         <div class="modal-card__body">
-          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Alcances y Privilegios:</h4>
+          <h4 class="modal-card__subtitle" data-i18n="admin.roles.modal_privileges">Alcances y Privilegios:</h4>
           <div data-ref="modal-role-permissions" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
             <!-- Badges de permisos -->
           </div>
         </div>
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
-            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-dismiss-role-modal">Cerrar</button>
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-dismiss-role-modal" data-i18n="admin.roles.modal_close_btn">Cerrar</button>
           </div>
         </div>
       </div>

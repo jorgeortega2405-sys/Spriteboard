@@ -527,7 +527,10 @@ def audit_translations(root_dir: Path) -> int:
     missing_in_es = en_keys - es_keys
 
     dict_report_lines: List[str] = []
-    if not missing_in_en and not missing_in_es:
+    if not en_file.exists():
+        print(f"  [OK] Master dictionary `es-419.json` loaded ({len(es_keys)} keys). Single es-419 mode active.")
+        dict_report_lines.append(f"- Master dictionary `es-419.json` active ({len(es_keys)} keys). Single es-419 mode.")
+    elif not missing_in_en and not missing_in_es:
         print(f"  [OK] Both language dictionaries are in sync ({len(es_keys)} keys).")
         dict_report_lines.append(f"- Both dictionaries are fully synchronized ({len(es_keys)} keys).")
     else:
@@ -690,7 +693,7 @@ def audit_translations(root_dir: Path) -> int:
     summary_items = [
         ("Audit Status", "PASSED" if total_issues == 0 else "ACTION REQUIRED"),
         ("Total Critical i18n Issues", str(total_issues)),
-        ("Dictionary Sync Mismatches", str(len(missing_in_en) + len(missing_in_es))),
+        ("Dictionary Sync Mismatches", str(len(missing_in_en) + len(missing_in_es)) if en_file.exists() else "0 (Single es-419 mode)"),
         ("Missing Referenced Keys in Code", str(len(missing_referenced_keys))),
         ("Frontend HTML Untranslated Elements", str(len(frontend_violations))),
         ("TS/JS Hardcoded String Candidates", str(len(ts_violations))),

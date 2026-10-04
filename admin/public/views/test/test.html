@@ -5,7 +5,7 @@
         <div class="view-backdrop" data-ref="test-backdrop"></div>
         <div class="view-header" data-ref="test-header">
           <div class="view-header__left" data-ref="test-header-left">
-            <h1 class="view-header__title" data-ref="test-title">Página de Prueba</h1>
+            <h1 class="view-header__title" data-ref="test-title" data-i18n="admin.test.title">Página de Prueba</h1>
           </div>
         </div>
 
@@ -16,17 +16,17 @@
                 <svg class="component-icon" style="width: 32px; height: 32px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </div>
 
-              <h1 class="view-hero__title" data-ref="test-headline" style="margin-bottom: 8px; font-size: 28px;">
+              <h1 class="view-hero__title" data-ref="test-headline" data-i18n="admin.test.spa_title" style="margin-bottom: 8px; font-size: 28px;">
                 Navegación SPA de Prueba
               </h1>
-              <p class="card__subtitle" data-ref="test-subtitle" style="margin-bottom: 24px;">
+              <p class="card__subtitle" data-ref="test-subtitle" data-i18n="admin.test.spa_desc" style="margin-bottom: 24px;">
                 Esta vista confirma que el cambio dinámico de rutas y el sistema de navegación modular en el panel de administración funcionan correctamente.
               </p>
 
               <div class="admin-test-actions" data-ref="admin-test-actions" style="display: flex; justify-content: center; gap: 12px; margin-top: 16px;">
                 <button type="button" class="component-button component-button--h45 component-button--primary" data-ref="btn-test-go-home">
                   <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#home"></use></svg>
-                  <span>Volver a Inicio</span>
+                  <span data-i18n="admin.test.back_home">Volver a Inicio</span>
                 </button>
               </div>
             </div>

@@ -3,54 +3,54 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="users-scrollable">
       <div class="view-header" data-ref="users-floating-top">
         <div class="view-header__left" data-ref="users-floating-left">
-          <h1 class="view-header__title" data-ref="users-title">Gestionar Usuarios</h1>
+          <h1 class="view-header__title" data-ref="users-title" data-i18n="admin.users.title">Gestionar Usuarios</h1>
         </div>
 
         <div class="view-header__right" data-ref="users-floating-right">
           <div class="view-header__actions" data-ref="users-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar usuarios" aria-label="Buscar usuarios">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-i18n-aria="admin.users.search_aria" data-i18n-tooltip="admin.users.search_tooltip" data-tooltip="Buscar usuarios" aria-label="Buscar usuarios">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
 
             <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-i18n-aria="admin.users.filters_aria" data-i18n-tooltip="admin.users.filters_tooltip" data-tooltip="Filtros" aria-label="Filtros">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </button>
 
               <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
                   <div class="avatar-menu__section-header">
-                    <span class="drawer-section__title">Filtrar por Rol</span>
+                    <span class="drawer-section__title" data-i18n="admin.users.filter_role_title">Filtrar por Rol</span>
                   </div>
                   <div class="menu-panel__list" data-ref="filter-roles-list">
                     <button type="button" class="menu-item is-active" data-ref="filter-role-all" data-role="all">
-                      <span class="menu-item__text">Todos los roles</span>
+                      <span class="menu-item__text" data-i18n="admin.users.role_all">Todos los roles</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="filter-role-super-admin" data-role="SUPER_ADMIN">
-                      <span class="menu-item__text">Super Admin</span>
+                      <span class="menu-item__text" data-i18n="admin.users.role_super_admin">Super Admin</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="filter-role-platform-admin" data-role="PLATFORM_ADMIN">
-                      <span class="menu-item__text">Platform Admin</span>
+                      <span class="menu-item__text" data-i18n="admin.users.role_platform_admin">Platform Admin</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="filter-role-user" data-role="USER">
-                      <span class="menu-item__text">Usuario (Estándar)</span>
+                      <span class="menu-item__text" data-i18n="admin.users.role_user">Usuario (Estándar)</span>
                     </button>
                   </div>
 
                   <div class="menu-divider"></div>
 
                   <div class="avatar-menu__section-header">
-                    <span class="drawer-section__title">Filtrar por 2FA</span>
+                    <span class="drawer-section__title" data-i18n="admin.users.filter_2fa_title">Filtrar por 2FA</span>
                   </div>
                   <div class="menu-panel__list" data-ref="filter-2fa-list">
                     <button type="button" class="menu-item is-active" data-ref="filter-2fa-all" data-2fa="all">
-                      <span class="menu-item__text">Todos</span>
+                      <span class="menu-item__text" data-i18n="admin.users.filter_2fa_all">Todos</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="filter-2fa-enabled" data-2fa="enabled">
-                      <span class="menu-item__text">Con 2FA Activado</span>
+                      <span class="menu-item__text" data-i18n="admin.users.filter_2fa_enabled">Con 2FA Activado</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="filter-2fa-disabled" data-2fa="disabled">
-                      <span class="menu-item__text">Sin 2FA</span>
+                      <span class="menu-item__text" data-i18n="admin.users.filter_2fa_disabled">Sin 2FA</span>
                     </button>
                   </div>
                 </div>
@@ -58,13 +58,13 @@
             </div>
             <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
               <div class="component-inline-control__group" data-ref="inline-group-page-prev">
-                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-i18n-aria="admin.users.prev_page_aria" data-i18n-tooltip="admin.users.prev_page_tooltip" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                 </button>
               </div>
               <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
               <div class="component-inline-control__group" data-ref="inline-group-page-next">
-                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-i18n-aria="admin.users.next_page_aria" data-i18n-tooltip="admin.users.next_page_tooltip" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                 </button>
               </div>
@@ -72,23 +72,23 @@
           </div>
 
           <div class="view-header__actions" data-ref="users-selected-actions" style="display: none; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-i18n-aria="admin.users.cancel_selection_aria" data-i18n-tooltip="admin.users.cancel_selection_tooltip" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-account" data-tooltip="Gestionar cuenta" aria-label="Gestionar cuenta">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-account" data-i18n-aria="admin.users.manage_account_aria" data-i18n-tooltip="admin.users.manage_account_tooltip" data-tooltip="Gestionar cuenta" aria-label="Gestionar cuenta">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions" data-tooltip="Gestionar sanciones" aria-label="Gestionar sanciones">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions" data-i18n-aria="admin.users.manage_sanctions_aria" data-i18n-tooltip="admin.users.manage_sanctions_tooltip" data-tooltip="Gestionar sanciones" aria-label="Gestionar sanciones">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions-history" data-tooltip="Historial de sanciones" aria-label="Historial de sanciones">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions-history" data-i18n-aria="admin.users.sanctions_history_aria" data-i18n-tooltip="admin.users.sanctions_history_tooltip" data-tooltip="Historial de sanciones" aria-label="Historial de sanciones">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-action-roles" data-tooltip="Gestionar roles" aria-label="Gestionar roles">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-action-roles" data-i18n-aria="admin.users.manage_roles_aria" data-i18n-tooltip="admin.users.manage_roles_tooltip" data-tooltip="Gestionar roles" aria-label="Gestionar roles">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#admin_panel_settings"></use></svg>
             </button>
           </div>
@@ -100,9 +100,9 @@
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </div>
             <div class="component-search__input-box" data-ref="search-input-box">
-              <input class="component-search__input" data-ref="users-search-input" placeholder="Buscar por nombre o correo..." type="text" maxlength="100" autocomplete="off" />
+              <input class="component-search__input" data-ref="users-search-input" data-i18n-placeholder="admin.users.search_placeholder" placeholder="Buscar por nombre o correo..." type="text" maxlength="100" autocomplete="off" />
             </div>
-            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" data-i18n-aria="admin.users.clear_search_aria" aria-label="Limpiar búsqueda">
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -114,11 +114,11 @@
           <table class="component-table" data-ref="users-table">
             <thead class="component-table__head" data-ref="users-thead">
               <tr>
-                <th data-ref="th-user">Usuario</th>
-                <th data-ref="th-email">Correo Electrónico</th>
-                <th data-ref="th-roles">Roles</th>
-                <th data-ref="th-2fa">2FA</th>
-                <th data-ref="th-created">Fecha de Registro</th>
+                <th data-ref="th-user" data-i18n="admin.users.th_user">Usuario</th>
+                <th data-ref="th-email" data-i18n="admin.users.th_email">Correo Electrónico</th>
+                <th data-ref="th-roles" data-i18n="admin.users.th_roles">Roles</th>
+                <th data-ref="th-2fa" data-i18n="admin.users.th_2fa">2FA</th>
+                <th data-ref="th-created" data-i18n="admin.users.th_created_at">Fecha de Registro</th>
               </tr>
             </thead>
             <tbody class="component-table__body" data-ref="users-tbody">

@@ -2,6 +2,7 @@ import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, getApi, postFormApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DesignerApplicationItem, DesignerStatusResponse } from '../types/designer.types.js';
@@ -57,7 +58,7 @@ export class DesignerApplyController {
     }
 
     if (stepIndicator) {
-      stepIndicator.textContent = `Paso ${this.currentStep} de 4`;
+      stepIndicator.textContent = t('designer_apply.step_indicator', { step: this.currentStep });
     }
 
     if (btnBack) {
@@ -117,13 +118,13 @@ export class DesignerApplyController {
       iconBox.style.color = '#10b981';
     }
     if (icon) icon.innerHTML = '<use href="/icons.svg#check_circle"></use>';
-    if (title) title.textContent = '¡Ya eres Diseñador Verificado!';
+    if (title) title.textContent = t('designer_apply.status_verified_title');
     if (pill) {
       pill.className = 'component-badge component-badge--success';
-      pill.textContent = 'Creador Oficial';
+      pill.textContent = t('designer_apply.status_verified_pill');
     }
     if (msg) {
-      msg.textContent = 'Tu cuenta cuenta con los permisos para publicar y gestionar plantillas comunitarias en Spriteboard.';
+      msg.textContent = t('designer_apply.status_verified_msg');
     }
     if (summary) summary.style.display = 'none';
 
@@ -150,13 +151,13 @@ export class DesignerApplyController {
         iconBox.style.color = '#f59e0b';
       }
       if (icon) icon.innerHTML = '<use href="/icons.svg#schedule"></use>';
-      if (title) title.textContent = 'Solicitud en Revisión';
+      if (title) title.textContent = t('designer_apply.status_review_title');
       if (pill) {
         pill.className = 'component-badge component-badge--warning';
-        pill.textContent = 'Pendiente';
+        pill.textContent = t('designer_apply.status_pending');
       }
       if (msg) {
-        msg.textContent = 'Hemos recibido tu postulación. El equipo de moderadores la revisará a la brevedad posible.';
+        msg.textContent = t('designer_apply.status_review_msg');
       }
 
       this.populateStatusSummary(app);
@@ -179,13 +180,13 @@ export class DesignerApplyController {
         iconBox.style.color = '#ef4444';
       }
       if (icon) icon.innerHTML = '<use href="/icons.svg#cancel"></use>';
-      if (title) title.textContent = 'Postulación no admitida';
+      if (title) title.textContent = t('designer_apply.status_rejected_title');
       if (pill) {
         pill.className = 'component-badge component-badge--danger';
-        pill.textContent = 'No admitida';
+        pill.textContent = t('designer_apply.status_rejected_pill');
       }
       if (msg) {
-        msg.textContent = 'Tu postulación anterior no fue admitida en esta ocasión. Puedes revisar las pautas y enviar una nueva solicitud cuando lo desees.';
+        msg.textContent = t('designer_apply.status_rejected_msg');
       }
       if (btnReapply) {
         btnReapply.style.display = 'inline-flex';
@@ -522,18 +523,18 @@ export class DesignerApplyController {
     const bio = textareaBio?.value.trim() || '';
 
     if (!fullName || fullName.length < 2) {
-      this.showError('Por favor ingresa tu nombre completo (mínimo 2 caracteres).');
+      this.showError(t('designer_apply.error_full_name'));
       inputName?.focus();
       return;
     }
 
     if (!country) {
-      this.showError('Por favor selecciona tu país de residencia.');
+      this.showError(t('designer_apply.error_country'));
       return;
     }
 
     if (this.portfolioLinks.length === 0 && this.selectedFiles.length === 0) {
-      this.showError('Debes agregar al menos un enlace a tus obras o subir fotos/archivos con muestras de tu trabajo.');
+      this.showError(t('designer_apply.error_no_samples'));
       return;
     }
 
@@ -558,17 +559,17 @@ export class DesignerApplyController {
     }
 
     if (btnSubmit) {
-      await withButtonLoading(btnSubmit, 'Enviando postulación...', async () => {
+      await withButtonLoading(btnSubmit, t('designer_apply.btn_sending'), async () => {
         try {
           const res = await postFormApi(API_ROUTES.designerApplications.apply, formData);
           if (!res.ok) {
             const errData = await res.json().catch(() => null);
-            this.showError(errData?.error || 'No se pudo enviar la solicitud. Por favor intenta más tarde.');
+            this.showError(errData?.error || t('designer_apply.error_submit'));
             return;
           }
 
           const resData = await res.json();
-          showToast('¡Postulación enviada exitosamente!', 'success');
+          showToast(t('designer_apply.toast_submitted'), 'success');
 
           if (resData.application) {
             this.renderStatusApplication(resData.application);
@@ -576,7 +577,7 @@ export class DesignerApplyController {
             await this.loadApplicationStatus();
           }
         } catch {
-          this.showError('Ha ocurrido un error al conectar con el servidor.');
+          this.showError(t('designer_apply.error_submit'));
         }
       });
     }

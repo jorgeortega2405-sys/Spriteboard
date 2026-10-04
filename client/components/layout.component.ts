@@ -30,7 +30,6 @@ import { closeAllDropdowns, registerActiveDropdown, setupDropdown, unregisterAct
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { formatVideoDuration, validateAndSanitizeFiles } from '../utils/validators.util.js';
-import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
 import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
@@ -1735,10 +1734,7 @@ function renderChartsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
       </div>
       <div class="canvas-panel-card__body layout-drawer__chart-body" data-ref="board-charts-drawer">
         <div class="chart-drawer-view" data-ref="chart-drawer-gallery-view">
-          <div class="chart-gallery-header">
-            <span class="chart-gallery-subtitle">Selecciona una gráfica para añadir al lienzo</span>
-          </div>
-          <div class="chart-gallery-grid" data-ref="chart-gallery-grid"></div>
+          <div class="elements-grid chart-gallery-grid" data-ref="chart-gallery-grid"></div>
         </div>
 
         <div class="chart-drawer-view is-hidden" data-ref="chart-drawer-inspector-view">
@@ -2135,13 +2131,6 @@ function renderMockupsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
         </button>
       </div>
       <div class="canvas-panel-card__body layout-drawer__mockup-body" data-ref="board-mockups-drawer">
-        <div class="mockup-search-box">
-          <label class="field field--sm mockup-search-field" data-ref="field-mockup-search">
-            <input class="field__input mockup-search-input" data-ref="mockup-search-input" type="text" placeholder=" " />
-            <span class="field__label" data-ref="label-mockup-search">Buscar mockups...</span>
-          </label>
-        </div>
-        <div class="mockup-category-tabs" data-ref="mockup-category-tabs"></div>
         <div class="mockup-templates-grid" data-ref="mockup-templates-grid"></div>
       </div>
     </div>
@@ -2631,22 +2620,20 @@ async function renderBrandDrawerContent(drawer: HTMLElement, drawerBody: HTMLEle
   if (kits.length === 0) {
     contentEl.innerHTML = `
       <div class="canvas-panel-card__empty" data-ref="brand-drawer-empty">
-        <div class="canvas-panel-card__empty-icon">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+        <div class="canvas-panel-card__empty-icon" data-ref="brand-drawer-empty-icon">
+          <svg class="component-icon" data-ref="brand-drawer-empty-svg" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width: 52px; height: 52px; color: var(--text-tertiary);">
+            <rect x="8" y="10" width="40" height="36" rx="8" stroke-width="1.8" />
+            <circle cx="19" cy="23" r="5" stroke-width="1.8" />
+            <circle cx="34" cy="21" r="3" stroke-width="1.8" />
+            <path d="M12 40c4-6 10-8 16-4s10 2 16-6" stroke-width="1.8" />
+            <path d="M37 31l5-5 3 3-5 5-3-3z" stroke-width="1.8" />
+            <path d="M37 31l-3 7 7-3" stroke-width="1.8" />
+          </svg>
         </div>
         <span class="canvas-panel-card__empty-title">${t('brand.drawer_empty_title') || 'No hay kits de marca'}</span>
         <p class="canvas-panel-card__empty-desc">${t('brand.drawer_empty_desc') || 'Crea tu primer kit de marca para organizar tus logos, paletas y recursos.'}</p>
-        <button type="button" class="component-button component-button--h36 component-button--black component-button--w-full" data-ref="btn-drawer-create-first-kit" style="margin-top: 12px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          <span>${t('brand.create_kit') || 'Crear kit de marca'}</span>
-        </button>
       </div>
     `;
-    const btnCreateKit = contentEl.querySelector<HTMLElement>('[data-ref="btn-drawer-create-first-kit"]');
-    btnCreateKit?.addEventListener('click', () => {
-      toggleDrawer(false);
-      navigate('/brand');
-    });
     renderIcons(contentEl);
     return;
   }
@@ -3120,12 +3107,30 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
         : presets;
 
       if (filtered.length === 0) {
-        templatesList.innerHTML = `
-          <div class="canvas-panel-card__empty" data-ref="canvas-panel-empty">
-            <span class="canvas-panel-card__empty-title">Sin resultados</span>
-            <p class="canvas-panel-card__empty-desc">No encontramos plantillas que coincidan con «${escapeHtml(query)}»</p>
-          </div>
-        `;
+        if (cleanQ) {
+          templatesList.innerHTML = `
+            <div class="canvas-panel-card__empty" data-ref="canvas-panel-empty">
+              <span class="canvas-panel-card__empty-title">Sin resultados</span>
+              <p class="canvas-panel-card__empty-desc">No encontramos plantillas que coincidan con «${escapeHtml(query)}»</p>
+            </div>
+          `;
+        } else {
+          templatesList.innerHTML = `
+            <div class="canvas-panel-card__empty" data-ref="canvas-panel-empty">
+              <div class="canvas-panel-card__empty-icon" data-ref="templates-empty-icon">
+                <svg class="component-icon" data-ref="templates-empty-svg" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width: 52px; height: 52px; color: var(--text-tertiary);">
+                  <rect x="8" y="8" width="40" height="40" rx="8" stroke-width="1.8" />
+                  <line x1="8" y1="20" x2="48" y2="20" stroke-width="1.8" />
+                  <line x1="22" y1="20" x2="22" y2="48" stroke-width="1.8" />
+                  <rect x="28" y="26" width="14" height="8" rx="2" stroke-width="1.5" stroke-dasharray="2 2" />
+                  <rect x="28" y="38" width="14" height="3" rx="1.5" stroke-width="1.5" />
+                </svg>
+              </div>
+              <span class="canvas-panel-card__empty-title">Aquí habrá plantillas</span>
+              <p class="canvas-panel-card__empty-desc">Aún no hay plantillas disponibles para este formato. Pronto encontrarás diseños listos para usar.</p>
+            </div>
+          `;
+        }
         return;
       }
 

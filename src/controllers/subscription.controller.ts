@@ -29,8 +29,10 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
     }
 
     const { planId, billingPeriod } = req.body;
+    const rawPlan = typeof planId === 'string' ? planId.toLowerCase() : '';
+    const canonicalPlan = rawPlan === 'negocios' ? 'business' : rawPlan;
 
-    if (!planId || !['pro', 'business', 'negocios'].includes(planId)) {
+    if (!['pro', 'business'].includes(canonicalPlan)) {
       sendBadRequest(res, 'El plan seleccionado no es válido.');
       return;
     }
@@ -41,7 +43,7 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
     const checkout = await stripeService.createCheckoutSession(
       user.id,
       user.email,
-      planId,
+      canonicalPlan,
       cycle,
       baseUrl
     );

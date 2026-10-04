@@ -3,7 +3,7 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
       <div class="view-header" data-ref="dashboard-floating-top">
         <div class="view-header__left" data-ref="dashboard-floating-left">
-          <h1 class="view-header__title" data-ref="dashboard-title">Dashboard</h1>
+          <h1 class="view-header__title" data-ref="dashboard-title" data-i18n="admin.dashboard.title">Dashboard</h1>
         </div>
 
         <div class="view-header__right" data-ref="dashboard-floating-right">
@@ -18,7 +18,7 @@
             <!-- Card 1: Cuentas Creadas Hoy -->
             <div class="dashboard-stat-card" data-ref="card-stat-accounts" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Cuentas Hoy</span>
+                <span data-i18n="admin.dashboard.accounts_today" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Cuentas Hoy</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
                 </div>
@@ -26,7 +26,7 @@
               <div>
                 <div class="stat-card-value" data-ref="stat-accounts-today" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                  <span data-ref="stat-accounts-total" style="font-size: 12px; color: var(--text-secondary);">Total: - usuarios</span>
+                  <span data-ref="stat-accounts-total" data-no-i18n style="font-size: 12px; color: var(--text-secondary);">Total: - usuarios</span>
                   <span class="stat-trend-badge" data-ref="stat-accounts-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle); color: var(--text-secondary);">--</span>
                 </div>
               </div>
@@ -35,7 +35,7 @@
             <!-- Card 2: Lienzos Creados Hoy -->
             <div class="dashboard-stat-card" data-ref="card-stat-canvases" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Hoy</span>
+                <span data-i18n="admin.dashboard.canvases_today" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Hoy</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
                 </div>
@@ -43,7 +43,7 @@
               <div>
                 <div class="stat-card-value" data-ref="stat-canvases-today" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                  <span data-ref="stat-canvases-total" style="font-size: 12px; color: var(--text-secondary);">Total: - lienzos</span>
+                  <span data-ref="stat-canvases-total" data-no-i18n style="font-size: 12px; color: var(--text-secondary);">Total: - lienzos</span>
                   <span class="stat-trend-badge" data-ref="stat-canvases-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle); color: var(--text-secondary);">--</span>
                 </div>
               </div>
@@ -52,7 +52,7 @@
             <!-- Card 3: Tickets de Soporte Activos -->
             <div class="dashboard-stat-card" data-ref="card-stat-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Tickets Activos</span>
+                <span data-i18n="admin.dashboard.tickets_active" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Tickets Activos</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
                 </div>
@@ -60,8 +60,8 @@
               <div>
                 <div class="stat-card-value" data-ref="stat-tickets-active" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                  <span data-ref="stat-tickets-resolved" style="font-size: 12px; color: var(--text-secondary);">- resueltos</span>
-                  <span class="stat-trend-badge" data-ref="stat-tickets-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">En atención</span>
+                  <span data-ref="stat-tickets-resolved" data-no-i18n style="font-size: 12px; color: var(--text-secondary);">- resueltos</span>
+                  <span class="stat-trend-badge" data-ref="stat-tickets-badge" data-i18n="admin.dashboard.in_progress" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">En atención</span>
                 </div>
               </div>
             </div>
@@ -69,7 +69,7 @@
             <!-- Card 4: Suscripciones Activas -->
             <div class="dashboard-stat-card" data-ref="card-stat-subscribers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Suscripciones Pro</span>
+                <span data-i18n="admin.dashboard.subscribers_pro" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Suscripciones Pro</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#card_membership"></use></svg>
                 </div>
@@ -77,8 +77,8 @@
               <div>
                 <div class="stat-card-value" data-ref="stat-subscribers-active" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                  <span data-ref="stat-subscribers-total" style="font-size: 12px; color: var(--text-secondary);">Planes activos</span>
-                  <span class="stat-trend-badge" data-ref="stat-subscribers-ratio" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(16, 185, 129, 0.12); color: #10b981;">Premium</span>
+                  <span data-ref="stat-subscribers-total" data-i18n="admin.dashboard.active_plans" style="font-size: 12px; color: var(--text-secondary);">Planes activos</span>
+                  <span class="stat-trend-badge" data-ref="stat-subscribers-ratio" data-i18n="admin.dashboard.premium" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(16, 185, 129, 0.12); color: #10b981;">Premium</span>
                 </div>
               </div>
             </div>
@@ -91,17 +91,17 @@
             <div class="dashboard-chart-card" data-ref="chart-card-trends" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); width: 100%; box-sizing: border-box;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                 <div>
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Crecimiento y Actividad de la Plataforma</h3>
-                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Nuevos usuarios vs creación de lienzos en los últimos 14 días.</p>
+                  <h3 data-i18n="admin.dashboard.growth_activity_title" style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Crecimiento y Actividad de la Plataforma</h3>
+                  <p data-i18n="admin.dashboard.growth_activity_desc" style="font-size: 12px; color: var(--text-secondary); margin: 0;">Nuevos usuarios vs creación de lienzos en los últimos 14 días.</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 14px;">
                   <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
                     <span style="width: 9px; height: 9px; border-radius: 3px; background: #3b82f6; display: inline-block;"></span>
-                    <span>Nuevos Usuarios</span>
+                    <span data-i18n="admin.dashboard.new_users">Nuevos Usuarios</span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
                     <span style="width: 9px; height: 9px; border-radius: 3px; background: #ea580c; display: inline-block;"></span>
-                    <span>Lienzos Creados</span>
+                    <span data-i18n="admin.dashboard.canvases_created">Lienzos Creados</span>
                   </div>
                 </div>
               </div>
@@ -116,8 +116,8 @@
               <!-- Chart 2: Subscription Distribution (Doughnut) -->
               <div class="dashboard-chart-card" data-ref="chart-card-tiers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
                 <div style="margin-bottom: 12px;">
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Distribución de Planes</h3>
-                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Usuarios clasificados por nivel de suscripción actual.</p>
+                  <h3 data-i18n="admin.dashboard.plans_dist_title" style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Distribución de Planes</h3>
+                  <p data-i18n="admin.dashboard.plans_dist_desc" style="font-size: 12px; color: var(--text-secondary); margin: 0;">Usuarios clasificados por nivel de suscripción actual.</p>
                 </div>
                 <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-tiers" style="position: relative; width: 100%; height: 200px; display: flex; align-items: center; justify-content: center;">
                   <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tiers" style="width: 100%; height: 100%;"></canvas>
@@ -140,7 +140,7 @@
                   <div style="text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
                       <span style="width: 8px; height: 8px; border-radius: 50%; background: #ea580c; display: inline-block;"></span>
-                      <span>Business</span>
+                      <span data-i18n="admin.dashboard.business">Business</span>
                     </div>
                     <div data-ref="tier-count-business" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
                   </div>
@@ -150,8 +150,8 @@
               <!-- Chart 3: Support Tickets Breakdown (Bar Chart) -->
               <div class="dashboard-chart-card" data-ref="chart-card-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
                 <div style="margin-bottom: 12px;">
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Estado de Tickets de Soporte</h3>
-                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Carga de trabajo y solicitudes de usuarios por estado.</p>
+                  <h3 data-i18n="admin.dashboard.tickets_status_title" style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Estado de Tickets de Soporte</h3>
+                  <p data-i18n="admin.dashboard.tickets_status_desc" style="font-size: 12px; color: var(--text-secondary); margin: 0;">Carga de trabajo y solicitudes de usuarios por estado.</p>
                 </div>
                 <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-tickets" style="position: relative; width: 100%; height: 240px;">
                   <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tickets" style="width: 100%; height: 100%;"></canvas>

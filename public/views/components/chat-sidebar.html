@@ -2,17 +2,17 @@
   <div class="chat-panel" data-ref="chat-panel">
     <div class="chat-gradient-backdrop" data-ref="chat-gradient-backdrop"></div>
     <div class="chat-panel__top" data-ref="chat-panel-top">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" aria-label="Historial de soporte">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" data-i18n-aria="chat.history" aria-label="Historial de soporte">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
       </button>
 
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-back" data-i18n-tooltip="chat.back_to_chat" aria-label="Volver al asistente" style="display: none;">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-back" data-i18n-tooltip="chat.back_to_chat" data-i18n-aria="chat.back_to_chat" aria-label="Volver al asistente" style="display: none;">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
       </button>
 
-      <span class="chat-panel__title" data-ref="chat-panel-title" style="display: none;" data-i18n="chat.history_title">Historial de Soporte</span>
+      <span class="chat-panel__title" data-ref="chat-panel-title" data-i18n="chat.history_title" style="display: none;">Historial de Soporte</span>
 
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-close" data-i18n-tooltip="chat.close" aria-label="Cerrar chat">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-close" data-i18n-tooltip="chat.close" data-i18n-aria="chat.close" aria-label="Cerrar chat">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
     </div>
@@ -21,17 +21,17 @@
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
         <div style="display: flex; align-items: center; gap: 6px;">
           <svg class="component-icon" style="width: 18px; height: 18px; color: var(--action-primary);" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
-          <span class="chat-support-title" data-ref="chat-support-ticket-num" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Soporte Técnico</span>
+          <span class="chat-support-title" data-ref="chat-support-ticket-num" data-i18n="chat.agent_support" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Soporte Técnico</span>
         </div>
-        <button type="button" class="component-button component-button--ghost component-button--h24" data-ref="btn-chat-cancel-support" style="font-size: 11px; padding: 2px 8px; color: var(--text-tertiary);" aria-label="Finalizar soporte">
+        <button type="button" class="component-button component-button--ghost component-button--h24" data-ref="btn-chat-cancel-support" data-i18n="chat.end_support" data-i18n-aria="chat.end_support" style="font-size: 11px; padding: 2px 8px; color: var(--text-tertiary);" aria-label="Finalizar soporte">
           Finalizar
         </button>
       </div>
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-        <div class="component-badge component-badge--info" data-ref="chat-support-status-pill" style="font-size: 11px; padding: 2px 8px; font-weight: 600;">
+        <div class="component-badge component-badge--info" data-ref="chat-support-status-pill" data-i18n="chat.status_queued" style="font-size: 11px; padding: 2px 8px; font-weight: 600;">
           En cola de espera
         </div>
-        <span class="chat-support-wait" data-ref="chat-support-wait-time" style="font-size: 11px; color: var(--text-secondary);">Buscando agente...</span>
+        <span class="chat-support-wait" data-ref="chat-support-wait-time" data-i18n="chat.searching_agent" style="font-size: 11px; color: var(--text-secondary);">Buscando agente...</span>
       </div>
     </div>
 
@@ -56,10 +56,10 @@
 
       <div class="chat-ticket-detail" data-ref="chat-ticket-detail" style="display: none; width: 100%; flex-direction: column; gap: 8px;">
         <div class="chat-history-header" data-ref="chat-ticket-header">
-          <button type="button" class="component-button component-button--ghost component-button--h28 component-button--icon-only" data-ref="btn-history-back-to-list" aria-label="Volver a la lista de tickets">
+          <button type="button" class="component-button component-button--ghost component-button--h28 component-button--icon-only" data-ref="btn-history-back-to-list" data-i18n-aria="chat.back_to_history" aria-label="Volver a la lista de tickets">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <span class="chat-history-header__title" data-ref="chat-ticket-detail-title">Ticket #TK</span>
+          <span class="chat-history-header__title" data-ref="chat-ticket-detail-title" data-no-i18n>Ticket #TK</span>
           <div class="component-badge" data-ref="chat-ticket-detail-badge"></div>
         </div>
         <div class="chat-messages" data-ref="chat-ticket-messages"></div>
@@ -75,7 +75,7 @@
     <div class="chat-panel__bottom" data-ref="chat-panel-bottom">
       <div class="chat-pill-input" data-ref="chat-input-box">
         <textarea class="chat-pill-input__field" data-ref="chat-input" data-i18n-placeholder="chat.input_placeholder" placeholder="Escribe un mensaje..." rows="1" maxlength="2000"></textarea>
-        <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-i18n-tooltip="chat.send" aria-label="Enviar mensaje">
+        <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-i18n-tooltip="chat.send" data-i18n-aria="chat.send" aria-label="Enviar mensaje">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
         </button>
       </div>

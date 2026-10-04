@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="presentation-wrapper">
   <div class="component-top component-top--gradient" data-ref="presentation-top">
       <div class="component-top-left" data-ref="presentation-top-left">
-        <h1 class="component-top-title" data-ref="presentation-title">Presentación sin título</h1>
+        <h1 class="component-top-title" data-ref="presentation-title" data-i18n="stage.untitled">Presentación sin título</h1>
       </div>
 
       <div class="component-top-right" data-ref="presentation-top-right">
@@ -9,40 +9,40 @@
           <div class="design-collaborators-list" data-ref="presentation-collaborators-list"></div>
         </div>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-i18n-tooltip="canvas.cloud_saved" data-tooltip="Todos los cambios están guardados en la nube" data-i18n-aria="canvas.save_status" aria-label="Estado de guardado">
           <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
           <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
           <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
         </button>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-metrics" data-tooltip="Estadísticas" aria-label="Estadísticas">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-metrics" data-i18n-tooltip="canvas.statistics" data-tooltip="Estadísticas" data-i18n-aria="canvas.statistics" aria-label="Estadísticas">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
         </button>
 
         <div class="design-share-wrapper" data-ref="presentation-file-menu-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-file-menu" data-tooltip="Archivo y opciones" aria-label="Archivo y opciones">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-file-menu" data-i18n-tooltip="canvas.file_options" data-tooltip="Archivo y opciones" data-i18n-aria="canvas.file_options" aria-label="Archivo y opciones">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
           </button>
         </div>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-comments" data-tooltip="Comentarios" aria-label="Comentarios">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-comments" data-i18n-tooltip="canvas.comments" data-tooltip="Comentarios" data-i18n-aria="canvas.comments" aria-label="Comentarios">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
         </button>
 
         <div class="design-share-wrapper" data-ref="presentation-ai-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-ai" data-tooltip="Spritebot IA" aria-label="Spritebot IA">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-ai" data-i18n-tooltip="canvas.spritebot_ai" data-tooltip="Spritebot IA" data-i18n-aria="canvas.spritebot_ai" aria-label="Spritebot IA">
             <span class="component-icon">auto_awesome</span>
           </button>
         </div>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-present" data-tooltip="Presentar (F5)" aria-label="Presentar diapositivas">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-present" data-i18n-tooltip="stage.present_shortcut" data-tooltip="Presentar (F5)" data-i18n-aria="stage.present" aria-label="Presentar diapositivas">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
         </button>
 
         <div class="design-share-wrapper" data-ref="presentation-share-wrapper">
-          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-presentation" data-tooltip="Compartir presentación" aria-label="Compartir presentación">
+          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-presentation" data-i18n-tooltip="stage.share_presentation" data-tooltip="Compartir presentación" data-i18n-aria="stage.share_presentation" aria-label="Compartir presentación">
             <span class="component-icon">share</span>
-            <span class="design-share-btn__text">Compartir</span>
+            <span class="design-share-btn__text" data-i18n="canvas.share_btn">Compartir</span>
           </button>
         </div>
       </div>
@@ -51,119 +51,129 @@
     <div class="component-bottom component-bottom--canvas" data-ref="presentation-viewport">
       <div class="design-vertical-toolbar-container is-hidden" data-ref="presentation-vertical-toolbar-container">
         <div class="design-vertical-toolbar-wrapper" data-ref="presentation-vertical-toolbar-wrapper">
-          <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-tooltip="Cerrar barra" aria-label="Cerrar barra">
+          <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-i18n-tooltip="canvas.close_bar" data-tooltip="Cerrar barra" data-i18n-aria="canvas.close_bar" aria-label="Cerrar barra">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
 
           <div class="design-vertical-toolbar" data-ref="presentation-vertical-toolbar">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-tooltip="Seleccionar (V)" aria-label="Seleccionar">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-i18n-tooltip="canvas.select_shortcut" data-tooltip="Seleccionar (V)" data-i18n-aria="canvas.select" aria-label="Seleccionar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-hand" data-vtool="hand" data-tooltip="Mano / Desplazar (H o Espacio)" aria-label="Mano">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-hand" data-vtool="hand" data-i18n-tooltip="canvas.hand_tool_shortcut" data-tooltip="Mano / Desplazar (H o Espacio)" data-i18n-aria="canvas.hand_tool" aria-label="Mano">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pan_tool"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-tooltip="Dibujar" aria-label="Dibujar">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-i18n-tooltip="canvas.draw" data-tooltip="Dibujar" data-i18n-aria="canvas.draw" aria-label="Dibujar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-tooltip="Formas" aria-label="Formas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-i18n-tooltip="canvas.shapes_tool" data-tooltip="Formas" data-i18n-aria="canvas.shapes_tool" aria-label="Formas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shapes"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-tooltip="Líneas y Conectores" aria-label="Líneas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-i18n-tooltip="canvas.lines_connectors" data-tooltip="Líneas y Conectores" data-i18n-aria="canvas.lines_tool" aria-label="Líneas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-tooltip="Notas adhesivas" aria-label="Notas adhesivas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-i18n-tooltip="canvas.sticky_notes" data-tooltip="Notas adhesivas" data-i18n-aria="canvas.sticky_notes" aria-label="Notas adhesivas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-tooltip="Texto" aria-label="Texto">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-i18n-tooltip="canvas.text_tool" data-tooltip="Texto" data-i18n-aria="canvas.text_tool" aria-label="Texto">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-cursors" data-vtool="cursors" data-tooltip="Cursores y Puntero láser" aria-label="Cursores">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-cursors" data-vtool="cursors" data-i18n-tooltip="canvas.auto.cursores_y_puntero_laser" data-tooltip="Cursores y Puntero láser" data-i18n-aria="canvas.cursors_tool" aria-label="Cursores">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
             </button>
           </div>
 
           <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-draw">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vdraw-tool-pen" data-subtool="pen" data-tooltip="Pluma fina" aria-label="Pluma fina">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vdraw-tool-pen" data-subtool="pen" data-i18n-tooltip="canvas.pens.fine_pen" data-tooltip="Pluma fina" data-i18n-aria="canvas.pens.fine_pen" aria-label="Pluma fina">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-marker" data-subtool="marker" data-tooltip="Marcador" aria-label="Marcador">
+            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-marker" data-subtool="marker" data-i18n-tooltip="canvas.pens.marker" data-tooltip="Marcador" data-i18n-aria="canvas.pens.marker" aria-label="Marcador">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-highlighter" data-subtool="highlighter" data-tooltip="Resaltador" aria-label="Resaltador">
+            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-highlighter" data-subtool="highlighter" data-i18n-tooltip="canvas.pens.highlighter" data-tooltip="Resaltador" data-i18n-aria="canvas.pens.highlighter" aria-label="Resaltador">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#ink_highlighter"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-eraser" data-subtool="eraser" data-tooltip="Borrador" aria-label="Borrador">
+            <button type="button" class="design-toolbar-btn" data-ref="vdraw-tool-eraser" data-subtool="eraser" data-i18n-tooltip="canvas.pens.eraser" data-tooltip="Borrador" data-i18n-aria="canvas.pens.eraser" aria-label="Borrador">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#ink_eraser"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn vsubtoolbar-color-btn" data-ref="vdraw-btn-color" data-tooltip="Color de trazo" aria-label="Color de trazo">
+            <button type="button" class="design-toolbar-btn vsubtoolbar-color-btn" data-ref="vdraw-btn-color" data-i18n-tooltip="canvas.stroke_color" data-tooltip="Color de trazo" data-i18n-aria="canvas.stroke_color" aria-label="Color de trazo">
               <span class="vsubtoolbar-color-swatch" data-ref="vdraw-color-swatch" style="background-color: #1e293b;"></span>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vdraw-btn-width" data-tooltip="Grosor de trazo" aria-label="Grosor de trazo">
+            <button type="button" class="design-toolbar-btn" data-ref="vdraw-btn-width" data-i18n-tooltip="canvas.stroke_width" data-tooltip="Grosor de trazo" data-i18n-aria="canvas.stroke_width" aria-label="Grosor de trazo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#line_weight"></use></svg>
             </button>
           </div>
 
           <div class="design-vsubtoolbar design-vsubtoolbar--scrollable is-hidden" data-ref="vsubtoolbar-shapes">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vshape-rect" data-shape="rect" data-tooltip="Rectángulo" aria-label="Rectángulo">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vshape-rect" data-shape="rect" data-i18n-tooltip="canvas.shapes.rectangle" data-tooltip="Rectángulo" data-i18n-aria="canvas.shapes.rectangle" aria-label="Rectángulo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-round-rect" data-shape="round-rect" data-tooltip="Rectángulo redondeado" aria-label="Rectángulo redondeado">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-round-rect" data-shape="round-rect" data-i18n-tooltip="canvas.shapes.rounded_rectangle" data-tooltip="Rectángulo redondeado" data-i18n-aria="canvas.shapes.rounded_rectangle" aria-label="Rectángulo redondeado">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rounded_corner"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-circle" data-shape="circle" data-tooltip="Círculo" aria-label="Círculo">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-circle" data-shape="circle" data-i18n-tooltip="canvas.shapes.circle" data-tooltip="Círculo" data-i18n-aria="canvas.shapes.circle" aria-label="Círculo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#circle"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-triangle" data-shape="triangle" data-tooltip="Triángulo" aria-label="Triángulo">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-triangle" data-shape="triangle" data-i18n-tooltip="canvas.shapes.triangle" data-tooltip="Triángulo" data-i18n-aria="canvas.shapes.triangle" aria-label="Triángulo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#change_history"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-diamond" data-shape="diamond" data-tooltip="Rombo" aria-label="Rombo">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-diamond" data-shape="diamond" data-i18n-tooltip="canvas.shapes.rhombus" data-tooltip="Rombo" data-i18n-aria="canvas.shapes.rhombus" aria-label="Rombo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#square"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-parallelogram" data-shape="parallelogram" data-tooltip="Paralelogramo" aria-label="Paralelogramo">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-parallelogram" data-shape="parallelogram" data-i18n-tooltip="canvas.shapes.parallelogram" data-tooltip="Paralelogramo" data-i18n-aria="canvas.shapes.parallelogram" aria-label="Paralelogramo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-cylinder" data-shape="cylinder" data-tooltip="Cilindro" aria-label="Cilindro">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-cylinder" data-shape="cylinder" data-i18n-tooltip="canvas.shapes.cylinder" data-tooltip="Cilindro" data-i18n-aria="canvas.shapes.cylinder" aria-label="Cilindro">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#storage"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-pill" data-shape="pill" data-tooltip="Píldora" aria-label="Píldora">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-pill" data-shape="pill" data-i18n-tooltip="canvas.shapes.pill" data-tooltip="Píldora" data-i18n-aria="canvas.shapes.pill" aria-label="Píldora">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schema"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-star" data-shape="star" data-tooltip="Estrella" aria-label="Estrella">
+            <button type="button" class="design-toolbar-btn" data-ref="vshape-star" data-shape="star" data-i18n-tooltip="canvas.shapes.star" data-tooltip="Estrella" data-i18n-aria="canvas.shapes.star" aria-label="Estrella">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
             </button>
           </div>
 
           <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-lines">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vline-straight" data-conn-style="straight" data-tooltip="Línea recta" aria-label="Línea recta">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vline-straight" data-conn-style="straight" data-i18n-tooltip="canvas.lines.straight" data-tooltip="Línea recta" data-i18n-aria="canvas.lines.straight" aria-label="Línea recta">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vline-curved" data-conn-style="curved" data-tooltip="Conector curvo" aria-label="Conector curvo">
+            <button type="button" class="design-toolbar-btn" data-ref="vline-curved" data-conn-style="curved" data-i18n-tooltip="canvas.lines.curved_connector" data-tooltip="Conector curvo" data-i18n-aria="canvas.lines.curved_connector" aria-label="Conector curvo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#gesture"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vline-orthogonal" data-conn-style="orthogonal" data-tooltip="Conector ortogonal" aria-label="Conector ortogonal">
+            <button type="button" class="design-toolbar-btn" data-ref="vline-orthogonal" data-conn-style="orthogonal" data-i18n-tooltip="canvas.lines.orthogonal" data-tooltip="Conector ortogonal" data-i18n-aria="canvas.lines.orthogonal" aria-label="Conector ortogonal">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#alt_route"></use></svg>
             </button>
           </div>
 
           <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-stickies">
-            <button type="button" class="vsubtoolbar-sticky-swatch is-active" data-ref="vsticky-color-yellow" data-color="#fef08a" style="background-color: #fef08a;" data-tooltip="Amarillo" aria-label="Amarillo"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-orange" data-color="#fed7aa" style="background-color: #fed7aa;" data-tooltip="Naranja" aria-label="Naranja"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-pink" data-color="#fbcfe8" style="background-color: #fbcfe8;" data-tooltip="Rosa" aria-label="Rosa"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-blue" data-color="#bae6fd" style="background-color: #bae6fd;" data-tooltip="Azul" aria-label="Azul"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-green" data-color="#bbf7d0" style="background-color: #bbf7d0;" data-tooltip="Verde" aria-label="Verde"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-purple" data-color="#e9d5ff" style="background-color: #e9d5ff;" data-tooltip="Morado" aria-label="Morado"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-red" data-color="#fecaca" style="background-color: #fecaca;" data-tooltip="Rojo" aria-label="Rojo"></button>
-            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-gray" data-color="#f1f5f9" style="background-color: #f1f5f9;" data-tooltip="Gris" aria-label="Gris"></button>
+            <button type="button" class="vsubtoolbar-sticky-swatch is-active" data-ref="vsticky-color-yellow" data-color="#fccb07" data-i18n-tooltip="canvas.colors.yellow" data-tooltip="Amarillo" data-i18n-aria="canvas.colors.yellow" aria-label="Amarillo">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#fccb07" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#e59b00" /></svg>
+            </button>
+            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-orange" data-color="#f9a850" data-i18n-tooltip="canvas.colors.orange" data-tooltip="Naranja" data-i18n-aria="canvas.colors.orange" aria-label="Naranja">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#f9a850" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#e07314" /></svg>
+            </button>
+            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-pink" data-color="#fc778c" data-i18n-tooltip="canvas.colors.pink" data-tooltip="Rosa" data-i18n-aria="canvas.colors.pink" aria-label="Rosa">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#fc778c" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#e11d48" /></svg>
+            </button>
+            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-blue" data-color="#83bdfa" data-i18n-tooltip="canvas.colors.blue" data-tooltip="Azul" data-i18n-aria="canvas.colors.blue" aria-label="Azul">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#83bdfa" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#2563eb" /></svg>
+            </button>
+            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-green" data-color="#62d083" data-i18n-tooltip="canvas.colors.green" data-tooltip="Verde" data-i18n-aria="canvas.colors.green" aria-label="Verde">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#62d083" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#059669" /></svg>
+            </button>
+            <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-purple" data-color="#c496fb" data-i18n-tooltip="canvas.colors.purple" data-tooltip="Morado" data-i18n-aria="canvas.colors.purple" aria-label="Morado">
+              <svg class="vsubtoolbar-sticky-swatch__icon" viewBox="0 0 24 28" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="26" rx="5.5" fill="#c496fb" /><path d="M 14.5 27 C 15.5 21 19 17.5 23 16.5 V 21.5 A 5.5 5.5 0 0 1 17.5 27 H 14.5 Z" fill="#7c3aed" /></svg>
+            </button>
           </div>
 
           <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-cursors">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-others" data-tooltip="Mostrar/Ocultar cursores de colaboradores" aria-label="Mostrar cursores de colaboradores">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-others" data-i18n-tooltip="canvas.cursors.toggle_collaborators" data-tooltip="Mostrar/Ocultar cursores de colaboradores" data-i18n-aria="canvas.cursors.show_collaborators" aria-label="Mostrar cursores de colaboradores">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-broadcast" data-tooltip="Transmitir mi cursor a colaboradores" aria-label="Transmitir mi cursor">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-broadcast" data-i18n-tooltip="canvas.cursors.broadcast_mine_tooltip" data-tooltip="Transmitir mi cursor a colaboradores" data-i18n-aria="canvas.cursors.broadcast_mine" aria-label="Transmitir mi cursor">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vcursor-btn-laser" data-tooltip="Puntero láser de presentación" aria-label="Puntero láser">
+            <button type="button" class="design-toolbar-btn" data-ref="vcursor-btn-laser" data-i18n-tooltip="canvas.cursors.laser_pointer_tooltip" data-tooltip="Puntero láser de presentación" data-i18n-aria="canvas.cursors.laser_pointer" aria-label="Puntero láser">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
             </button>
           </div>
@@ -171,24 +181,24 @@
       </div>
 
       <div class="design-top-toolbar-container is-hidden" data-ref="presentation-top-toolbar-container">
-        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-i18n-tooltip="canvas.scroll_left" data-tooltip="Desplazar a la izquierda" data-i18n-aria="canvas.scroll_left" aria-label="Desplazar a la izquierda">
           <span class="component-icon">chevron_left</span>
         </button>
 
         <div class="design-top-toolbar" data-ref="presentation-top-toolbar">
           <div class="design-top-toolbar__section" data-ref="presentation-top-slide-section">
             <div class="design-toolbar-group" data-ref="presentation-top-group-slide-bg">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-slide-bg" data-tooltip="Color de fondo de la diapositiva" aria-label="Color de fondo">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-slide-bg" data-i18n-tooltip="canvas.auto.color_de_fondo_de_la_diapositiva" data-tooltip="Color de fondo de la diapositiva" data-i18n-aria="canvas.auto.color_de_fondo" aria-label="Color de fondo">
                 <span class="top-color-swatch" data-ref="top-slide-bg-swatch" style="background-color: #ffffff;"></span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-slide-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-animate" data-tooltip="Animación de diapositiva" aria-label="Animar diapositiva">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-animate" data-i18n-tooltip="canvas.auto.animacion_de_diapositiva" data-tooltip="Animación de diapositiva" data-i18n-aria="canvas.auto.animar_diapositiva" aria-label="Animar diapositiva">
                 <span class="component-icon">motion_photos_on</span>
-                <span>Animar</span>
+                <span data-i18n="canvas.animate">Animar</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-duration-header" data-tooltip="Duración de diapositiva" aria-label="Duración">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-duration-header" data-i18n-tooltip="stage.slide_duration" data-tooltip="Duración de diapositiva" data-i18n-aria="canvas.auto.duracion" aria-label="Duración">
                 <span class="component-icon">timer</span>
                 <span data-ref="top-slide-duration-label">5.0s</span>
               </button>
@@ -197,239 +207,239 @@
 
           <div class="design-top-toolbar__section is-hidden" data-ref="presentation-top-selection-section">
             <div class="design-toolbar-group" data-ref="presentation-top-group-fill">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-fill" data-tooltip="Color de relleno" aria-label="Color de relleno">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-fill" data-i18n-tooltip="canvas.fill_color" data-tooltip="Color de relleno" data-i18n-aria="canvas.fill_color" aria-label="Color de relleno">
                 <span class="top-color-swatch" data-ref="top-fill-swatch" style="background-color: #000000;"></span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-stroke-color">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-color" data-tooltip="Color de borde o línea" aria-label="Color de borde">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-color" data-i18n-tooltip="canvas.border_or_line_color" data-tooltip="Color de borde o línea" data-i18n-aria="canvas.border_color" aria-label="Color de borde">
                 <span class="top-color-swatch" data-ref="top-stroke-swatch" style="background-color: #1e293b;"></span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-stroke-style">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-style" data-tooltip="Estilo y grosor del trazo" aria-label="Estilo y grosor del trazo">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-style" data-i18n-tooltip="canvas.stroke_style_and_width" data-tooltip="Estilo y grosor del trazo" data-i18n-aria="canvas.stroke_style_and_width" aria-label="Estilo y grosor del trazo">
                 <span class="component-icon">line_weight</span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-corners">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-corners" data-tooltip="Redondear esquinas" aria-label="Redondear esquinas">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-corners" data-i18n-tooltip="canvas.corner_radius" data-tooltip="Redondear esquinas" data-i18n-aria="canvas.corner_radius" aria-label="Redondear esquinas">
                 <span class="component-icon">rounded_corner</span>
               </button>
             </div>
 
             <div class="design-toolbar-group is-hidden" data-ref="presentation-top-group-markers">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-marker-start" data-tooltip="Extremo inicial" aria-label="Extremo inicial">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-marker-start" data-i18n-tooltip="canvas.auto.extremo_inicial" data-tooltip="Extremo inicial" data-i18n-aria="canvas.auto.extremo_inicial" aria-label="Extremo inicial">
                 <span class="component-icon">arrow_back</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-swap-markers" data-tooltip="Intercambiar extremos" aria-label="Intercambiar extremos">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-swap-markers" data-i18n-tooltip="canvas.arrow_swap_ends" data-tooltip="Intercambiar extremos" data-i18n-aria="canvas.arrow_swap_ends" aria-label="Intercambiar extremos">
                 <span class="component-icon">swap_horiz</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-marker-end" data-tooltip="Extremo final" aria-label="Extremo final">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-marker-end" data-i18n-tooltip="canvas.auto.extremo_final" data-tooltip="Extremo final" data-i18n-aria="canvas.auto.extremo_final" aria-label="Extremo final">
                 <span class="component-icon">arrow_forward</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-connector-style" data-tooltip="Tipo de conector (Curvo, Ortogonal, Recto)" aria-label="Tipo de conector">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-connector-style" data-i18n-tooltip="canvas.connector_type_tooltip" data-tooltip="Tipo de conector (Curvo, Ortogonal, Recto)" data-i18n-aria="canvas.auto.tipo_de_conector" aria-label="Tipo de conector">
                 <span class="component-icon">gesture</span>
               </button>
             </div>
 
             <div class="design-toolbar-group is-hidden" data-ref="presentation-top-group-text-props">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-font-family" data-tooltip="Tipografía" aria-label="Tipografía">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-font-family" data-i18n-tooltip="canvas.font_family" data-tooltip="Tipografía" data-i18n-aria="canvas.font_family" aria-label="Tipografía">
                 <span class="component-icon">font_download</span>
                 <span data-ref="top-font-family-label">Inter</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-text-color" data-tooltip="Color de texto" aria-label="Color de texto">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-text-color" data-i18n-tooltip="canvas.text_color" data-tooltip="Color de texto" data-i18n-aria="canvas.text_color" aria-label="Color de texto">
                 <span class="top-color-swatch" data-ref="top-text-swatch" style="background-color: #1e293b;"></span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-font-dec" data-tooltip="Disminuir fuente" aria-label="Disminuir fuente">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-font-dec" data-i18n-tooltip="canvas.decrease_font" data-tooltip="Disminuir fuente" data-i18n-aria="canvas.decrease_font" aria-label="Disminuir fuente">
                 <span class="component-icon">remove</span>
               </button>
               <span class="design-toolbar-badge__text" data-ref="top-font-size-label" style="padding: 0 4px; font-size: 12px; font-weight: 600; color: #ffffff;">14</span>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-font-inc" data-tooltip="Aumentar fuente" aria-label="Aumentar fuente">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-font-inc" data-i18n-tooltip="canvas.increase_font" data-tooltip="Aumentar fuente" data-i18n-aria="canvas.increase_font" aria-label="Aumentar fuente">
                 <span class="component-icon">add</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-bold" data-tooltip="Negrita (Ctrl+B)" aria-label="Negrita">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-bold" data-i18n-tooltip="canvas.bold_shortcut" data-tooltip="Negrita (Ctrl+B)" data-i18n-aria="canvas.bold" aria-label="Negrita">
                 <span class="component-icon">format_bold</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-italic" data-tooltip="Cursiva (Ctrl+I)" aria-label="Cursiva">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-italic" data-i18n-tooltip="canvas.italic_shortcut" data-tooltip="Cursiva (Ctrl+I)" data-i18n-aria="canvas.italic" aria-label="Cursiva">
                 <span class="component-icon">format_italic</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-underline" data-tooltip="Subrayado (Ctrl+U)" aria-label="Subrayado">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-underline" data-i18n-tooltip="canvas.underline_shortcut" data-tooltip="Subrayado (Ctrl+U)" data-i18n-aria="canvas.underline" aria-label="Subrayado">
                 <span class="component-icon">format_underlined</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-strikethrough" data-tooltip="Tachado" aria-label="Tachado">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-strikethrough" data-i18n-tooltip="canvas.strikethrough" data-tooltip="Tachado" data-i18n-aria="canvas.strikethrough" aria-label="Tachado">
                 <span class="component-icon">format_strikethrough</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-text-align" data-tooltip="Alineación del texto" aria-label="Alineación del texto">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-text-align" data-i18n-tooltip="canvas.align_text" data-tooltip="Alineación del texto" data-i18n-aria="canvas.align_text" aria-label="Alineación del texto">
                 <span class="component-icon" data-ref="top-icon-text-align">format_align_left</span>
               </button>
             </div>
 
             <div class="design-toolbar-group is-hidden" data-ref="presentation-top-group-image">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-remove-bg" data-tooltip="Eliminar fondo con IA (Pro y Negocios)" aria-label="Eliminar fondo">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-remove-bg" data-i18n-tooltip="canvas.remove_bg_pro" data-tooltip="Eliminar fondo con IA (Pro y Negocios)" data-i18n-aria="canvas.auto.eliminar_fondo" aria-label="Eliminar fondo">
                 <span class="component-icon">blur_off</span>
-                <span>Eliminar fondo</span>
-                <span class="menu-item__badge menu-item__badge--pro" title="Función Pro y Negocios">
+                <span data-i18n="canvas.remove_background">Eliminar fondo</span>
+                <span class="menu-item__badge menu-item__badge--pro" data-i18n-title="canvas.pro_feature" data-i18n-title="canvas.pro_feature" title="Función Pro y Negocios">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
                 </span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-opacity">
-              <button type="button" class="design-toolbar-btn" data-ref="top-btn-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-opacity" data-i18n-tooltip="canvas.opacity" data-tooltip="Transparencia" data-i18n-aria="canvas.opacity" aria-label="Transparencia">
                 <span class="component-icon">opacity</span>
               </button>
             </div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-canva-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-effects" data-tooltip="Efectos de estilo y filtros" aria-label="Efectos">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-effects" data-i18n-tooltip="canvas.effects_tooltip" data-tooltip="Efectos de estilo y filtros" data-i18n-aria="canvas.auto.efectos" aria-label="Efectos">
                 <span class="component-icon">auto_fix_high</span>
-                <span>Efectos</span>
+                <span data-i18n="canvas.effects">Efectos</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-animate" data-tooltip="Animaciones del elemento" aria-label="Animar">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-animate" data-i18n-tooltip="canvas.animations_tooltip" data-tooltip="Animaciones del elemento" data-i18n-aria="canvas.auto.animar" aria-label="Animar">
                 <span class="component-icon">motion_photos_on</span>
-                <span>Animar</span>
+                <span data-i18n="canvas.animate">Animar</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-position" data-tooltip="Posición, alineación y capas" aria-label="Posición">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-position" data-i18n-tooltip="canvas.auto.posicion,_alineacion_y_capas" data-tooltip="Posición, alineación y capas" data-i18n-aria="canvas.auto.posicion" aria-label="Posición">
                 <span class="component-icon">layers</span>
-                <span>Posición</span>
+                <span data-i18n="canvas.position">Posición</span>
               </button>
             </div>
 
             <div class="design-toolbar-divider" data-ref="presentation-top-divider-sel-end"></div>
 
             <div class="design-toolbar-group" data-ref="presentation-top-group-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-duplicate" data-i18n-tooltip="canvas.duplicate_shortcut" data-tooltip="Duplicar (Ctrl+D)" data-i18n-aria="canvas.duplicate" aria-label="Duplicar">
                 <span class="component-icon">content_copy</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="top-btn-delete" data-tooltip="Eliminar (Supr)" aria-label="Eliminar">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="top-btn-delete" data-i18n-tooltip="canvas.delete_shortcut" data-tooltip="Eliminar (Supr)" data-i18n-aria="canvas.delete" aria-label="Eliminar">
                 <span class="component-icon">delete_outline</span>
               </button>
             </div>
           </div>
         </div>
 
-        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-top-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-top-toolbar-scroll-right" data-i18n-tooltip="canvas.scroll_right" data-tooltip="Desplazar a la derecha" data-i18n-aria="canvas.scroll_right" aria-label="Desplazar a la derecha">
           <span class="component-icon">chevron_right</span>
         </button>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-stroke">
         <div class="board-popover-presets-row">
-          <button type="button" class="board-popover-preset-btn is-active" data-ref="stroke-style-none" data-stroke-preset="none" data-tooltip="Sin borde">
+          <button type="button" class="board-popover-preset-btn is-active" data-ref="stroke-style-none" data-stroke-preset="none" data-i18n-tooltip="canvas.auto.sin_borde" data-tooltip="Sin borde">
             <span class="component-icon">block</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-solid" data-stroke-preset="solid" data-tooltip="Línea continua">
+          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-solid" data-stroke-preset="solid" data-i18n-tooltip="canvas.auto.linea_continua" data-tooltip="Línea continua">
             <span class="component-icon">horizontal_rule</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dashed" data-stroke-preset="dashed" data-tooltip="Guiones largos">
+          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dashed" data-stroke-preset="dashed" data-i18n-tooltip="canvas.auto.guiones_largos" data-tooltip="Guiones largos">
             <span class="component-icon">density_medium</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dashed-short" data-stroke-preset="dashed-short" data-tooltip="Guiones cortos">
+          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dashed-short" data-stroke-preset="dashed-short" data-i18n-tooltip="canvas.auto.guiones_cortos" data-tooltip="Guiones cortos">
             <span class="component-icon">reorder</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dotted" data-stroke-preset="dotted" data-tooltip="Punteado">
+          <button type="button" class="board-popover-preset-btn" data-ref="stroke-style-dotted" data-stroke-preset="dotted" data-i18n-tooltip="canvas.auto.punteado" data-tooltip="Punteado">
             <span class="component-icon">more_horiz</span>
           </button>
         </div>
-        <div class="board-popover-title">Grosor del trazo</div>
+        <div class="board-popover-title" data-i18n="canvas.stroke_width">Grosor del trazo</div>
         <div class="board-popover-slider-row">
-          <input class="board-popover-slider" data-ref="input-popover-stroke-width" type="range" min="0" max="40" value="0" aria-label="Grosor del trazo" />
+          <input class="board-popover-slider" data-ref="input-popover-stroke-width" type="range" min="0" max="40" value="0" data-i18n-aria="canvas.auto.grosor_del_trazo" aria-label="Grosor del trazo" />
           <span class="board-popover-value-box" data-ref="label-popover-stroke-width">0</span>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-corners">
-        <div class="board-popover-title">Redondear esquinas</div>
+        <div class="board-popover-title" data-i18n="canvas.corner_radius">Redondear esquinas</div>
         <div class="board-popover-slider-row">
-          <input class="board-popover-slider" data-ref="input-popover-corner-radius" type="range" min="0" max="100" value="0" aria-label="Redondear esquinas" />
+          <input class="board-popover-slider" data-ref="input-popover-corner-radius" type="range" min="0" max="100" value="0" data-i18n-aria="canvas.corner_radius" aria-label="Redondear esquinas" />
           <span class="board-popover-value-box" data-ref="label-popover-corner-radius">0</span>
         </div>
         <div class="is-hidden" data-ref="popover-sides-container">
-          <div class="board-popover-title" style="margin-top: 6px;">Lados</div>
+          <div class="board-popover-title" data-i18n="canvas.sides" style="margin-top: 6px;">Lados</div>
           <div class="board-popover-slider-row">
-            <input class="board-popover-slider" data-ref="input-popover-sides" type="range" min="3" max="12" value="5" aria-label="Cantidad de lados" />
+            <input class="board-popover-slider" data-ref="input-popover-sides" type="range" min="3" max="12" value="5" data-i18n-aria="canvas.auto.cantidad_de_lados" aria-label="Cantidad de lados" />
             <span class="board-popover-value-box" data-ref="label-popover-sides">5</span>
           </div>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-opacity">
-        <div class="board-popover-title">Transparencia</div>
+        <div class="board-popover-title" data-i18n="canvas.opacity">Transparencia</div>
         <div class="board-popover-slider-row">
-          <input class="board-popover-slider" data-ref="input-popover-opacity" type="range" min="0" max="100" value="100" aria-label="Transparencia" />
+          <input class="board-popover-slider" data-ref="input-popover-opacity" type="range" min="0" max="100" value="100" data-i18n-aria="canvas.opacity" aria-label="Transparencia" />
           <span class="board-popover-value-box" data-ref="label-popover-opacity">100</span>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-marker-start">
-        <div class="board-popover-title">Extremo inicial</div>
+        <div class="board-popover-title" data-i18n="canvas.arrow_start">Extremo inicial</div>
         <div class="board-popover-markers-grid" data-ref="grid-marker-start">
-          <button type="button" class="board-popover-marker-btn is-active" data-marker="none" data-tooltip="Ninguno"><span class="component-icon">block</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="arrow" data-tooltip="Flecha"><span class="component-icon">arrow_back</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="circle" data-tooltip="Círculo"><span class="component-icon">radio_button_unchecked</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="square" data-tooltip="Cuadrado"><span class="component-icon">check_box_outline_blank</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="diamond" data-tooltip="Rombo"><span class="component-icon">square</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="bar" data-tooltip="Barra"><span class="component-icon">pause</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="arrow-filled" data-tooltip="Flecha rellena"><span class="component-icon">arrow_back_ios_new</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="circle-filled" data-tooltip="Círculo relleno"><span class="component-icon">circle</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="square-filled" data-tooltip="Cuadrado relleno"><span class="component-icon">square</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="diamond-filled" data-tooltip="Rombo relleno"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn is-active" data-marker="none" data-i18n-tooltip="canvas.shapes.none" data-tooltip="Ninguno"><span class="component-icon">block</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="arrow" data-i18n-tooltip="canvas.shapes.arrow" data-tooltip="Flecha"><span class="component-icon">arrow_back</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="circle" data-i18n-tooltip="canvas.shapes.circle" data-tooltip="Círculo"><span class="component-icon">radio_button_unchecked</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="square" data-i18n-tooltip="canvas.shapes.square" data-tooltip="Cuadrado"><span class="component-icon">check_box_outline_blank</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="diamond" data-i18n-tooltip="canvas.shapes.rhombus" data-tooltip="Rombo"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="bar" data-i18n-tooltip="canvas.shapes.bar" data-tooltip="Barra"><span class="component-icon">pause</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="arrow-filled" data-i18n-tooltip="canvas.shapes.arrow_filled" data-tooltip="Flecha rellena"><span class="component-icon">arrow_back_ios_new</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="circle-filled" data-i18n-tooltip="canvas.shapes.circle_filled" data-tooltip="Círculo relleno"><span class="component-icon">circle</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="square-filled" data-i18n-tooltip="canvas.shapes.square_filled" data-tooltip="Cuadrado relleno"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="diamond-filled" data-i18n-tooltip="canvas.shapes.rhombus_filled" data-tooltip="Rombo relleno"><span class="component-icon">square</span></button>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-marker-end">
-        <div class="board-popover-title">Extremo final</div>
+        <div class="board-popover-title" data-i18n="canvas.arrow_end">Extremo final</div>
         <div class="board-popover-markers-grid" data-ref="grid-marker-end">
-          <button type="button" class="board-popover-marker-btn is-active" data-marker="none" data-tooltip="Ninguno"><span class="component-icon">block</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="arrow" data-tooltip="Flecha"><span class="component-icon">arrow_forward</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="circle" data-tooltip="Círculo"><span class="component-icon">radio_button_unchecked</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="square" data-tooltip="Cuadrado"><span class="component-icon">check_box_outline_blank</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="diamond" data-tooltip="Rombo"><span class="component-icon">square</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="bar" data-tooltip="Barra"><span class="component-icon">pause</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="arrow-filled" data-tooltip="Flecha rellena"><span class="component-icon">arrow_forward_ios</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="circle-filled" data-tooltip="Círculo relleno"><span class="component-icon">circle</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="square-filled" data-tooltip="Cuadrado relleno"><span class="component-icon">square</span></button>
-          <button type="button" class="board-popover-marker-btn" data-marker="diamond-filled" data-tooltip="Rombo relleno"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn is-active" data-marker="none" data-i18n-tooltip="canvas.shapes.none" data-tooltip="Ninguno"><span class="component-icon">block</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="arrow" data-i18n-tooltip="canvas.shapes.arrow" data-tooltip="Flecha"><span class="component-icon">arrow_forward</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="circle" data-i18n-tooltip="canvas.shapes.circle" data-tooltip="Círculo"><span class="component-icon">radio_button_unchecked</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="square" data-i18n-tooltip="canvas.shapes.square" data-tooltip="Cuadrado"><span class="component-icon">check_box_outline_blank</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="diamond" data-i18n-tooltip="canvas.shapes.rhombus" data-tooltip="Rombo"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="bar" data-i18n-tooltip="canvas.shapes.bar" data-tooltip="Barra"><span class="component-icon">pause</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="arrow-filled" data-i18n-tooltip="canvas.shapes.arrow_filled" data-tooltip="Flecha rellena"><span class="component-icon">arrow_forward_ios</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="circle-filled" data-i18n-tooltip="canvas.shapes.circle_filled" data-tooltip="Círculo relleno"><span class="component-icon">circle</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="square-filled" data-i18n-tooltip="canvas.shapes.square_filled" data-tooltip="Cuadrado relleno"><span class="component-icon">square</span></button>
+          <button type="button" class="board-popover-marker-btn" data-marker="diamond-filled" data-i18n-tooltip="canvas.shapes.rhombus_filled" data-tooltip="Rombo relleno"><span class="component-icon">square</span></button>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-connector-style">
-        <div class="board-popover-title">Tipo de conector</div>
+        <div class="board-popover-title" data-i18n="canvas.connector_type">Tipo de conector</div>
         <div class="board-popover-presets-row">
-          <button type="button" class="board-popover-preset-btn is-active" data-ref="popover-conn-curved" data-conn-style="curved" data-tooltip="Curvo">
+          <button type="button" class="board-popover-preset-btn is-active" data-ref="popover-conn-curved" data-conn-style="curved" data-i18n-tooltip="canvas.auto.curvo" data-tooltip="Curvo">
             <span class="component-icon">gesture</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="popover-conn-orthogonal" data-conn-style="orthogonal" data-tooltip="Ortogonal">
+          <button type="button" class="board-popover-preset-btn" data-ref="popover-conn-orthogonal" data-conn-style="orthogonal" data-i18n-tooltip="canvas.auto.ortogonal" data-tooltip="Ortogonal">
             <span class="component-icon">alt_route</span>
           </button>
-          <button type="button" class="board-popover-preset-btn" data-ref="popover-conn-straight" data-conn-style="straight" data-tooltip="Recto">
+          <button type="button" class="board-popover-preset-btn" data-ref="popover-conn-straight" data-conn-style="straight" data-i18n-tooltip="canvas.auto.recto" data-tooltip="Recto">
             <span class="component-icon">horizontal_rule</span>
           </button>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-position">
-        <div class="board-popover-title">Capas y orden</div>
+        <div class="board-popover-title" data-i18n="canvas.layers_order">Capas y orden</div>
         <div class="menu-panel__list" style="display: flex; flex-direction: column; gap: 4px;">
           <button type="button" class="menu-item" data-ref="btn-pos-front">
             <span class="component-icon menu-item__icon">flip_to_front</span>
-            <span class="menu-item__text">Traer al frente</span>
+            <span class="menu-item__text" data-i18n="canvas.bring_to_front">Traer al frente</span>
           </button>
           <button type="button" class="menu-item" data-ref="btn-pos-back">
             <span class="component-icon menu-item__icon">flip_to_back</span>
-            <span class="menu-item__text">Enviar al fondo</span>
+            <span class="menu-item__text" data-i18n="canvas.send_to_back">Enviar al fondo</span>
           </button>
         </div>
       </div>
 
       <div class="board-context-popover is-hidden" data-ref="popover-slide-duration">
-        <div class="board-popover-title">Duración de la diapositiva</div>
+        <div class="board-popover-title" data-i18n="stage.slide_duration">Duración de la diapositiva</div>
         <div class="board-popover-slider-row">
-          <input class="board-popover-slider" data-ref="input-popover-slide-duration" type="range" min="0.5" max="30" step="0.5" value="5" aria-label="Duración en segundos" />
-          <span class="board-popover-value-box" data-ref="label-popover-slide-duration">5.0 s</span>
+          <input class="board-popover-slider" data-ref="input-popover-slide-duration" type="range" min="0.5" max="30" step="0.5" value="5" data-i18n-aria="canvas.auto.duracion_en_segundos" aria-label="Duración en segundos" />
+          <span class="board-popover-value-box" data-ref="label-popover-slide-duration" data-no-i18n>5.0 s</span>
         </div>
         <div class="canva-duration-presets-row" data-ref="slide-duration-presets">
           <button type="button" class="canva-duration-chip" data-duration="2.5">2.5s</button>
@@ -441,7 +451,7 @@
         <div class="canva-duration-footer">
           <button type="button" class="component-button component-button--h32 component-button--secondary component-button--w-full" data-ref="btn-apply-duration-all">
             <span class="component-icon">done_all</span>
-            <span>Aplicar a todas las diapositivas</span>
+            <span data-i18n="stage.apply_all_slides">Aplicar a todas las diapositivas</span>
           </button>
         </div>
       </div>
@@ -453,23 +463,23 @@
 
       <div class="board-selection-toolbar is-hidden" data-ref="presentation-selection-toolbar">
         <div class="design-toolbar-group is-hidden" data-ref="presentation-sel-group-embeds">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-play-embed" data-tooltip="Reproducir video" aria-label="Reproducir video">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-play-embed" data-i18n-tooltip="canvas.auto.reproducir_video" data-tooltip="Reproducir video" data-i18n-aria="canvas.auto.reproducir_video" aria-label="Reproducir video">
             <svg class="component-icon" aria-hidden="true" style="fill: #ef4444;"><use href="/icons.svg#play_arrow"></use></svg>
           </button>
         </div>
         <div class="design-toolbar-group" data-ref="presentation-sel-group-layer">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-duplicate" data-i18n-tooltip="canvas.duplicate_shortcut" data-tooltip="Duplicar (Ctrl+D)" data-i18n-aria="canvas.duplicate" aria-label="Duplicar">
             <span class="component-icon">content_copy</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-bring-forward" data-tooltip="Traer al frente" aria-label="Traer al frente">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-bring-forward" data-i18n-tooltip="canvas.bring_to_front" data-tooltip="Traer al frente" data-i18n-aria="canvas.bring_to_front" aria-label="Traer al frente">
             <span class="component-icon">flip_to_front</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-send-backward" data-tooltip="Enviar al fondo" aria-label="Enviar al fondo">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-send-backward" data-i18n-tooltip="canvas.send_to_back" data-tooltip="Enviar al fondo" data-i18n-aria="canvas.send_to_back" aria-label="Enviar al fondo">
             <span class="component-icon">flip_to_back</span>
           </button>
         </div>
         <div class="design-toolbar-group" data-ref="presentation-sel-group-delete">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="btn-sel-delete" data-tooltip="Eliminar (Supr)" aria-label="Eliminar">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="btn-sel-delete" data-i18n-tooltip="canvas.delete_shortcut" data-tooltip="Eliminar (Supr)" data-i18n-aria="canvas.delete" aria-label="Eliminar">
             <span class="component-icon">delete_outline</span>
           </button>
         </div>
@@ -478,15 +488,15 @@
       <div class="design-history-preview-banner is-hidden" data-ref="presentation-history-preview-banner">
         <div class="design-history-preview-banner__content">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-          <span class="design-history-preview-banner__text" data-ref="preview-banner-text">Modo vista previa</span>
+          <span class="design-history-preview-banner__text" data-ref="preview-banner-text" data-i18n="canvas.preview_mode">Modo vista previa</span>
         </div>
         <div class="design-history-preview-banner__actions">
           <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-preview-restore">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span>Restaurar esta versión</span>
+            <span data-i18n="canvas.restore_version">Restaurar esta versión</span>
           </button>
           <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-preview-exit">
-            <span>Salir de la vista previa</span>
+            <span data-i18n="canvas.exit_preview">Salir de la vista previa</span>
           </button>
         </div>
       </div>
@@ -494,60 +504,60 @@
       <div class="design-bottom-toolbar-container" data-ref="presentation-toolbar-container">
         <div class="design-pages-tray design-pages-tray--transparent is-hidden" data-ref="design-pages-tray">
           <div class="design-pages-tray__cards-wrapper" data-ref="pages-cards-wrapper">
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-pages-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-pages-tray-scroll-left" data-i18n-tooltip="canvas.scroll_left" data-tooltip="Desplazar a la izquierda" data-i18n-aria="canvas.scroll_left" aria-label="Desplazar a la izquierda">
               <span class="component-icon">chevron_left</span>
             </button>
             <div class="design-pages-tray__cards" data-ref="pages-cards-list"></div>
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-pages-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-pages-tray-scroll-right" data-i18n-tooltip="canvas.scroll_right" data-tooltip="Desplazar a la derecha" data-i18n-aria="canvas.scroll_right" aria-label="Desplazar a la derecha">
               <span class="component-icon">chevron_right</span>
             </button>
           </div>
         </div>
 
         <div class="design-bottom-toolbar-wrapper" data-ref="presentation-toolbar-wrapper">
-          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-i18n-tooltip="canvas.scroll_left" data-tooltip="Desplazar a la izquierda" data-i18n-aria="canvas.scroll_left" aria-label="Desplazar a la izquierda">
             <span class="component-icon">chevron_left</span>
           </button>
 
           <div class="design-bottom-toolbar" data-ref="presentation-bottom-toolbar">
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--pages" data-ref="presentation-pages-section">
               <div class="design-toolbar-group" data-ref="presentation-group-pages">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bottom-pages" data-tooltip="Diapositivas" aria-label="Diapositivas">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bottom-pages" data-i18n-tooltip="canvas.auto.diapositivas" data-tooltip="Diapositivas" data-i18n-aria="canvas.auto.diapositivas" aria-label="Diapositivas">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
                   <span class="design-toolbar-badge__text" data-ref="bottom-pages-text">1 / 1</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slide-duration" data-tooltip="Duración de diapositiva" aria-label="Duración de diapositiva">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slide-duration" data-i18n-tooltip="stage.slide_duration" data-tooltip="Duración de diapositiva" data-i18n-aria="stage.slide_duration" aria-label="Duración de diapositiva">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
-                  <span class="design-toolbar-badge__text" data-ref="slide-duration-text">5.0 s</span>
+                  <span class="design-toolbar-badge__text" data-ref="slide-duration-text" data-no-i18n>5.0 s</span>
                 </button>
               </div>
             </div>
             <div class="design-bottom-toolbar__section" data-ref="presentation-snapping-section">
               <div class="design-toolbar-group" data-ref="presentation-group-snapping">
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-tooltip="Ajuste magnético inteligente" aria-label="Ajuste magnético inteligente">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-i18n-tooltip="canvas.auto.ajuste_magnetico_inteligente" data-tooltip="Ajuste magnético inteligente" data-i18n-aria="canvas.auto.ajuste_magnetico_inteligente" aria-label="Ajuste magnético inteligente">
                   <span class="component-icon">center_focus_strong</span>
                 </button>
               </div>
             </div>
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="presentation-zoom-section">
               <div class="design-toolbar-group" data-ref="presentation-group-zoom">
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-i18n-tooltip="canvas.auto.alejar_ctrl__" data-tooltip="Alejar (Ctrl -)" data-i18n-aria="canvas.auto.alejar" aria-label="Alejar">
                   <span class="component-icon">remove</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-i18n-tooltip="canvas.auto.restablecer_zoom_100%" data-tooltip="Restablecer zoom (100%)" data-i18n-aria="canvas.zoom_reset" aria-label="Restablecer zoom">
                   <span class="design-toolbar-badge__text" data-ref="presentation-zoom-value">100%</span>
                 </button>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar (Ctrl +)" aria-label="Acercar">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-i18n-tooltip="canvas.auto.acercar_ctrl__" data-tooltip="Acercar (Ctrl +)" data-i18n-aria="canvas.auto.acercar" aria-label="Acercar">
                   <span class="component-icon">add</span>
                 </button>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar diapositiva a la pantalla" aria-label="Ajustar diapositiva">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-i18n-tooltip="canvas.auto.ajustar_diapositiva_a_la_pantalla" data-tooltip="Ajustar diapositiva a la pantalla" data-i18n-aria="canvas.auto.ajustar_diapositiva" aria-label="Ajustar diapositiva">
                   <span class="component-icon">fit_screen</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-i18n-tooltip="canvas.scroll_right" data-tooltip="Desplazar a la derecha" data-i18n-aria="canvas.scroll_right" aria-label="Desplazar a la derecha">
             <span class="component-icon">chevron_right</span>
           </button>
         </div>

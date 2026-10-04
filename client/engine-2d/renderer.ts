@@ -850,7 +850,7 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
 
   ctx.save();
   ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
-  ctx.fillStyle = sticky.textColor || '#1e293b';
+  ctx.fillStyle = sticky.textColor || '#202229';
   const stickyFamily = sticky.fontFamily ? `"${sticky.fontFamily.split(',')[0].replace(/['"]/g, '')}", sans-serif` : 'sans-serif';
   const stickyWeight = sticky.fontWeight || 500;
   const stickyStyle = sticky.fontStyle || 'normal';
@@ -885,7 +885,7 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
       else if (align === 'right') startX = sticky.x + sticky.width - pad - textW;
 
       ctx.save();
-      ctx.strokeStyle = sticky.textColor || '#1e293b';
+      ctx.strokeStyle = sticky.textColor || '#202229';
       ctx.lineWidth = Math.max(1, sticky.fontSize / 16);
       ctx.beginPath();
       if (deco === 'underline') {

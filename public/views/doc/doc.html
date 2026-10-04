@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="doc-wrapper">
     <div class="component-top component-top--gradient" data-ref="doc-top">
       <div class="component-top-left" data-ref="doc-top-left">
-        <h1 class="component-top-title" data-ref="doc-title">Documento sin título</h1>
+        <h1 class="component-top-title" data-ref="doc-title" data-i18n="doc.untitled">Documento sin título</h1>
       </div>
 
       <div class="component-top-right" data-ref="doc-top-right">
@@ -9,38 +9,38 @@
           <div class="design-collaborators-list" data-ref="doc-collaborators-list"></div>
         </div>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-doc-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-doc-cloud-status" data-i18n-tooltip="canvas.cloud_saved" data-tooltip="Todos los cambios están guardados en la nube" data-i18n-aria="canvas.save_status" aria-label="Estado de guardado">
           <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
           <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
           <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
         </button>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-metrics" data-tooltip="Estadísticas" aria-label="Estadísticas">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-metrics" data-i18n-tooltip="canvas.statistics" data-tooltip="Estadísticas" data-i18n-aria="canvas.statistics" aria-label="Estadísticas">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
         </button>
 
         <div class="design-share-wrapper" data-ref="doc-file-menu-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-file-menu" data-tooltip="Archivo y opciones" aria-label="Archivo y opciones">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-file-menu" data-i18n-tooltip="canvas.file_options" data-tooltip="Archivo y opciones" data-i18n-aria="canvas.file_options" aria-label="Archivo y opciones">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
           </button>
         </div>
 
         <div class="design-share-wrapper" data-ref="doc-ai-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-magic-ai" data-tooltip="Spritebot IA" aria-label="Spritebot IA">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-magic-ai" data-i18n-tooltip="canvas.spritebot_ai" data-tooltip="Spritebot IA" data-i18n-aria="canvas.spritebot_ai" aria-label="Spritebot IA">
             <span class="component-icon">auto_awesome</span>
           </button>
         </div>
 
         <div class="design-share-wrapper" data-ref="doc-present-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-present" data-tooltip="Modo Presentación (F5)" aria-label="Presentar">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-present" data-i18n-tooltip="canvas.present_shortcut" data-tooltip="Modo Presentación (F5)" data-i18n-aria="canvas.present" aria-label="Presentar">
             <span class="component-icon">slideshow</span>
           </button>
         </div>
 
         <div class="design-share-wrapper" data-ref="doc-share-wrapper">
-          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-doc" data-tooltip="Compartir documento" aria-label="Compartir documento">
+          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-doc" data-i18n-tooltip="doc.share_doc" data-tooltip="Compartir documento" data-i18n-aria="doc.share_doc" aria-label="Compartir documento">
             <span class="component-icon">share</span>
-            <span class="design-share-btn__text">Compartir</span>
+            <span class="design-share-btn__text" data-i18n="canvas.share_btn">Compartir</span>
           </button>
         </div>
       </div>
@@ -49,30 +49,30 @@
     <div class="component-bottom component-bottom--canvas" data-ref="doc-viewport-wrapper">
       <div class="design-vertical-toolbar-container is-hidden" data-ref="doc-vertical-toolbar-container">
         <div class="design-vertical-toolbar-wrapper" data-ref="doc-vertical-toolbar-wrapper">
-          <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-tooltip="Cerrar barra" aria-label="Cerrar barra">
+          <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-i18n-tooltip="canvas.close_bar" data-tooltip="Cerrar barra" data-i18n-aria="canvas.close_bar" aria-label="Cerrar barra">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
 
           <div class="design-vertical-toolbar" data-ref="doc-vertical-toolbar">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-tooltip="Seleccionar" aria-label="Seleccionar">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-i18n-tooltip="canvas.select" data-tooltip="Seleccionar" data-i18n-aria="canvas.select" aria-label="Seleccionar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-sections" data-vtool="section" data-tooltip="Sección" aria-label="Sección">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-sections" data-vtool="section" data-i18n-tooltip="doc.section" data-tooltip="Sección" data-i18n-aria="doc.section" aria-label="Sección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-tooltip="Dibujar" aria-label="Dibujar">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-i18n-tooltip="canvas.draw" data-tooltip="Dibujar" data-i18n-aria="canvas.draw" aria-label="Dibujar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-tooltip="Formas" aria-label="Formas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-i18n-tooltip="canvas.shapes_tool" data-tooltip="Formas" data-i18n-aria="canvas.shapes_tool" aria-label="Formas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shapes"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-tooltip="Líneas" aria-label="Líneas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-i18n-tooltip="canvas.lines_tool" data-tooltip="Líneas" data-i18n-aria="canvas.lines_tool" aria-label="Líneas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-tooltip="Notas adhesivas" aria-label="Notas adhesivas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-i18n-tooltip="canvas.sticky_notes" data-tooltip="Notas adhesivas" data-i18n-aria="canvas.sticky_notes" aria-label="Notas adhesivas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-tooltip="Texto" aria-label="Texto">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-i18n-tooltip="canvas.text_tool" data-tooltip="Texto" data-i18n-aria="canvas.text_tool" aria-label="Texto">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
             </button>
           </div>
@@ -80,17 +80,17 @@
       </div>
 
       <div class="design-top-toolbar-container" data-ref="doc-top-toolbar-container">
-        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-i18n-tooltip="canvas.scroll_left" data-tooltip="Desplazar a la izquierda" data-i18n-aria="canvas.scroll_left" aria-label="Desplazar a la izquierda">
           <span class="component-icon">chevron_left</span>
         </button>
 
         <div class="design-top-toolbar" data-ref="doc-top-toolbar">
           <div class="design-top-toolbar__section" data-ref="doc-top-toolbar-left">
             <div class="design-toolbar-group" data-ref="doc-group-history">
-              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-i18n-tooltip="canvas.undo_shortcut" data-tooltip="Deshacer (Ctrl+Z)" data-i18n-aria="canvas.undo" aria-label="Deshacer" disabled>
                 <span class="component-icon">undo</span>
               </button>
-              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-i18n-tooltip="canvas.redo_shortcut" data-tooltip="Rehacer (Ctrl+Y)" data-i18n-aria="canvas.redo" aria-label="Rehacer" disabled>
                 <span class="component-icon">redo</span>
               </button>
             </div>
@@ -99,9 +99,9 @@
 
             <div class="design-toolbar-group" data-ref="doc-group-styles">
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-styles">
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-trigger-styles" data-tooltip="Estilo de párrafo y títulos" aria-label="Estilo de párrafo">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-trigger-styles" data-i18n-tooltip="doc.paragraph_style_tooltip" data-tooltip="Estilo de párrafo y títulos" data-i18n-aria="doc.paragraph_style" aria-label="Estilo de párrafo">
                   <span class="component-icon">title</span>
-                  <span data-ref="lbl-current-style">Texto normal</span>
+                  <span data-ref="lbl-current-style" data-i18n="doc.style_normal">Texto normal</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-styles">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="menu-styles">
@@ -111,65 +111,65 @@
                     <div class="menu-panel__list" data-ref="list-styles" style="max-height: 320px; overflow-y: auto;">
                       <button type="button" class="menu-item is-active" data-ref="opt-style-p" data-command="formatBlock" data-value="p">
                         <span class="component-icon menu-item__icon">notes</span>
-                        <span class="menu-item__text">Texto normal</span>
+                        <span class="menu-item__text" data-i18n="doc.style_normal">Texto normal</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-title" data-command="customStyle" data-value="title">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 17px; font-weight: 800;">Título Principal</span>
+                        <span class="menu-item__text" style="font-size: 17px; font-weight: 800;" data-i18n="doc.style_title">Título Principal</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-subtitle" data-command="customStyle" data-value="subtitle">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 14px; font-weight: 500; color: #64748b;">Subtítulo</span>
+                        <span class="menu-item__text" style="font-size: 14px; font-weight: 500; color: #64748b;" data-i18n="doc.style_subtitle">Subtítulo</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h1" data-command="formatBlock" data-value="h1">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 15px; font-weight: 700;">Encabezado 1</span>
+                        <span class="menu-item__text" style="font-size: 15px; font-weight: 700;" data-i18n="doc.style_h1">Encabezado 1</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h2" data-command="formatBlock" data-value="h2">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 14px; font-weight: 700;">Encabezado 2</span>
+                        <span class="menu-item__text" style="font-size: 14px; font-weight: 700;" data-i18n="doc.style_h2">Encabezado 2</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h3" data-command="formatBlock" data-value="h3">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 13px; font-weight: 600;">Encabezado 3</span>
+                        <span class="menu-item__text" style="font-size: 13px; font-weight: 600;" data-i18n="doc.style_h3">Encabezado 3</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h4" data-command="formatBlock" data-value="h4">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 12px; font-weight: 600;">Encabezado 4</span>
+                        <span class="menu-item__text" style="font-size: 12px; font-weight: 600;" data-i18n="doc.style_h4">Encabezado 4</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h5" data-command="formatBlock" data-value="h5">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Encabezado 5</span>
+                        <span class="menu-item__text" style="font-size: 11px; font-weight: 700; text-transform: uppercase;" data-i18n="doc.style_h5">Encabezado 5</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-h6" data-command="formatBlock" data-value="h6">
                         <span class="component-icon menu-item__icon">format_size</span>
-                        <span class="menu-item__text" style="font-size: 11px; font-weight: 600; color: #64748b;">Encabezado 6</span>
+                        <span class="menu-item__text" style="font-size: 11px; font-weight: 600; color: #64748b;" data-i18n="doc.style_h6">Encabezado 6</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-blockquote" data-command="formatBlock" data-value="blockquote">
                         <span class="component-icon menu-item__icon">format_quote</span>
-                        <span class="menu-item__text" style="font-style: italic;">Cita destacada</span>
+                        <span class="menu-item__text" style="font-style: italic;" data-i18n="doc.style_quote">Cita destacada</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-style-pre" data-command="formatBlock" data-value="pre">
                         <span class="component-icon menu-item__icon">code</span>
-                        <span class="menu-item__text" style="font-family: monospace;">Bloque de código</span>
+                        <span class="menu-item__text" style="font-family: monospace;" data-i18n="doc.style_code">Bloque de código</span>
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-trigger-font-family" data-tooltip="Tipografía" aria-label="Tipografía">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-trigger-font-family" data-i18n-tooltip="canvas.font_family" data-tooltip="Tipografía" data-i18n-aria="canvas.font_family" aria-label="Tipografía">
                 <span class="component-icon">font_download</span>
                 <span data-ref="lbl-current-font">Inter</span>
               </button>
 
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-font-size-minus" data-tooltip="Reducir tamaño" aria-label="Reducir tamaño">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-font-size-minus" data-i18n-tooltip="canvas.decrease_font" data-tooltip="Reducir tamaño" data-i18n-aria="canvas.decrease_font" aria-label="Reducir tamaño">
                 <span class="component-icon">remove</span>
               </button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-font-size-badge" data-tooltip="Tamaño de fuente" aria-label="Tamaño de fuente">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-font-size-badge" data-i18n-tooltip="canvas.font_size" data-tooltip="Tamaño de fuente" data-i18n-aria="canvas.font_size" aria-label="Tamaño de fuente">
                 <span class="design-toolbar-badge__text" data-ref="lbl-font-size">11pt</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-font-size-plus" data-tooltip="Aumentar tamaño" aria-label="Aumentar tamaño">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-font-size-plus" data-i18n-tooltip="canvas.increase_font" data-tooltip="Aumentar tamaño" data-i18n-aria="canvas.increase_font" aria-label="Aumentar tamaño">
                 <span class="component-icon">add</span>
               </button>
             </div>
@@ -177,26 +177,26 @@
             <div class="design-toolbar-divider" data-ref="doc-divider-formatting"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-formatting">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-bold" data-tooltip="Negrita (Ctrl+B)" aria-label="Negrita">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-bold" data-i18n-tooltip="canvas.bold_shortcut" data-tooltip="Negrita (Ctrl+B)" data-i18n-aria="canvas.bold" aria-label="Negrita">
                 <span class="component-icon">format_bold</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-italic" data-tooltip="Cursiva (Ctrl+I)" aria-label="Cursiva">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-italic" data-i18n-tooltip="canvas.italic_shortcut" data-tooltip="Cursiva (Ctrl+I)" data-i18n-aria="canvas.italic" aria-label="Cursiva">
                 <span class="component-icon">format_italic</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-underline" data-tooltip="Subrayado (Ctrl+U)" aria-label="Subrayado">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-underline" data-i18n-tooltip="canvas.underline_shortcut" data-tooltip="Subrayado (Ctrl+U)" data-i18n-aria="canvas.underline" aria-label="Subrayado">
                 <span class="component-icon">format_underlined</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-text-color-trigger" data-tooltip="Color de texto" aria-label="Color de texto">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-text-color-trigger" data-i18n-tooltip="canvas.text_color" data-tooltip="Color de texto" data-i18n-aria="canvas.text_color" aria-label="Color de texto">
                 <span class="component-icon">format_color_text</span>
                 <span class="board-fill-preview-dot" data-ref="indicator-text-color" style="background-color: #0f172a;"></span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-bg-color-trigger" data-tooltip="Color de resaltado" aria-label="Color de resaltado">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-bg-color-trigger" data-i18n-tooltip="doc.highlight_color" data-tooltip="Color de resaltado" data-i18n-aria="doc.highlight_color" aria-label="Color de resaltado">
                 <span class="component-icon">format_ink_highlighter</span>
                 <span class="board-fill-preview-dot" data-ref="indicator-bg-color" style="background-color: #fef08a;"></span>
               </button>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-more-formatting">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-more-formatting" data-tooltip="Más formato de texto" aria-label="Más formato">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-more-formatting" data-i18n-tooltip="doc.more_format_tooltip" data-tooltip="Más formato de texto" data-i18n-aria="doc.more_format" aria-label="Más formato">
                   <span class="component-icon">more_horiz</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-more-formatting">
@@ -207,46 +207,46 @@
                     <div class="menu-panel__list" data-ref="list-more-formatting">
                       <button type="button" class="menu-item" data-ref="btn-strike">
                         <span class="component-icon menu-item__icon">format_strikethrough</span>
-                        <span class="menu-item__text">Tachado</span>
+                        <span class="menu-item__text" data-i18n="canvas.strikethrough">Tachado</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-superscript">
                         <span class="component-icon menu-item__icon">superscript</span>
-                        <span class="menu-item__text">Superíndice (x²)</span>
+                        <span class="menu-item__text" data-i18n="doc.superscript">Superíndice (x²)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-subscript">
                         <span class="component-icon menu-item__icon">subscript</span>
-                        <span class="menu-item__text">Subíndice (x₂)</span>
+                        <span class="menu-item__text" data-i18n="doc.subscript">Subíndice (x₂)</span>
                       </button>
                       <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="opt-case-upper">
                         <span class="component-icon menu-item__icon">text_fields</span>
-                        <span class="menu-item__text">MAYÚSCULAS</span>
+                        <span class="menu-item__text" data-i18n="doc.uppercase">MAYÚSCULAS</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-case-lower">
                         <span class="component-icon menu-item__icon">text_format</span>
-                        <span class="menu-item__text">minúsculas</span>
+                        <span class="menu-item__text" data-i18n="doc.lowercase">minúsculas</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-case-title">
                         <span class="component-icon menu-item__icon">title</span>
-                        <span class="menu-item__text">Tipo Título</span>
+                        <span class="menu-item__text" data-i18n="doc.titlecase">Tipo Título</span>
                       </button>
                       <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="opt-letter-spacing-tight" data-letter-spacing="-0.5px">
                         <span class="component-icon menu-item__icon">compress</span>
-                        <span class="menu-item__text">Espaciado estrecho (-0.5px)</span>
+                        <span class="menu-item__text" data-i18n="doc.spacing_narrow">Espaciado estrecho (-0.5px)</span>
                       </button>
                       <button type="button" class="menu-item is-active" data-ref="opt-letter-spacing-normal" data-letter-spacing="0px">
                         <span class="component-icon menu-item__icon">space_bar</span>
-                        <span class="menu-item__text">Espaciado normal (0px)</span>
+                        <span class="menu-item__text" data-i18n="doc.spacing_normal">Espaciado normal (0px)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-letter-spacing-wide" data-letter-spacing="1px">
                         <span class="component-icon menu-item__icon">expand</span>
-                        <span class="menu-item__text">Espaciado amplio (+1px)</span>
+                        <span class="menu-item__text" data-i18n="doc.spacing_wide">Espaciado amplio (+1px)</span>
                       </button>
                       <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="btn-clear-format">
                         <span class="component-icon menu-item__icon">format_clear</span>
-                        <span class="menu-item__text">Limpiar formato</span>
+                        <span class="menu-item__text" data-i18n="doc.clear_formatting">Limpiar formato</span>
                       </button>
                     </div>
                   </div>
@@ -258,7 +258,7 @@
 
             <div class="design-toolbar-group" data-ref="doc-group-paragraph">
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-alignment">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-alignment" data-tooltip="Alineación de texto" aria-label="Alineación">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-alignment" data-i18n-tooltip="canvas.align_text" data-tooltip="Alineación de texto" data-i18n-aria="canvas.align_text" aria-label="Alineación">
                   <span class="component-icon" data-ref="alignment-current-icon">format_align_left</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-alignment">
@@ -269,19 +269,19 @@
                     <div class="menu-panel__list" data-ref="list-alignment">
                       <button type="button" class="menu-item is-active" data-ref="btn-align-left">
                         <span class="component-icon menu-item__icon">format_align_left</span>
-                        <span class="menu-item__text">Izquierda</span>
+                        <span class="menu-item__text" data-i18n="canvas.align_left">Izquierda</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-align-center">
                         <span class="component-icon menu-item__icon">format_align_center</span>
-                        <span class="menu-item__text">Centrar</span>
+                        <span class="menu-item__text" data-i18n="canvas.align_center">Centrar</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-align-right">
                         <span class="component-icon menu-item__icon">format_align_right</span>
-                        <span class="menu-item__text">Derecha</span>
+                        <span class="menu-item__text" data-i18n="canvas.align_right">Derecha</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-align-justify">
                         <span class="component-icon menu-item__icon">format_align_justify</span>
-                        <span class="menu-item__text">Justificar</span>
+                        <span class="menu-item__text" data-i18n="canvas.align_justify">Justificar</span>
                       </button>
                     </div>
                   </div>
@@ -289,7 +289,7 @@
               </div>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-line-spacing">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-line-spacing" data-tooltip="Interlineado y espaciado de párrafo" aria-label="Interlineado">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-line-spacing" data-i18n-tooltip="doc.line_spacing_tooltip" data-tooltip="Interlineado y espaciado de párrafo" data-i18n-aria="doc.line_spacing" aria-label="Interlineado">
                   <span class="component-icon">format_line_spacing</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-line-spacing">
@@ -299,7 +299,7 @@
                     </div>
                     <div class="menu-panel__list" data-ref="list-line-spacing">
                       <button type="button" class="menu-item" data-ref="opt-spacing-10" data-spacing="1">
-                        <span class="menu-item__text">1.0 (Sencillo)</span>
+                        <span class="menu-item__text" data-i18n="doc.line_spacing_single">1.0 (Sencillo)</span>
                       </button>
                       <button type="button" class="menu-item is-active" data-ref="opt-spacing-115" data-spacing="1.15">
                         <span class="menu-item__text">1.15</span>
@@ -308,10 +308,10 @@
                         <span class="menu-item__text">1.25</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-spacing-15" data-spacing="1.5">
-                        <span class="menu-item__text">1.5 (1½ líneas)</span>
+                        <span class="menu-item__text" data-i18n="doc.line_spacing_one_half">1.5 (1½ líneas)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-spacing-20" data-spacing="2">
-                        <span class="menu-item__text">2.0 (Doble)</span>
+                        <span class="menu-item__text" data-i18n="doc.line_spacing_double">2.0 (Doble)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-spacing-25" data-spacing="2.5">
                         <span class="menu-item__text">2.5</span>
@@ -319,11 +319,11 @@
                       <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="opt-para-space-add">
                         <span class="component-icon menu-item__icon">format_line_spacing</span>
-                        <span class="menu-item__text">Espacio después del párrafo</span>
+                        <span class="menu-item__text" data-i18n="doc.space_after_p">Espacio después del párrafo</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-para-space-remove">
                         <span class="component-icon menu-item__icon">close</span>
-                        <span class="menu-item__text">Quitar espacio de párrafo</span>
+                        <span class="menu-item__text" data-i18n="doc.remove_p_space">Quitar espacio de párrafo</span>
                       </button>
                     </div>
                   </div>
@@ -334,14 +334,14 @@
             <div class="design-toolbar-divider" data-ref="doc-divider-lists"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-lists">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-list-bullet" data-tooltip="Lista con viñetas" aria-label="Lista con viñetas">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-list-bullet" data-i18n-tooltip="canvas.bullet_list" data-tooltip="Lista con viñetas" data-i18n-aria="canvas.bullet_list" aria-label="Lista con viñetas">
                 <span class="component-icon">format_list_bulleted</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-list-ordered" data-tooltip="Lista numerada" aria-label="Lista numerada">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-list-ordered" data-i18n-tooltip="canvas.numbered_list" data-tooltip="Lista numerada" data-i18n-aria="canvas.numbered_list" aria-label="Lista numerada">
                 <span class="component-icon">format_list_numbered</span>
               </button>
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-indents">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-indents" data-tooltip="Sangría y listas avanzadas" aria-label="Sangría">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-indents" data-i18n-tooltip="doc.indent_tooltip" data-tooltip="Sangría y listas avanzadas" data-i18n-aria="doc.indent" aria-label="Sangría">
                   <span class="component-icon">format_indent_increase</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-indents">
@@ -352,19 +352,19 @@
                     <div class="menu-panel__list" data-ref="list-indents">
                       <button type="button" class="menu-item" data-ref="btn-list-checklist">
                         <span class="component-icon menu-item__icon">checklist</span>
-                        <span class="menu-item__text">Lista de tareas</span>
+                        <span class="menu-item__text" data-i18n="doc.task_list">Lista de tareas</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-indent">
                         <span class="component-icon menu-item__icon">format_indent_increase</span>
-                        <span class="menu-item__text">Aumentar sangría</span>
+                        <span class="menu-item__text" data-i18n="doc.indent_increase">Aumentar sangría</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-outdent">
                         <span class="component-icon menu-item__icon">format_indent_decrease</span>
-                        <span class="menu-item__text">Disminuir sangría</span>
+                        <span class="menu-item__text" data-i18n="doc.indent_decrease">Disminuir sangría</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-indent-first-line">
                         <span class="component-icon menu-item__icon">first_page</span>
-                        <span class="menu-item__text">Sangría 1ra línea</span>
+                        <span class="menu-item__text" data-i18n="doc.indent_first_line">Sangría 1ra línea</span>
                       </button>
                     </div>
                   </div>
@@ -375,10 +375,10 @@
             <div class="design-toolbar-divider" data-ref="doc-divider-insert"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-insert">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-link" data-tooltip="Insertar enlace (Ctrl+K)" aria-label="Insertar enlace">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-link" data-i18n-tooltip="doc.insert_link_shortcut" data-tooltip="Insertar enlace (Ctrl+K)" data-i18n-aria="doc.insert_link" aria-label="Insertar enlace">
                 <span class="component-icon">link</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-image" data-tooltip="Insertar o arrastrar imagen" aria-label="Insertar imagen">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-image" data-i18n-tooltip="doc.insert_image_tooltip" data-tooltip="Insertar o arrastrar imagen" data-i18n-aria="doc.insert_image" aria-label="Insertar imagen">
                 <span class="component-icon">image</span>
               </button>
               <input class="is-hidden" data-ref="input-file-image" type="file" accept="image/*" style="display: none !important;" />
@@ -386,7 +386,7 @@
               <input class="is-hidden" data-ref="input-file-replace-img" type="file" accept="image/*" style="display: none !important;" />
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-table">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-table" data-tooltip="Insertar tabla" aria-label="Insertar tabla">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-table" data-i18n-tooltip="doc.insert_table" data-tooltip="Insertar tabla" data-i18n-aria="doc.insert_table" aria-label="Insertar tabla">
                   <span class="component-icon">table_chart</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-table">
@@ -395,7 +395,7 @@
                       <div class="menu-panel__drag-handle"></div>
                     </div>
                     <div class="doc-table-picker" data-ref="table-picker">
-                      <div class="doc-table-picker__header" data-ref="table-picker-label">Insertar tabla 3 × 3</div>
+                      <div class="doc-table-picker__header" data-ref="table-picker-label" data-i18n="doc.insert_table_3x3">Insertar tabla 3 × 3</div>
                       <div class="doc-table-picker__grid" data-ref="table-picker-grid"></div>
                     </div>
                   </div>
@@ -403,7 +403,7 @@
               </div>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-insert-more">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-insert-more" data-tooltip="Más elementos a insertar" aria-label="Insertar más">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-insert-more" data-i18n-tooltip="doc.insert_more_tooltip" data-tooltip="Más elementos a insertar" data-i18n-aria="doc.insert_more" aria-label="Insertar más">
                   <span class="component-icon">add_circle_outline</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-insert-more">
@@ -414,40 +414,40 @@
                     <div class="menu-panel__list" data-ref="list-insert-more">
                       <button type="button" class="menu-item" data-ref="btn-insert-logo">
                         <span class="component-icon menu-item__icon">verified_user</span>
-                        <span class="menu-item__text">Logo de encabezado</span>
+                        <span class="menu-item__text" data-i18n="doc.header_logo">Logo de encabezado</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-insert-symbol">
                         <span class="component-icon menu-item__icon">emoji_symbols</span>
-                        <span class="menu-item__text">Símbolo especial</span>
+                        <span class="menu-item__text" data-i18n="doc.special_symbol">Símbolo especial</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-insert-hr">
                         <span class="component-icon menu-item__icon">horizontal_rule</span>
-                        <span class="menu-item__text">Línea divisoria</span>
+                        <span class="menu-item__text" data-i18n="doc.horizontal_divider">Línea divisoria</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-add-page">
                         <span class="component-icon menu-item__icon">post_add</span>
-                        <span class="menu-item__text">Nueva página</span>
+                        <span class="menu-item__text" data-i18n="doc.new_page">Nueva página</span>
                       </button>
                       <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="opt-callout-info" data-type="info">
                         <span class="component-icon menu-item__icon" style="color: #3b82f6;">info</span>
-                        <span class="menu-item__text">Nota informativa</span>
+                        <span class="menu-item__text" data-i18n="doc.callout_info">Nota informativa</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-success" data-type="success">
                         <span class="component-icon menu-item__icon" style="color: #22c55e;">check_circle</span>
-                        <span class="menu-item__text">Nota de éxito</span>
+                        <span class="menu-item__text" data-i18n="doc.callout_success">Nota de éxito</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-warning" data-type="warning">
                         <span class="component-icon menu-item__icon" style="color: #f59e0b;">warning</span>
-                        <span class="menu-item__text">Nota de advertencia</span>
+                        <span class="menu-item__text" data-i18n="doc.callout_warning">Nota de advertencia</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-danger" data-type="danger">
                         <span class="component-icon menu-item__icon" style="color: #ef4444;">dangerous</span>
-                        <span class="menu-item__text">Nota de peligro</span>
+                        <span class="menu-item__text" data-i18n="doc.callout_danger">Nota de peligro</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-tip" data-type="tip">
                         <span class="component-icon menu-item__icon" style="color: #a855f7;">lightbulb</span>
-                        <span class="menu-item__text">Nota de consejo</span>
+                        <span class="menu-item__text" data-i18n="doc.callout_tip">Nota de consejo</span>
                       </button>
                     </div>
                   </div>
@@ -458,11 +458,11 @@
             <div class="design-toolbar-divider" data-ref="doc-divider-tools"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-tools">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-find" data-tooltip="Buscar y reemplazar (Ctrl+F)" aria-label="Buscar y reemplazar">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-find" data-i18n-tooltip="canvas.find_replace_shortcut" data-tooltip="Buscar y reemplazar (Ctrl+F)" data-i18n-aria="canvas.find_replace" aria-label="Buscar y reemplazar">
                 <span class="component-icon">search</span>
               </button>
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-doc-tools">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-doc-tools" data-tooltip="Diseño y configuración de página" aria-label="Configuración de página">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-doc-tools" data-i18n-tooltip="doc.layout_page_setup_tooltip" data-tooltip="Diseño y configuración de página" data-i18n-aria="doc.page_setup" aria-label="Configuración de página">
                   <span class="component-icon">tune</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-doc-tools">
@@ -473,23 +473,23 @@
                     <div class="menu-panel__list" data-ref="list-doc-tools">
                       <button type="button" class="menu-item" data-ref="btn-page-setup">
                         <span class="component-icon menu-item__icon">pageview</span>
-                        <span class="menu-item__text">Configuración de página</span>
+                        <span class="menu-item__text" data-i18n="doc.page_setup">Configuración de página</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-page-design">
                         <span class="component-icon menu-item__icon">auto_awesome_mosaic</span>
-                        <span class="menu-item__text">Diseño y márgenes</span>
+                        <span class="menu-item__text" data-i18n="doc.layout_margins">Diseño y márgenes</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-watermark-setup">
                         <span class="component-icon menu-item__icon">branding_watermark</span>
-                        <span class="menu-item__text">Marca de agua</span>
+                        <span class="menu-item__text" data-i18n="doc.watermark">Marca de agua</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-doc-stats">
                         <span class="component-icon menu-item__icon">analytics</span>
-                        <span class="menu-item__text">Estadísticas</span>
+                        <span class="menu-item__text" data-i18n="canvas.statistics">Estadísticas</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-print">
                         <span class="component-icon menu-item__icon">print</span>
-                        <span class="menu-item__text">Imprimir / Guardar PDF</span>
+                        <span class="menu-item__text" data-i18n="doc.print_save_pdf">Imprimir / Guardar PDF</span>
                       </button>
                     </div>
                   </div>
@@ -497,7 +497,7 @@
               </div>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-export">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-export" data-tooltip="Descargar o Exportar" aria-label="Descargar o Exportar">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-export" data-i18n-tooltip="doc.download_export" data-tooltip="Descargar o Exportar" data-i18n-aria="doc.download_export" aria-label="Descargar o Exportar">
                   <span class="component-icon">download</span>
                 </button>
                 <div class="dropdown-backdrop" data-ref="backdrop-export">
@@ -508,27 +508,27 @@
                     <div class="menu-panel__list" data-ref="list-export-options">
                       <button type="button" class="menu-item" data-ref="btn-export-pdf">
                         <span class="component-icon menu-item__icon" style="color: #ef4444;">picture_as_pdf</span>
-                        <span class="menu-item__text">Documento PDF (.pdf)</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_pdf">Documento PDF (.pdf)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-export-word">
                         <span class="component-icon menu-item__icon" style="color: #2563eb;">description</span>
-                        <span class="menu-item__text">Microsoft Word (.doc)</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_word">Microsoft Word (.doc)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-export-markdown">
                         <span class="component-icon menu-item__icon">article</span>
-                        <span class="menu-item__text">Markdown (.md)</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_markdown">Markdown (.md)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-export-txt">
                         <span class="component-icon menu-item__icon">text_fields</span>
-                        <span class="menu-item__text">Texto plano (.txt)</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_txt">Texto plano (.txt)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-export-html">
                         <span class="component-icon menu-item__icon">code</span>
-                        <span class="menu-item__text">Página Web (.html)</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_html">Página Web (.html)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-export-json">
                         <span class="component-icon menu-item__icon">data_object</span>
-                        <span class="menu-item__text">Archivo JSON del proyecto</span>
+                        <span class="menu-item__text" data-i18n="canvas.download.type_project_json">Archivo JSON del proyecto</span>
                       </button>
                     </div>
                   </div>
@@ -538,7 +538,7 @@
           </div>
         </div>
 
-        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-top-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-top-toolbar-scroll-right" data-i18n-tooltip="canvas.scroll_right" data-tooltip="Desplazar a la derecha" data-i18n-aria="canvas.scroll_right" aria-label="Desplazar a la derecha">
           <span class="component-icon">chevron_right</span>
         </button>
       </div>
@@ -547,9 +547,9 @@
         <div class="design-colors-panel__header" data-ref="doc-fonts-header">
           <div class="design-colors-panel__title-box">
             <span class="component-icon">font_download</span>
-            <span class="design-colors-panel__title" data-ref="doc-fonts-title">Tipografía</span>
+            <span class="design-colors-panel__title" data-ref="doc-fonts-title" data-i18n="canvas.font_family">Tipografía</span>
           </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-doc-fonts" data-tooltip="Cerrar" aria-label="Cerrar tipografía">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-doc-fonts" data-i18n-tooltip="canvas.close" data-tooltip="Cerrar" data-i18n-aria="doc.close_font" aria-label="Cerrar tipografía">
             <span class="component-icon">close</span>
           </button>
         </div>
@@ -562,9 +562,9 @@
         <div class="design-colors-panel__header" data-ref="doc-colors-header">
           <div class="design-colors-panel__title-box">
             <span class="component-icon">palette</span>
-            <span class="design-colors-panel__title" data-ref="doc-colors-title">Color de texto</span>
+            <span class="design-colors-panel__title" data-ref="doc-colors-title" data-i18n="canvas.text_color">Color de texto</span>
           </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-doc-colors" data-tooltip="Cerrar" aria-label="Cerrar colores">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-doc-colors" data-i18n-tooltip="canvas.close" data-tooltip="Cerrar" data-i18n-aria="doc.close_colors" aria-label="Cerrar colores">
             <span class="component-icon">close</span>
           </button>
         </div>
@@ -573,24 +573,24 @@
             <div class="design-colors-section__header">
               <div class="design-colors-section__title-box">
                 <span class="component-icon">palette</span>
-                <span class="design-colors-section__title">Color personalizado</span>
+                <span class="design-colors-section__title" data-i18n="doc.custom_color">Color personalizado</span>
               </div>
-              <span class="design-colors-hex" data-ref="doc-colors-hex-text">#0F172A</span>
+              <span class="design-colors-hex" data-ref="doc-colors-hex-text" data-no-i18n>#0F172A</span>
             </div>
             <div class="design-colors-custom-row">
-              <div class="design-color-btn-rainbow-wrapper" data-tooltip="Elegir color personalizado">
-                <input class="design-color-active-input" data-ref="input-custom-color" type="color" value="#0f172a" aria-label="Seleccionar color" />
+              <div class="design-color-btn-rainbow-wrapper" data-i18n-tooltip="doc.choose_custom_color" data-tooltip="Elegir color personalizado">
+                <input class="design-color-active-input" data-ref="input-custom-color" type="color" value="#0f172a" data-i18n-aria="doc.select_color" aria-label="Seleccionar color" />
                 <div class="design-color-btn-rainbow">
                   <div class="design-color-btn-rainbow__inner">
                     <span class="component-icon">add</span>
                   </div>
                 </div>
               </div>
-              <div class="design-color-active-swatch-wrapper" data-tooltip="Color activo">
+              <div class="design-color-active-swatch-wrapper" data-i18n-tooltip="doc.active_color" data-tooltip="Color activo">
                 <span class="design-color-active-swatch" data-ref="doc-color-active-swatch" style="background-color: #0f172a;"></span>
               </div>
               <div class="design-colors-active-info">
-                <input class="design-colors-text-input" data-ref="input-custom-hex" type="text" value="#0F172A" maxlength="7" placeholder="#000000" aria-label="Código hexadecimal" />
+                <input class="design-colors-text-input" data-ref="input-custom-hex" type="text" value="#0F172A" maxlength="7" placeholder="#000000" data-i18n-aria="doc.hex_code" aria-label="Código hexadecimal" />
               </div>
             </div>
           </div>
@@ -599,7 +599,7 @@
             <div class="design-colors-section__header">
               <div class="design-colors-section__title-box">
                 <span class="component-icon">color_lens</span>
-                <span class="design-colors-section__title">Paleta de colores</span>
+                <span class="design-colors-section__title" data-i18n="doc.color_palette">Paleta de colores</span>
               </div>
             </div>
             <div class="design-colors-palette-grid" data-ref="doc-palette-grid"></div>
@@ -613,25 +613,25 @@
 
       <div class="design-shape-minitoolbar is-hidden" data-ref="doc-floating-bubble" style="position: absolute; z-index: 60;">
         <div class="design-toolbar-group" data-ref="doc-bubble-group-style">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-bold" data-tooltip="Negrita (Ctrl+B)" aria-label="Negrita">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-bold" data-i18n-tooltip="canvas.bold_shortcut" data-tooltip="Negrita (Ctrl+B)" data-i18n-aria="canvas.bold" aria-label="Negrita">
             <span class="component-icon">format_bold</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-italic" data-tooltip="Cursiva (Ctrl+I)" aria-label="Cursiva">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-italic" data-i18n-tooltip="canvas.italic_shortcut" data-tooltip="Cursiva (Ctrl+I)" data-i18n-aria="canvas.italic" aria-label="Cursiva">
             <span class="component-icon">format_italic</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-underline" data-tooltip="Subrayado (Ctrl+U)" aria-label="Subrayado">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-underline" data-i18n-tooltip="canvas.underline_shortcut" data-tooltip="Subrayado (Ctrl+U)" data-i18n-aria="canvas.underline" aria-label="Subrayado">
             <span class="component-icon">format_underlined</span>
           </button>
         </div>
         <div class="design-toolbar-divider"></div>
         <div class="design-toolbar-group" data-ref="doc-bubble-group-structure">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-h2" data-tooltip="Título" aria-label="Título">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-h2" data-i18n-tooltip="doc.title" data-tooltip="Título" data-i18n-aria="doc.title" aria-label="Título">
             <span class="component-icon">title</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-quote" data-tooltip="Cita" aria-label="Cita">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-quote" data-i18n-tooltip="doc.quote" data-tooltip="Cita" data-i18n-aria="doc.quote" aria-label="Cita">
             <span class="component-icon">format_quote</span>
           </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-link" data-tooltip="Enlace" aria-label="Enlace">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="bubble-btn-link" data-i18n-tooltip="doc.link" data-tooltip="Enlace" data-i18n-aria="doc.link" aria-label="Enlace">
             <span class="component-icon">link</span>
           </button>
         </div>
@@ -640,48 +640,48 @@
       <div class="design-bottom-toolbar-container" data-ref="doc-bottom-toolbar-container">
         <div class="design-options-tray is-hidden" data-ref="doc-find-replace-tray">
           <div class="design-options-tray__content" data-ref="find-options-content">
-            <span class="design-options-tray__label">Buscar:</span>
-            <input class="design-options-text-input" data-ref="input-find-text" type="text" placeholder="Buscar texto..." aria-label="Buscar texto" />
-            <span class="design-toolbar-badge" data-ref="find-match-count" style="font-size: 11px;">0 de 0</span>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-find-prev" data-tooltip="Anterior (Shift+Enter)" aria-label="Anterior">
+            <span class="design-options-tray__label" data-i18n="doc.search_label">Buscar:</span>
+            <input class="design-options-text-input" data-ref="input-find-text" type="text" data-i18n-placeholder="doc.search_placeholder" placeholder="Buscar texto..." data-i18n-aria="doc.search_text" aria-label="Buscar texto" />
+            <span class="design-toolbar-badge" data-ref="find-match-count" data-no-i18n style="font-size: 11px;">0 de 0</span>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-find-prev" data-i18n-tooltip="doc.prev_match_shortcut" data-tooltip="Anterior (Shift+Enter)" data-i18n-aria="doc.prev_match" aria-label="Anterior">
               <span class="component-icon">expand_less</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-find-next" data-tooltip="Siguiente (Enter)" aria-label="Siguiente">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-find-next" data-i18n-tooltip="doc.next_match_shortcut" data-tooltip="Siguiente (Enter)" data-i18n-aria="doc.next_match" aria-label="Siguiente">
               <span class="component-icon">expand_more</span>
             </button>
             <div class="design-toolbar-divider"></div>
-            <span class="design-options-tray__label">Reemplazar:</span>
-            <input class="design-options-text-input" data-ref="input-replace-text" type="text" placeholder="Reemplazar..." aria-label="Reemplazar con" />
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-replace-one" data-tooltip="Reemplazar actual">Reemplazar</button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-replace-all" data-tooltip="Reemplazar todas">Todo</button>
+            <span class="design-options-tray__label" data-i18n="doc.replace_label">Reemplazar:</span>
+            <input class="design-options-text-input" data-ref="input-replace-text" type="text" data-i18n-placeholder="doc.replace_placeholder" placeholder="Reemplazar..." data-i18n-aria="doc.replace_with" aria-label="Reemplazar con" />
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-replace-one" data-i18n="doc.btn_replace" data-i18n-tooltip="doc.replace_current" data-tooltip="Reemplazar actual">Reemplazar</button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-replace-all" data-i18n="doc.btn_replace_all" data-i18n-tooltip="doc.replace_all" data-tooltip="Reemplazar todas">Todo</button>
           </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-find" data-tooltip="Cerrar búsqueda" aria-label="Cerrar búsqueda">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-find" data-i18n-tooltip="doc.close_search" data-tooltip="Cerrar búsqueda" data-i18n-aria="doc.close_search" aria-label="Cerrar búsqueda">
             <span class="component-icon">close</span>
           </button>
         </div>
 
         <div class="design-options-tray is-hidden" data-ref="doc-image-tray">
           <div class="design-options-tray__content" data-ref="image-options-content">
-            <span class="design-options-tray__label">Ajuste de texto:</span>
+            <span class="design-options-tray__label" data-i18n="doc.text_wrap_label">Ajuste de texto:</span>
             <div class="design-options-tray__badges" data-ref="image-wrap-badges">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-inline" data-tooltip="En línea con el texto" aria-label="En línea">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-inline" data-i18n-tooltip="doc.inline_with_text" data-tooltip="En línea con el texto" data-i18n-aria="doc.inline_text" aria-label="En línea">
                 <span class="component-icon">view_headline</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-left" data-tooltip="Flotante a la izquierda (Ajustar texto)" aria-label="Flotar izquierda">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-left" data-i18n-tooltip="doc.float_left_tooltip" data-tooltip="Flotante a la izquierda (Ajustar texto)" data-i18n-aria="doc.float_left" aria-label="Flotar izquierda">
                 <span class="component-icon">format_align_left</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-right" data-tooltip="Flotante a la derecha (Ajustar texto)" aria-label="Flotar derecha">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-right" data-i18n-tooltip="doc.float_right_tooltip" data-tooltip="Flotante a la derecha (Ajustar texto)" data-i18n-aria="doc.float_right" aria-label="Flotar derecha">
                 <span class="component-icon">format_align_right</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-center" data-tooltip="Centrado en bloque" aria-label="Centrado">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-center" data-i18n-tooltip="doc.align_center_block" data-tooltip="Centrado en bloque" data-i18n-aria="doc.align_center" aria-label="Centrado">
                 <span class="component-icon">format_align_center</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-free" data-tooltip="Flotante libre (Mover por la página)" aria-label="Mover libre">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-wrap-free" data-i18n-tooltip="doc.move_free_tooltip" data-tooltip="Flotante libre (Mover por la página)" data-i18n-aria="doc.move_free" aria-label="Mover libre">
                 <span class="component-icon">drag_pan</span>
               </button>
             </div>
             <div class="design-toolbar-divider"></div>
-            <span class="design-options-tray__label">Tamaño:</span>
+            <span class="design-options-tray__label" data-i18n="doc.size_label">Tamaño:</span>
             <div class="design-options-tray__badges" data-ref="image-size-badges">
               <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="img-btn-size-25" data-size="25">25%</button>
               <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="img-btn-size-50" data-size="50">50%</button>
@@ -689,108 +689,108 @@
               <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="img-btn-size-100" data-size="100">100%</button>
             </div>
             <div class="design-toolbar-divider"></div>
-            <span class="design-options-tray__label">Estilo:</span>
+            <span class="design-options-tray__label" data-i18n="doc.style_label">Estilo:</span>
             <div class="design-options-tray__badges">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-toggle-radius" data-tooltip="Redondear bordes" aria-label="Redondear">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-toggle-radius" data-i18n-tooltip="doc.round_edges" data-tooltip="Redondear bordes" data-i18n-aria="canvas.corner_radius" aria-label="Redondear">
                 <span class="component-icon">rounded_corner</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-toggle-shadow" data-tooltip="Sombra de imagen" aria-label="Sombra">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-toggle-shadow" data-i18n-tooltip="doc.shadow_tooltip" data-tooltip="Sombra de imagen" data-i18n-aria="doc.shadow" aria-label="Sombra">
                 <span class="component-icon">filter_drama</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-caption" data-tooltip="Añadir / quitar pie de foto" aria-label="Pie de foto">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-caption" data-i18n-tooltip="doc.caption_tooltip" data-tooltip="Añadir / quitar pie de foto" data-i18n-aria="doc.caption" aria-label="Pie de foto">
                 <span class="component-icon">short_text</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-remove-bg" data-tooltip="Eliminar fondo con IA (Pro y Negocios)" aria-label="Eliminar fondo">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-remove-bg" data-i18n-tooltip="canvas.remove_bg_pro" data-tooltip="Eliminar fondo con IA (Pro y Negocios)" data-i18n-aria="canvas.remove_background" aria-label="Eliminar fondo">
                 <span class="component-icon">blur_off</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-replace" data-tooltip="Reemplazar imagen" aria-label="Reemplazar">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-replace" data-i18n-tooltip="doc.replace_image" data-tooltip="Reemplazar imagen" data-i18n-aria="doc.btn_replace" aria-label="Reemplazar">
                 <span class="component-icon">find_replace</span>
               </button>
             </div>
             <div class="design-toolbar-divider"></div>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-delete" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen" style="color: #ef4444;">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="img-btn-delete" data-i18n-tooltip="doc.delete_image" data-tooltip="Eliminar imagen" data-i18n-aria="doc.delete_image" aria-label="Eliminar imagen" style="color: #ef4444;">
               <span class="component-icon">delete_outline</span>
             </button>
           </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-image-options" data-tooltip="Cerrar opciones" aria-label="Cerrar">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-image-options" data-i18n-tooltip="doc.close_options" data-tooltip="Cerrar opciones" data-i18n-aria="canvas.close" aria-label="Cerrar">
             <span class="component-icon">close</span>
           </button>
         </div>
 
         <div class="design-options-tray is-hidden" data-ref="doc-table-tray">
           <div class="design-options-tray__content" data-ref="table-options-content">
-            <span class="design-options-tray__label">Filas y columnas:</span>
+            <span class="design-options-tray__label" data-i18n="doc.rows_cols_label">Filas y columnas:</span>
             <div class="design-options-tray__badges" data-ref="table-action-badges">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-row-above" data-tooltip="Añadir fila arriba">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-row-above" data-i18n-tooltip="doc.add_row_above" data-tooltip="Añadir fila arriba">
                 <span class="component-icon">table_rows</span>
-                <span>+ Fila arriba</span>
+                <span data-i18n="doc.add_row_above">+ Fila arriba</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-row-below" data-tooltip="Añadir fila abajo">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-row-below" data-i18n-tooltip="doc.add_row_below" data-tooltip="Añadir fila abajo">
                 <span class="component-icon">table_rows</span>
-                <span>+ Fila abajo</span>
+                <span data-i18n="doc.add_row_below">+ Fila abajo</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-col-left" data-tooltip="Añadir columna a la izquierda">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-col-left" data-i18n-tooltip="doc.add_col_left" data-tooltip="Añadir columna a la izquierda">
                 <span class="component-icon">view_column</span>
-                <span>+ Col izq</span>
+                <span data-i18n="doc.add_col_left">+ Col izq</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-col-right" data-tooltip="Añadir columna a la derecha">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="tbl-btn-add-col-right" data-i18n-tooltip="doc.add_col_right" data-tooltip="Añadir columna a la derecha">
                 <span class="component-icon">view_column</span>
-                <span>+ Col der</span>
+                <span data-i18n="doc.add_col_right">+ Col der</span>
               </button>
             </div>
             <div class="design-toolbar-divider"></div>
             <div class="design-options-tray__badges">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-row" data-tooltip="Eliminar fila actual" aria-label="Eliminar fila">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-row" data-i18n-tooltip="doc.delete_row_tooltip" data-tooltip="Eliminar fila actual" data-i18n-aria="doc.delete_row" aria-label="Eliminar fila">
                 <span class="component-icon">delete_sweep</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-col" data-tooltip="Eliminar columna actual" aria-label="Eliminar columna">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-col" data-i18n-tooltip="doc.delete_col_tooltip" data-tooltip="Eliminar columna actual" data-i18n-aria="doc.delete_col" aria-label="Eliminar columna">
                 <span class="component-icon">table_view</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-table" data-tooltip="Eliminar tabla" aria-label="Eliminar tabla" style="color: #ef4444;">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="tbl-btn-del-table" data-i18n-tooltip="doc.delete_table" data-tooltip="Eliminar tabla" data-i18n-aria="doc.delete_table" aria-label="Eliminar tabla" style="color: #ef4444;">
                 <span class="component-icon">delete_outline</span>
               </button>
             </div>
           </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-table-options" data-tooltip="Cerrar opciones" aria-label="Cerrar">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-table-options" data-i18n-tooltip="doc.close_options" data-tooltip="Cerrar opciones" data-i18n-aria="canvas.close" aria-label="Cerrar">
             <span class="component-icon">close</span>
           </button>
         </div>
 
         <div class="design-bottom-toolbar-wrapper" data-ref="doc-bottom-toolbar-wrapper">
-          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-i18n-tooltip="canvas.scroll_left" data-tooltip="Desplazar a la izquierda" data-i18n-aria="canvas.scroll_left" aria-label="Desplazar a la izquierda">
             <span class="component-icon">chevron_left</span>
           </button>
 
           <div class="design-bottom-toolbar" data-ref="doc-bottom-toolbar">
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--tools" data-ref="doc-status-section">
               <div class="design-toolbar-group" data-ref="doc-group-status-pills">
-                <span class="design-toolbar-badge" data-ref="status-page-count">Página 1 de 1</span>
-                <span class="design-toolbar-badge" data-ref="status-word-count">0 palabras</span>
-                <span class="design-toolbar-badge" data-ref="status-char-count">0 caracteres</span>
-                <span class="design-toolbar-badge" data-ref="status-reading-time">1 min lectura</span>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="lbl-current-paper" data-tooltip="Configuración de página" aria-label="Configuración de página">Carta • Vertical</button>
+                <span class="design-toolbar-badge" data-ref="status-page-count" data-no-i18n>Página 1 de 1</span>
+                <span class="design-toolbar-badge" data-ref="status-word-count" data-no-i18n>0 palabras</span>
+                <span class="design-toolbar-badge" data-ref="status-char-count" data-no-i18n>0 caracteres</span>
+                <span class="design-toolbar-badge" data-ref="status-reading-time" data-no-i18n>1 min lectura</span>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="lbl-current-paper" data-no-i18n data-i18n-tooltip="doc.page_setup" data-tooltip="Configuración de página" data-i18n-aria="doc.page_setup" aria-label="Configuración de página">Carta • Vertical</button>
               </div>
             </div>
 
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="doc-zoom-section">
               <div class="design-toolbar-group" data-ref="doc-group-zoom">
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-i18n-tooltip="canvas.auto.alejar" data-tooltip="Alejar (Ctrl -)" data-i18n-aria="canvas.zoom_out" aria-label="Alejar">
                   <span class="component-icon">remove</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-i18n-tooltip="canvas.zoom_reset" data-tooltip="Restablecer zoom (100%)" data-i18n-aria="canvas.zoom_reset" aria-label="Restablecer zoom">
                   <span class="design-toolbar-badge__text" data-ref="lbl-zoom-level">100%</span>
                 </button>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar (Ctrl +)" aria-label="Acercar">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-i18n-tooltip="canvas.auto.acercar" data-tooltip="Acercar (Ctrl +)" data-i18n-aria="canvas.zoom_in" aria-label="Acercar">
                   <span class="component-icon">add</span>
                 </button>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-i18n-tooltip="canvas.zoom_fit" data-tooltip="Ajustar a pantalla" data-i18n-aria="canvas.zoom_fit" aria-label="Ajustar a pantalla">
                   <span class="component-icon">fit_screen</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-i18n-tooltip="canvas.scroll_right" data-tooltip="Desplazar a la derecha" data-i18n-aria="canvas.scroll_right" aria-label="Desplazar a la derecha">
             <span class="component-icon">chevron_right</span>
           </button>
         </div>
@@ -799,15 +799,15 @@
       <div class="design-preview-banner is-hidden" data-ref="doc-preview-banner">
         <div class="design-preview-banner__info">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-          <span class="design-preview-banner__text">Estás previsualizando una versión histórica (modo lectura)</span>
+          <span class="design-preview-banner__text" data-i18n="doc.preview_banner_hint">Estás previsualizando una versión histórica (modo lectura)</span>
         </div>
         <div class="design-preview-banner__actions">
           <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-doc-preview-restore">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span>Restaurar esta versión</span>
+            <span data-i18n="canvas.restore_version">Restaurar esta versión</span>
           </button>
           <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-doc-preview-exit">
-            <span>Salir de la vista previa</span>
+            <span data-i18n="canvas.exit_preview">Salir de la vista previa</span>
           </button>
         </div>
       </div>

@@ -386,6 +386,10 @@ export async function addAccountToSession(
     await touchSession(sessionId);
   }
 
+  const perms = (user.permissions && user.permissions.length > 0)
+    ? user.permissions
+    : await getUserEffectivePermissions(user.id, user.role, user.roles, user.subscription_tier, 'active');
+
   const sessionAcc: SessionAccount = {
     id: user.id,
     username: user.username,
@@ -393,7 +397,7 @@ export async function addAccountToSession(
     avatar_url: user.avatar_url ?? null,
     role: user.role || 'USER',
     roles: user.roles || (user.role ? [user.role] : ['USER']),
-    permissions: user.permissions || [],
+    permissions: perms,
     google_id: user.google_id ?? null,
     subscription_tier: user.subscription_tier || 'free',
     sessionId,
@@ -499,6 +503,7 @@ export function updateActiveAccountInSession(
       ...updatedData,
       last_accessed: Date.now(),
     };
+    (req as any)._cachedMultiAccountSession = session;
     setMultiAccountCookie(res, session);
   }
 }

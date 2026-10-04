@@ -230,11 +230,14 @@ export function create3DElement(shape3dType: Shape3DType, options: {
 export function createTableElement(rows = 3, cols = 3, options: {
   borderColor?: string;
   borderWidth?: number;
+  cellBackgroundColor?: string;
   cellHeight?: number;
+  cellTextColor?: string;
   cellWidth?: number;
   data?: BoardTableCell[][];
   fontSize?: number;
   headerBackgroundColor?: string;
+  headerTextColor?: string;
   height?: number;
   id?: string;
   opacity?: number;
@@ -256,9 +259,9 @@ export function createTableElement(rows = 3, cols = 3, options: {
       const rowCells: BoardTableCell[] = [];
       for (let c = 0; c < cols; c++) {
         rowCells.push({
-          backgroundColor: r === 0 ? (options.headerBackgroundColor || '#f8fafc') : '#ffffff',
+          backgroundColor: r === 0 ? (options.headerBackgroundColor || '#f8fafc') : (options.cellBackgroundColor || '#ffffff'),
           text: r === 0 ? `Encabezado ${c + 1}` : `Celda ${r},${c + 1}`,
-          textColor: '#1e293b',
+          textColor: r === 0 ? (options.headerTextColor || '#1e293b') : (options.cellTextColor || '#1e293b'),
         });
       }
       cells.push(rowCells);

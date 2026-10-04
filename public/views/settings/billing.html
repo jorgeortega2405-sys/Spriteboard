@@ -107,10 +107,10 @@
               <div class="storage-meter" data-ref="storage-meter-box">
                 <div class="storage-meter__header" data-ref="storage-meter-header">
                   <div class="storage-meter__info" data-ref="storage-meter-info">
-                    <span class="storage-meter__used" data-ref="storage-used-label">0 B</span>
+                    <span class="storage-meter__used" data-ref="storage-used-label" data-no-i18n>0 B</span>
                     <span class="storage-meter__separator" data-ref="storage-separator">/</span>
-                    <span class="storage-meter__limit" data-ref="storage-limit-label">5 GB</span>
-                    <span class="component-badge component-badge--sm" data-ref="storage-percent-badge">0% en uso</span>
+                    <span class="storage-meter__limit" data-ref="storage-limit-label" data-no-i18n>5 GB</span>
+                    <span class="component-badge component-badge--sm" data-ref="storage-percent-badge" data-i18n="settings.billing.storage_usage_percent">0% en uso</span>
                   </div>
                   <div class="storage-meter__actions" data-ref="storage-meter-actions">
                     <button type="button" class="component-button component-button--h30 component-button--outline" data-ref="btn-storage-upgrade" data-i18n="settings.billing.btn_increase_storage">Aumentar almacenamiento</button>
@@ -122,7 +122,7 @@
                 </div>
 
                 <div class="storage-meter__footer" data-ref="storage-meter-footer">
-                  <span class="storage-meter__remaining-text" data-ref="storage-remaining-text">Calculando espacio disponible...</span>
+                  <span class="storage-meter__remaining-text" data-ref="storage-remaining-text" data-i18n="settings.billing.calculating_storage">Calculando espacio disponible...</span>
                 </div>
               </div>
             </div>
@@ -154,15 +154,15 @@
               <div class="storage-meter" data-ref="ai-quota-meter-box">
                 <div class="storage-meter__header" data-ref="ai-quota-meter-header">
                   <div class="storage-meter__info" data-ref="ai-quota-meter-info">
-                    <span class="storage-meter__used" data-ref="ai-quota-used-label">0</span>
+                    <span class="storage-meter__used" data-ref="ai-quota-used-label" data-no-i18n>0</span>
                     <span class="storage-meter__separator" data-ref="ai-quota-separator">/</span>
-                    <span class="storage-meter__limit" data-ref="ai-quota-limit-label">50,000 tokens</span>
-                    <span class="component-badge component-badge--sm" data-ref="ai-quota-percent-badge">0% en uso</span>
+                    <span class="storage-meter__limit" data-ref="ai-quota-limit-label" data-no-i18n>50,000 tokens</span>
+                    <span class="component-badge component-badge--sm" data-ref="ai-quota-percent-badge" data-i18n="settings.billing.token_usage_percent">0% en uso</span>
                   </div>
                   <div class="storage-meter__actions" data-ref="ai-quota-meter-actions">
                     <span class="component-badge component-badge--sm component-badge--info" data-ref="ai-quota-reset-timer" style="display: inline-flex; align-items: center; gap: 4px;">
                       <span class="material-symbols-rounded" style="font-size: 14px;">timer</span>
-                      <span data-ref="ai-quota-reset-timer-text">Ciclo inactivo</span>
+                      <span data-ref="ai-quota-reset-timer-text" data-i18n="settings.billing.cycle_inactive">Ciclo inactivo</span>
                     </span>
                   </div>
                 </div>
@@ -172,8 +172,8 @@
                 </div>
 
                 <div class="storage-meter__footer" data-ref="ai-quota-meter-footer">
-                  <span class="storage-meter__remaining-text" data-ref="ai-quota-remaining-text">Calculando cuota disponible...</span>
-                  <span class="storage-meter__cycle-text" data-ref="ai-quota-cycle-text" style="font-size: 12px; color: var(--text-muted);">Ventana de 12 horas</span>
+                  <span class="storage-meter__remaining-text" data-ref="ai-quota-remaining-text" data-i18n="settings.billing.calculating_quota">Calculando cuota disponible...</span>
+                  <span class="storage-meter__cycle-text" data-ref="ai-quota-cycle-text" data-i18n="settings.billing.window_12_hours" style="font-size: 12px; color: var(--text-muted);">Ventana de 12 horas</span>
                 </div>
               </div>
             </div>

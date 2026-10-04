@@ -1,51 +1,51 @@
 <div class="component-wrapper component-wrapper--full no-padding view-wrapper video-editor-wrapper" data-ref="video-wrapper">
   <div class="component-top component-top--gradient video-top-bar" data-ref="video-top-bar">
     <div class="component-top-left" data-ref="video-top-left">
-      <h1 class="component-top-title" data-ref="video-title" contenteditable="true" spellcheck="false">Video sin título</h1>
-      <button type="button" class="component-badge component-badge--interactive video-format-badge" data-ref="btn-topbar-format" data-tooltip="Formato del video: clic para cambiar" aria-label="Cambiar formato del video">
+      <h1 class="component-top-title" data-ref="video-title" contenteditable="true" spellcheck="false" data-i18n="video.untitled">Video sin título</h1>
+      <button type="button" class="component-badge component-badge--interactive video-format-badge" data-ref="btn-topbar-format" data-i18n-tooltip="video.change_format_tooltip" data-tooltip="Formato del video: clic para cambiar" data-i18n-aria="video.change_format" aria-label="Cambiar formato del video">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-        <span class="component-badge__text" data-ref="topbar-format-label">Video de YouTube (1920 × 1080)</span>
+        <span class="component-badge__text" data-ref="topbar-format-label" data-i18n="video.preset_youtube_label">Video de YouTube (1920 × 1080)</span>
       </button>
     </div>
 
     <div class="component-top-right" data-ref="video-top-right">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-i18n-tooltip="canvas.cloud_saved" data-tooltip="Todos los cambios están guardados en la nube" data-i18n-aria="canvas.save_status" aria-label="Estado de guardado">
         <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
         <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
         <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
       </button>
 
-      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-undo" data-i18n-tooltip="canvas.undo_shortcut" data-tooltip="Deshacer (Ctrl+Z)" data-i18n-aria="canvas.undo" aria-label="Deshacer">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
       </button>
 
-      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-redo" data-i18n-tooltip="canvas.redo_shortcut" data-tooltip="Rehacer (Ctrl+Y)" data-i18n-aria="canvas.redo" aria-label="Rehacer">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
       </button>
 
       <div class="design-share-wrapper" data-ref="video-settings-wrapper">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn dropdown-trigger" data-ref="btn-video-settings" data-tooltip="Ajustes del lienzo" aria-label="Ajustes del lienzo">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn dropdown-trigger" data-ref="btn-video-settings" data-i18n-tooltip="video.canvas_settings" data-tooltip="Ajustes del lienzo" data-i18n-aria="video.canvas_settings" aria-label="Ajustes del lienzo">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
         </button>
 
         <div class="dropdown-backdrop" data-ref="video-settings-backdrop" style="display: none;">
           <div class="menu-panel menu-panel--dropdown video-settings-menu" data-ref="video-settings-menu">
             <div class="video-settings-header">
-              <span class="video-settings-title">Ajustes del Video</span>
+              <span class="video-settings-title" data-i18n="video.settings_title">Ajustes del Video</span>
               <span class="video-current-format-meta" data-ref="settings-current-format-label">1920 × 1080 px</span>
             </div>
 
             <div class="video-settings-body">
               <div class="video-format-section">
-                <span class="video-settings-subtitle">Formato del Video</span>
+                <span class="video-settings-subtitle" data-i18n="video.format_title">Formato del Video</span>
                 <div class="video-format-list" data-ref="video-format-list">
                   <button type="button" class="video-format-item is-active" data-ref="btn-format-youtube" data-format-id="youtube" data-w="1920" data-h="1080" data-aspect="16:9">
                     <div class="video-format-item__icon-wrapper" aria-hidden="true">
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--16-9"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video de YouTube</span>
-                      <span class="video-format-item__meta">1920 × 1080 px • 16:9</span>
+                      <span class="video-format-item__title" data-i18n="video.preset_youtube">Video de YouTube</span>
+                      <span class="video-format-item__meta" data-no-i18n>1920 × 1080 px • 16:9</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -55,8 +55,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--16-9"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video horizontal</span>
-                      <span class="video-format-item__meta">1920 × 1080 px • 16:9</span>
+                      <span class="video-format-item__title" data-i18n="video.horizontal_video">Video horizontal</span>
+                      <span class="video-format-item__meta" data-no-i18n>1920 × 1080 px • 16:9</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -66,8 +66,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--9-16"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video para dispositivos móviles</span>
-                      <span class="video-format-item__meta">1080 × 1920 px • 9:16</span>
+                      <span class="video-format-item__title" data-i18n="video.mobile_video">Video para dispositivos móviles</span>
+                      <span class="video-format-item__meta" data-no-i18n>1080 × 1920 px • 9:16</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -77,8 +77,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--9-16"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video para TikTok</span>
-                      <span class="video-format-item__meta">1080 × 1920 px • 9:16</span>
+                      <span class="video-format-item__title" data-i18n="video.preset_tiktok">Video para TikTok</span>
+                      <span class="video-format-item__meta" data-no-i18n>1080 × 1920 px • 9:16</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -88,8 +88,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--9-16"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Corto para YouTube</span>
-                      <span class="video-format-item__meta">1080 × 1920 px • 9:16</span>
+                      <span class="video-format-item__title" data-i18n="video.preset_yt_shorts">Corto para YouTube</span>
+                      <span class="video-format-item__meta" data-no-i18n>1080 × 1920 px • 9:16</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -99,8 +99,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--1-1"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video para Facebook</span>
-                      <span class="video-format-item__meta">1080 × 1080 px • 1:1</span>
+                      <span class="video-format-item__title" data-i18n="video.preset_facebook">Video para Facebook</span>
+                      <span class="video-format-item__meta" data-no-i18n>1080 × 1080 px • 1:1</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -110,8 +110,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--9-16"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Reel de Instagram</span>
-                      <span class="video-format-item__meta">1080 × 1920 px • 9:16</span>
+                      <span class="video-format-item__title" data-i18n="video.preset_ig_reel">Reel de Instagram</span>
+                      <span class="video-format-item__meta" data-no-i18n>1080 × 1920 px • 9:16</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -121,8 +121,8 @@
                       <div class="video-format-item__ratio-box video-format-item__ratio-box--1-1"></div>
                     </div>
                     <div class="video-format-item__content">
-                      <span class="video-format-item__title">Video cuadrado</span>
-                      <span class="video-format-item__meta">800 × 800 px • 1:1</span>
+                      <span class="video-format-item__title" data-i18n="video.square_video">Video cuadrado</span>
+                      <span class="video-format-item__meta" data-no-i18n>800 × 800 px • 1:1</span>
                     </div>
                     <svg class="component-icon video-format-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                   </button>
@@ -130,12 +130,12 @@
               </div>
 
               <div class="field-group" data-ref="field-video-fps">
-                <span class="field-group__label">Fotogramas por segundo (FPS)</span>
+                <span class="field-group__label" data-i18n="video.fps_settings_label">Fotogramas por segundo (FPS)</span>
                 <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-video-fps">
-                  <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="btn-trigger-video-fps" aria-label="Fotogramas por segundo">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="btn-trigger-video-fps" data-i18n-aria="video.fps_label" aria-label="Fotogramas por segundo">
                     <div class="dropdown-trigger__left">
                       <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
-                      <span class="dropdown-trigger__text" data-ref="video-fps-selected-text">30 FPS (Estándar)</span>
+                      <span class="dropdown-trigger__text" data-ref="video-fps-selected-text" data-i18n="video.fps_30_standard">30 FPS (Estándar)</span>
                     </div>
                     <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                   </button>
@@ -143,13 +143,13 @@
                     <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-video-fps">
                       <div class="menu-panel__list" data-ref="list-video-fps">
                         <button type="button" class="menu-item is-active" data-ref="btn-fps-30" data-value="30">
-                          <span class="menu-item__text">30 FPS (Estándar)</span>
+                          <span class="menu-item__text" data-i18n="video.fps_30_standard">30 FPS (Estándar)</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-fps-60" data-value="60">
-                          <span class="menu-item__text">60 FPS (Fluido)</span>
+                          <span class="menu-item__text" data-i18n="video.fps_60_fluid">60 FPS (Fluido)</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-fps-24" data-value="24">
-                          <span class="menu-item__text">24 FPS (Cinemático)</span>
+                          <span class="menu-item__text" data-i18n="video.fps_24_cinema">24 FPS (Cinemático)</span>
                         </button>
                       </div>
                     </div>
@@ -158,7 +158,7 @@
               </div>
 
               <label class="field field--sm" data-ref="field-video-bg-color">
-                <span class="field__label">Color de Fondo</span>
+                <span class="field__label" data-i18n="video.bg_color">Color de Fondo</span>
                 <input class="field__input" data-ref="input-video-bg-color" type="color" value="#000000" />
               </label>
             </div>
@@ -166,9 +166,9 @@
         </div>
       </div>
 
-      <button type="button" class="component-button component-button--h40 component-button--primary video-export-btn" data-ref="btn-video-export" data-tooltip="Exportar Video MP4" aria-label="Exportar Video">
+      <button type="button" class="component-button component-button--h40 component-button--primary video-export-btn" data-ref="btn-video-export" data-i18n-tooltip="video.export_video_mp4" data-tooltip="Exportar Video MP4" data-i18n-aria="video.export_video" aria-label="Exportar Video">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-        <span>Exportar</span>
+        <span data-i18n="video.export_btn">Exportar</span>
       </button>
     </div>
   </div>
@@ -181,7 +181,7 @@
             <canvas class="video-preview-canvas" data-ref="video-preview-canvas" width="1920" height="1080"></canvas>
             <div class="video-buffering-overlay is-hidden" data-ref="video-buffering-overlay">
               <div class="video-buffering-spinner" aria-hidden="true"></div>
-              <span class="video-buffering-text" data-ref="video-buffering-text">Cargando video...</span>
+              <span class="video-buffering-text" data-ref="video-buffering-text" data-i18n="video.loading_video">Cargando video...</span>
             </div>
             <div class="video-media-pool" data-ref="video-media-pool" style="position: fixed; left: -9999px; top: -9999px; width: 320px; height: 180px; opacity: 0; pointer-events: none; overflow: hidden;" aria-hidden="true"></div>
           </div>
@@ -189,8 +189,8 @@
           <div class="video-drop-overlay is-hidden" data-ref="video-drop-overlay">
             <div class="video-drop-overlay__content" data-ref="video-drop-overlay-content">
               <svg class="component-icon video-drop-overlay__icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
-              <span class="video-drop-overlay__title">Soltar para añadir al video</span>
-              <span class="video-drop-overlay__subtitle">El video se agregará al proyecto</span>
+              <span class="video-drop-overlay__title" data-i18n="video.drop_to_add">Soltar para añadir al video</span>
+              <span class="video-drop-overlay__subtitle" data-i18n="video.drop_hint">El video se agregará al proyecto</span>
             </div>
           </div>
         </div>
@@ -201,54 +201,54 @@
       <div class="video-timeline-toolbar-wrapper" data-ref="video-timeline-toolbar-wrapper">
         <div class="video-timeline-toolbar" data-ref="video-timeline-toolbar">
           <div class="design-toolbar-group" data-ref="video-timeline-group-edit">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-split" data-tooltip="Cortar / Dividir en cabezal (S)" aria-label="Cortar clip">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-split" data-i18n-tooltip="video.split_clip_tooltip" data-tooltip="Cortar / Dividir en cabezal (S)" data-i18n-aria="video.split_clip" aria-label="Cortar clip">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
-              <span>Cortar</span>
+              <span data-i18n="video.cut">Cortar</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-delete" data-tooltip="Eliminar clip seleccionado (Supr)" aria-label="Eliminar clip">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-delete" data-i18n-tooltip="video.delete_clip_tooltip" data-tooltip="Eliminar clip seleccionado (Supr)" data-i18n-aria="video.delete_clip" aria-label="Eliminar clip">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-              <span>Eliminar</span>
+              <span data-i18n="canvas.delete">Eliminar</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-ripple-delete" data-tooltip="Eliminar con Ripple y cerrar hueco (Shift+Supr)" aria-label="Eliminar con Ripple">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-ripple-delete" data-i18n-tooltip="video.ripple_delete_tooltip" data-tooltip="Eliminar con Ripple y cerrar hueco (Shift+Supr)" data-i18n-aria="video.ripple_delete" aria-label="Eliminar con Ripple">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_delete"></use></svg>
-              <span>Ripple</span>
+              <span data-i18n="video.ripple">Ripple</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-detach-audio" data-tooltip="Separar pista de audio del video seleccionado" aria-label="Separar audio">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-detach-audio" data-i18n-tooltip="video.detach_audio_tooltip" data-tooltip="Separar pista de audio del video seleccionado" data-i18n-aria="video.detach_audio" aria-label="Separar audio">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_split"></use></svg>
-              <span>Separar Audio</span>
+              <span data-i18n="video.detach_audio_btn">Separar Audio</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-duplicate" data-tooltip="Duplicar clip (Ctrl+D)" aria-label="Duplicar clip">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-duplicate" data-i18n-tooltip="video.duplicate_clip_shortcut" data-tooltip="Duplicar clip (Ctrl+D)" data-i18n-aria="video.duplicate_clip" aria-label="Duplicar clip">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              <span>Duplicar</span>
+              <span data-i18n="canvas.duplicate">Duplicar</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-add-track" data-tooltip="Añadir nueva pista" aria-label="Añadir pista">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-add-track" data-i18n-tooltip="video.add_track" data-tooltip="Añadir nueva pista" data-i18n-aria="video.add_track" aria-label="Añadir pista">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Pista</span>
+              <span data-i18n="video.track">Pista</span>
             </button>
           </div>
 
           <div class="design-toolbar-group" data-ref="video-timeline-group-snap">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="btn-tl-snap" data-tooltip="Ajuste magnético inteligente (N)" aria-label="Ajuste magnético">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="btn-tl-snap" data-i18n-tooltip="video.magnetic_snap_shortcut" data-tooltip="Ajuste magnético inteligente (N)" data-i18n-aria="video.magnetic_snap" aria-label="Ajuste magnético">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
             </button>
           </div>
 
           <div class="design-toolbar-group" data-ref="video-timeline-group-effects">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-filters" data-tooltip="Filtros y Ajustes de Color" aria-label="Filtros">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-filters" data-i18n-tooltip="video.filters_tooltip" data-tooltip="Filtros y Ajustes de Color" data-i18n-aria="video.filters" aria-label="Filtros">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-              <span>Filtros</span>
+              <span data-i18n="video.filters">Filtros</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-transitions" data-tooltip="Transición entre clips" aria-label="Transición">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-transitions" data-i18n-tooltip="video.transition_tooltip" data-tooltip="Transición entre clips" data-i18n-aria="video.transition" aria-label="Transición">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flare"></use></svg>
-              <span>Transición</span>
+              <span data-i18n="video.transition">Transición</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-audio-fade" data-tooltip="Fundido de audio (Fade In/Out)" aria-label="Fundido de audio">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-audio-fade" data-i18n-tooltip="video.audio_fade_tooltip" data-tooltip="Fundido de audio (Fade In/Out)" data-i18n-aria="video.audio_fade" aria-label="Fundido de audio">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-              <span>Fundido</span>
+              <span data-i18n="video.fade">Fundido</span>
             </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-subtitles" data-tooltip="Generar Subtítulos con IA" aria-label="Subtítulos con IA">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tl-subtitles" data-i18n-tooltip="video.ai_subtitles_tooltip" data-tooltip="Generar Subtítulos con IA" data-i18n-aria="video.ai_subtitles" aria-label="Subtítulos con IA">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
-              <span>Subtítulos IA</span>
+              <span data-i18n="video.subtitles_ai">Subtítulos IA</span>
             </button>
           </div>
         </div>
@@ -257,7 +257,7 @@
       <div class="video-timeline-viewport" data-ref="video-timeline-viewport">
         <div class="video-timeline-headers" data-ref="video-timeline-headers">
           <div class="timeline-ruler-corner" data-ref="timeline-ruler-corner">
-            <span class="timeline-corner-label">Pistas</span>
+            <span class="timeline-corner-label" data-i18n="video.tracks">Pistas</span>
           </div>
           <div class="timeline-headers-scrollable" data-ref="timeline-headers-scrollable">
             <div class="timeline-header-list" data-ref="timeline-header-list"></div>
@@ -297,14 +297,14 @@
 
           <div class="design-bottom-toolbar__section video-bottom-toolbar__section--playback" data-ref="video-section-playback">
             <div class="design-toolbar-group" data-ref="video-group-playback">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-back" data-tooltip="Retroceder 1s" aria-label="Retroceder 1s">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-back" data-i18n-tooltip="video.rewind_1s" data-tooltip="Retroceder 1s" data-i18n-aria="video.rewind_1s" aria-label="Retroceder 1s">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#replay_10"></use></svg>
               </button>
-              <button type="button" class="design-toolbar-btn is-active" data-ref="btn-transport-play-pause" data-tooltip="Reproducir / Pausa (Espacio)" aria-label="Reproducir">
+              <button type="button" class="design-toolbar-btn is-active" data-ref="btn-transport-play-pause" data-i18n-tooltip="video.play_pause_shortcut" data-tooltip="Reproducir / Pausa (Espacio)" data-i18n-aria="video.play" aria-label="Reproducir">
                 <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
                 <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-forward" data-tooltip="Avanzar 1s" aria-label="Avanzar 1s">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-step-forward" data-i18n-tooltip="video.forward_1s" data-tooltip="Avanzar 1s" data-i18n-aria="video.forward_1s" aria-label="Avanzar 1s">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#forward_10"></use></svg>
               </button>
             </div>
@@ -312,33 +312,33 @@
 
           <div class="design-bottom-toolbar__section video-bottom-toolbar__section--right" data-ref="video-section-right">
             <div class="design-toolbar-group" data-ref="video-group-volume">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-mute" data-tooltip="Silenciar" aria-label="Silenciar">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-mute" data-i18n-tooltip="video.mute" data-tooltip="Silenciar" data-i18n-aria="video.mute" aria-label="Silenciar">
                 <svg class="component-icon icon-vol-on" aria-hidden="true"><use href="/icons.svg#volume_up"></use></svg>
                 <svg class="component-icon icon-vol-off is-hidden" aria-hidden="true"><use href="/icons.svg#volume_off"></use></svg>
               </button>
               <div class="design-zoom-slider-container video-volume-slider-container" data-ref="video-volume-slider-container">
-                <input class="design-zoom-slider video-volume-slider" data-ref="input-transport-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen" />
+                <input class="design-zoom-slider video-volume-slider" data-ref="input-transport-volume" type="range" min="0" max="1" step="0.05" value="1" data-i18n-aria="video.volume" aria-label="Volumen" />
               </div>
             </div>
 
             <div class="design-toolbar-group" data-ref="video-group-zoom">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-mode" data-tooltip="Modo: Zoom de Línea de Tiempo (clic para alternar a Zoom de Lienzo)" aria-label="Cambiar modo de zoom">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-mode" data-i18n-tooltip="video.zoom_mode_tooltip" data-tooltip="Modo: Zoom de Línea de Tiempo (clic para alternar a Zoom de Lienzo)" data-i18n-aria="video.toggle_zoom_mode" aria-label="Cambiar modo de zoom">
                 <svg class="component-icon icon-zoom-timeline" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
                 <svg class="component-icon icon-zoom-canvas is-hidden" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-out" data-i18n-tooltip="canvas.zoom_out" data-tooltip="Reducir zoom" data-i18n-aria="canvas.zoom_out" aria-label="Reducir zoom">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_out"></use></svg>
               </button>
               <div class="design-zoom-slider-container" data-ref="video-zoom-slider-container">
-                <input class="design-zoom-slider" data-ref="input-tl-zoom" type="range" min="10" max="200" step="5" value="50" aria-label="Zoom de línea de tiempo" />
+                <input class="design-zoom-slider" data-ref="input-tl-zoom" type="range" min="10" max="200" step="5" value="50" data-i18n-aria="video.timeline_zoom" aria-label="Zoom de línea de tiempo" />
               </div>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-zoom-in" data-i18n-tooltip="canvas.zoom_in" data-tooltip="Aumentar zoom" data-i18n-aria="canvas.zoom_in" aria-label="Aumentar zoom">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_in"></use></svg>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-fit" data-tooltip="Ajustar escala al contenido" aria-label="Ajustar al contenido">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tl-fit" data-i18n-tooltip="video.fit_content_tooltip" data-tooltip="Ajustar escala al contenido" data-i18n-aria="video.fit_content" aria-label="Ajustar al contenido">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fit_screen"></use></svg>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-fullscreen" data-tooltip="Pantalla Completa" aria-label="Pantalla Completa">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-transport-fullscreen" data-i18n-tooltip="video.fullscreen" data-tooltip="Pantalla Completa" data-i18n-aria="video.fullscreen" aria-label="Pantalla Completa">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
               </button>
             </div>
@@ -359,19 +359,19 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">Exportar Video MP4</h2>
-          <p class="modal-card__desc" data-ref="modal-desc">Renderizado en alta calidad impulsado por FFmpeg en el servidor.</p>
+          <h2 class="modal-card__title" data-ref="modal-title" data-i18n="video.export_video_mp4">Exportar Video MP4</h2>
+          <p class="modal-card__desc" data-ref="modal-desc" data-i18n="video.render_desc">Renderizado en alta calidad impulsado por FFmpeg en el servidor.</p>
         </div>
 
         <div class="modal-card__body" data-ref="modal-body">
           <div class="video-export-options-view" data-ref="export-options-view">
             <div class="field-group field-group--mb12" data-ref="group-export-quality">
-              <span class="field-group__label">Calidad de Renderizado</span>
+              <span class="field-group__label" data-i18n="video.render_quality">Calidad de Renderizado</span>
               <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-quality">
-                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-quality" aria-label="Calidad de Renderizado">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-quality" data-i18n-aria="video.render_quality" aria-label="Calidad de Renderizado">
                   <div class="dropdown-trigger__left">
                     <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#high_quality"></use></svg>
-                    <span class="dropdown-trigger__text" data-ref="export-quality-selected-text">Alta Calidad (1080p / Bitrate Óptimo)</span>
+                    <span class="dropdown-trigger__text" data-ref="export-quality-selected-text" data-i18n="video.quality_1080p">Alta Calidad (1080p / Bitrate Óptimo)</span>
                   </div>
                   <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
@@ -379,13 +379,13 @@
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-export-quality">
                     <div class="menu-panel__list" data-ref="list-export-quality">
                       <button type="button" class="menu-item is-active" data-ref="btn-opt-quality-high" data-value="high">
-                        <span class="menu-item__text">Alta Calidad (1080p / Bitrate Óptimo)</span>
+                        <span class="menu-item__text" data-i18n="video.quality_1080p">Alta Calidad (1080p / Bitrate Óptimo)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-opt-quality-medium" data-value="medium">
-                        <span class="menu-item__text">Calidad Media (720p / Rápido)</span>
+                        <span class="menu-item__text" data-i18n="video.quality_720p">Calidad Media (720p / Rápido)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-opt-quality-low" data-value="low">
-                        <span class="menu-item__text">Borrador Rápido (480p / Ligero)</span>
+                        <span class="menu-item__text" data-i18n="video.quality_480p">Borrador Rápido (480p / Ligero)</span>
                       </button>
                     </div>
                   </div>
@@ -394,12 +394,12 @@
             </div>
 
             <div class="field-group field-group--mb12" data-ref="group-export-fps">
-              <span class="field-group__label">Fotogramas por Segundo</span>
+              <span class="field-group__label" data-i18n="video.fps_label">Fotogramas por Segundo</span>
               <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-export-fps">
-                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-fps" aria-label="Fotogramas por Segundo">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-export-fps" data-i18n-aria="video.fps_label" aria-label="Fotogramas por Segundo">
                   <div class="dropdown-trigger__left">
                     <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
-                    <span class="dropdown-trigger__text" data-ref="export-fps-selected-text">30 FPS</span>
+                    <span class="dropdown-trigger__text" data-ref="export-fps-selected-text" data-i18n="video.fps_30">30 FPS</span>
                   </div>
                   <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
@@ -407,10 +407,10 @@
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-export-fps">
                     <div class="menu-panel__list" data-ref="list-export-fps">
                       <button type="button" class="menu-item is-active" data-ref="btn-opt-fps-30" data-value="30">
-                        <span class="menu-item__text">30 FPS</span>
+                        <span class="menu-item__text" data-i18n="video.fps_30">30 FPS</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-opt-fps-60" data-value="60">
-                        <span class="menu-item__text">60 FPS</span>
+                        <span class="menu-item__text" data-i18n="video.fps_60">60 FPS</span>
                       </button>
                     </div>
                   </div>
@@ -423,7 +423,7 @@
             <div class="video-render-spinner-box">
               <svg class="component-icon video-render-spinner" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
             </div>
-            <h3 class="video-progress-status-text" data-ref="video-progress-status-text">Procesando y concatenando clips...</h3>
+            <h3 class="video-progress-status-text" data-ref="video-progress-status-text" data-i18n="video.processing_clips">Procesando y concatenando clips...</h3>
             <div class="video-progress-bar-bg">
               <div class="video-progress-bar-fill" data-ref="video-progress-bar-fill" style="width: 0%;"></div>
             </div>
@@ -431,10 +431,10 @@
 
             <div class="video-download-success-box" data-ref="video-download-success-box" style="display: none;">
               <svg class="component-icon icon-success" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-              <p class="video-success-msg">¡Tu video se ha renderizado exitosamente!</p>
+              <p class="video-success-msg" data-i18n="video.render_success">¡Tu video se ha renderizado exitosamente!</p>
               <a class="component-button component-button--h34 component-button--black" data-ref="btn-download-video-file" href="#" download>
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                <span>Descargar Video MP4</span>
+                <span data-i18n="video.download_mp4">Descargar Video MP4</span>
               </a>
             </div>
           </div>
@@ -442,10 +442,10 @@
 
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-export">Cancelar</button>
+            <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-export" data-i18n="canvas.cancel">Cancelar</button>
             <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-start-render">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>Comenzar Renderizado</span>
+              <span data-i18n="video.start_render">Comenzar Renderizado</span>
             </button>
           </div>
           <div class="banner banner--danger" data-ref="video-export-error" style="display: none;"></div>
@@ -465,43 +465,43 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">Filtros y Ajustes de Color</h2>
-          <p class="modal-card__desc" data-ref="modal-desc">Aplica efectos visuales y gradación de color al clip seleccionado.</p>
+          <h2 class="modal-card__title" data-ref="modal-title" data-i18n="video.filters_title">Filtros y Ajustes de Color</h2>
+          <p class="modal-card__desc" data-ref="modal-desc" data-i18n="video.filters_desc">Aplica efectos visuales y gradación de color al clip seleccionado.</p>
         </div>
 
         <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <div class="video-filter-presets-section">
-            <span class="video-filter-presets-title">Efectos Preestablecidos</span>
+            <span class="video-filter-presets-title" data-i18n="video.preset_effects">Efectos Preestablecidos</span>
             <div class="video-filter-presets-grid" data-ref="video-filter-presets">
-              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-filter-preset-none" data-preset="none">Normal</button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cinema" data-preset="cinema">Cine</button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-retro" data-preset="retro">Retro</button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-grayscale" data-preset="grayscale">B&W</button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-warm" data-preset="warm">Cálido</button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cool" data-preset="cool">Frío</button>
+              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-filter-preset-none" data-preset="none" data-i18n="video.effect_normal">Normal</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cinema" data-preset="cinema" data-i18n="video.effect_cinema">Cine</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-retro" data-preset="retro" data-i18n="video.effect_retro">Retro</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-grayscale" data-preset="grayscale" data-i18n="video.effect_bw">B&W</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-warm" data-preset="warm" data-i18n="video.effect_warm">Cálido</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cool" data-preset="cool" data-i18n="video.effect_cold">Frío</button>
             </div>
           </div>
 
           <label class="field field--sm" data-ref="field-filter-brightness">
-            <span class="field__label">Brillo: <span data-ref="val-filter-brightness">100%</span></span>
+            <span class="field__label"><span data-i18n="video.brightness">Brillo:</span> <span data-ref="val-filter-brightness" data-no-i18n>100%</span></span>
             <input class="field__input" data-ref="input-filter-brightness" type="range" min="0.5" max="1.5" step="0.05" value="1" />
           </label>
 
           <label class="field field--sm" data-ref="field-filter-contrast">
-            <span class="field__label">Contraste: <span data-ref="val-filter-contrast">100%</span></span>
+            <span class="field__label"><span data-i18n="video.contrast">Contraste:</span> <span data-ref="val-filter-contrast" data-no-i18n>100%</span></span>
             <input class="field__input" data-ref="input-filter-contrast" type="range" min="0.5" max="1.5" step="0.05" value="1" />
           </label>
 
           <label class="field field--sm" data-ref="field-filter-saturate">
-            <span class="field__label">Saturación: <span data-ref="val-filter-saturate">100%</span></span>
+            <span class="field__label"><span data-i18n="video.saturation">Saturación:</span> <span data-ref="val-filter-saturate" data-no-i18n>100%</span></span>
             <input class="field__input" data-ref="input-filter-saturate" type="range" min="0" max="2" step="0.05" value="1" />
           </label>
         </div>
 
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-reset-filters">Restablecer</button>
-            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-filters">Aplicar</button>
+            <button type="button" class="component-button component-button--h34" data-ref="btn-reset-filters" data-i18n="video.reset">Restablecer</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-filters" data-i18n="video.apply">Aplicar</button>
           </div>
         </div>
       </div>
@@ -519,18 +519,18 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">Transición de Entrada</h2>
-          <p class="modal-card__desc" data-ref="modal-desc">Efecto visual al entrar el clip en la reproducción.</p>
+          <h2 class="modal-card__title" data-ref="modal-title" data-i18n="video.transition_title">Transición de Entrada</h2>
+          <p class="modal-card__desc" data-ref="modal-desc" data-i18n="video.transition_desc">Efecto visual al entrar el clip en la reproducción.</p>
         </div>
 
         <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <div class="field-group" data-ref="field-transition-type">
-            <span class="field-group__label">Tipo de Transición</span>
+            <span class="field-group__label" data-i18n="video.transition_type">Tipo de Transición</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-transition-type">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-transition-type" aria-label="Tipo de Transición">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-transition-type" data-i18n-aria="video.transition_type" aria-label="Tipo de Transición">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#movie_edit"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="transition-type-selected-text">Ninguna</span>
+                  <span class="dropdown-trigger__text" data-ref="transition-type-selected-text" data-i18n="video.transition_none">Ninguna</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -538,19 +538,19 @@
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-transition-type">
                   <div class="menu-panel__list" data-ref="list-transition-type">
                     <button type="button" class="menu-item is-active" data-ref="btn-trans-none" data-value="none">
-                      <span class="menu-item__text">Ninguna</span>
+                      <span class="menu-item__text" data-i18n="video.transition_none">Ninguna</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-trans-crossfade" data-value="crossfade">
-                      <span class="menu-item__text">Disolución Cruzada (Crossfade)</span>
+                      <span class="menu-item__text" data-i18n="video.trans_crossfade">Disolución Cruzada (Crossfade)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-trans-fade-black" data-value="fade_black">
-                      <span class="menu-item__text">Fundido a Negro (Fade Black)</span>
+                      <span class="menu-item__text" data-i18n="video.trans_fade_black">Fundido a Negro (Fade Black)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-trans-slide-left" data-value="slide_left">
-                      <span class="menu-item__text">Deslizar a la Izquierda (Slide)</span>
+                      <span class="menu-item__text" data-i18n="video.trans_slide">Deslizar a la Izquierda (Slide)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-trans-wipe-left" data-value="wipe_left">
-                      <span class="menu-item__text">Barrido a la Izquierda (Wipe)</span>
+                      <span class="menu-item__text" data-i18n="video.trans_wipe">Barrido a la Izquierda (Wipe)</span>
                     </button>
                   </div>
                 </div>
@@ -559,15 +559,15 @@
           </div>
 
           <label class="field field--sm" data-ref="field-transition-duration">
-            <span class="field__label">Duración: <span data-ref="val-transition-duration">1.0s</span></span>
+            <span class="field__label"><span data-i18n="video.duration">Duración:</span> <span data-ref="val-transition-duration" data-no-i18n>1.0s</span></span>
             <input class="field__input" data-ref="input-transition-duration" type="range" min="0.3" max="2.5" step="0.1" value="1.0" />
           </label>
         </div>
 
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-close-transitions-modal">Cancelar</button>
-            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-transition">Guardar Transición</button>
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-transitions-modal" data-i18n="canvas.cancel">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-transition" data-i18n="video.save_transition">Guardar Transición</button>
           </div>
         </div>
       </div>
@@ -585,26 +585,26 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">Fundidos de Audio</h2>
-          <p class="modal-card__desc" data-ref="modal-desc">Atenuación suave de entrada (Fade In) y salida (Fade Out).</p>
+          <h2 class="modal-card__title" data-ref="modal-title" data-i18n="video.audio_fades_title">Fundidos de Audio</h2>
+          <p class="modal-card__desc" data-ref="modal-desc" data-i18n="video.audio_fades_desc">Atenuación suave de entrada (Fade In) y salida (Fade Out).</p>
         </div>
 
         <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <label class="field field--sm" data-ref="field-audio-fade-in">
-            <span class="field__label">Aparición (Fade In): <span data-ref="val-audio-fade-in">0.0s</span></span>
+            <span class="field__label"><span data-i18n="video.fade_in">Aparición (Fade In):</span> <span data-ref="val-audio-fade-in" data-no-i18n>0.0s</span></span>
             <input class="field__input" data-ref="input-audio-fade-in" type="range" min="0" max="5" step="0.2" value="0" />
           </label>
 
           <label class="field field--sm" data-ref="field-audio-fade-out">
-            <span class="field__label">Desvanecimiento (Fade Out): <span data-ref="val-audio-fade-out">0.0s</span></span>
+            <span class="field__label"><span data-i18n="video.fade_out">Desvanecimiento (Fade Out):</span> <span data-ref="val-audio-fade-out" data-no-i18n>0.0s</span></span>
             <input class="field__input" data-ref="input-audio-fade-out" type="range" min="0" max="5" step="0.2" value="0" />
           </label>
         </div>
 
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-close-audio-fade-modal">Cancelar</button>
-            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-audio-fade">Guardar Fundidos</button>
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-audio-fade-modal" data-i18n="canvas.cancel">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-apply-audio-fade" data-i18n="video.save_fades">Guardar Fundidos</button>
           </div>
         </div>
       </div>
@@ -622,18 +622,18 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">Subtítulos Automáticos con IA</h2>
-          <p class="modal-card__desc" data-ref="modal-desc">Transcribe y sincroniza la voz del video automáticamente con Gemini IA.</p>
+          <h2 class="modal-card__title" data-ref="modal-title" data-i18n="video.ai_subtitles_title">Subtítulos Automáticos con IA</h2>
+          <p class="modal-card__desc" data-ref="modal-desc" data-i18n="video.ai_subtitles_desc">Transcribe y sincroniza la voz del video automáticamente con Gemini IA.</p>
         </div>
 
         <div class="modal-card__body modal-card__body--gap14" data-ref="modal-body">
           <div class="field-group" data-ref="field-subtitles-source">
-            <span class="field-group__label">Clip de Origen</span>
+            <span class="field-group__label" data-i18n="video.source_clip">Clip de Origen</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-source">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-source" aria-label="Clip de Origen">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-source" data-i18n-aria="video.source_clip" aria-label="Clip de Origen">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="subtitles-source-selected-text">Seleccionar clip...</span>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-source-selected-text" data-i18n="video.select_clip_placeholder">Seleccionar clip...</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -646,12 +646,12 @@
           </div>
 
           <div class="field-group" data-ref="field-subtitles-lang">
-            <span class="field-group__label">Idioma del Audio</span>
+            <span class="field-group__label" data-i18n="video.audio_language">Idioma del Audio</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-lang">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-lang" aria-label="Idioma del Audio">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-lang" data-i18n-aria="video.audio_language" aria-label="Idioma del Audio">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#translate"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="subtitles-lang-selected-text">Detección Automática</span>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-lang-selected-text" data-i18n="video.auto_detect">Detección Automática</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -659,25 +659,25 @@
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-subtitles-lang">
                   <div class="menu-panel__list" data-ref="list-subtitles-lang">
                     <button type="button" class="menu-item is-active" data-ref="btn-lang-auto" data-value="auto">
-                      <span class="menu-item__text">Detección Automática</span>
+                      <span class="menu-item__text" data-i18n="video.auto_detect">Detección Automática</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-es" data-value="es">
-                      <span class="menu-item__text">Español</span>
+                      <span class="menu-item__text" data-i18n="video.lang_es">Español</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-en" data-value="en">
-                      <span class="menu-item__text">Inglés</span>
+                      <span class="menu-item__text" data-i18n="video.lang_en">Inglés</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-pt" data-value="pt">
-                      <span class="menu-item__text">Portugués</span>
+                      <span class="menu-item__text" data-i18n="video.lang_pt">Portugués</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-fr" data-value="fr">
-                      <span class="menu-item__text">Francés</span>
+                      <span class="menu-item__text" data-i18n="video.lang_fr">Francés</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-de" data-value="de">
-                      <span class="menu-item__text">Alemán</span>
+                      <span class="menu-item__text" data-i18n="video.lang_de">Alemán</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-lang-it" data-value="it">
-                      <span class="menu-item__text">Italiano</span>
+                      <span class="menu-item__text" data-i18n="video.lang_it">Italiano</span>
                     </button>
                   </div>
                 </div>
@@ -686,12 +686,12 @@
           </div>
 
           <div class="field-group" data-ref="field-subtitles-style">
-            <span class="field-group__label">Estilo Visual</span>
+            <span class="field-group__label" data-i18n="video.visual_style">Estilo Visual</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-subtitles-style">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-style" aria-label="Estilo Visual">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-subtitles-style" data-i18n-aria="video.visual_style" aria-label="Estilo Visual">
                 <div class="dropdown-trigger__left">
                   <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="subtitles-style-selected-text">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
+                  <span class="dropdown-trigger__text" data-ref="subtitles-style-selected-text" data-i18n="video.style_karaoke">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -699,19 +699,19 @@
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-subtitles-style">
                   <div class="menu-panel__list" data-ref="list-subtitles-style">
                     <button type="button" class="menu-item is-active" data-ref="btn-style-karaoke-yellow" data-value="karaoke_yellow">
-                      <span class="menu-item__text">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
+                      <span class="menu-item__text" data-i18n="video.style_karaoke">Karaoke (Texto Blanco, Palabra Activa en Amarillo)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-style-karaoke-white" data-value="karaoke_white">
-                      <span class="menu-item__text">Karaoke Inverso (Texto Amarillo, Palabra Activa en Blanco)</span>
+                      <span class="menu-item__text" data-i18n="video.style_karaoke_inv">Karaoke Inverso (Texto Amarillo, Palabra Activa en Blanco)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-style-standard" data-value="standard">
-                      <span class="menu-item__text">Blanco con Sombra (Clásico)</span>
+                      <span class="menu-item__text" data-i18n="video.style_white_shadow">Blanco con Sombra (Clásico)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-style-yellow" data-value="yellow">
-                      <span class="menu-item__text">Amarillo Destacado (TikTok / Reels)</span>
+                      <span class="menu-item__text" data-i18n="video.style_yellow_featured">Amarillo Destacado (TikTok / Reels)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="btn-style-boxed" data-value="boxed">
-                      <span class="menu-item__text">Caja Oscura Translúcida</span>
+                      <span class="menu-item__text" data-i18n="video.style_dark_box">Caja Oscura Translúcida</span>
                     </button>
                   </div>
                 </div>
@@ -722,15 +722,15 @@
 
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-close-subtitles-modal">Cancelar</button>
+            <button type="button" class="component-button component-button--h34" data-ref="btn-close-subtitles-modal" data-i18n="canvas.cancel">Cancelar</button>
             <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-generate-subtitles">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
-              <span data-ref="btn-generate-subtitles-text">Generar Subtítulos</span>
+              <span data-ref="btn-generate-subtitles-text" data-i18n="video.generate_subtitles">Generar Subtítulos</span>
             </button>
           </div>
           <div class="banner banner--danger" data-ref="banner-subtitles-error" style="display: none;">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
-            <span data-ref="subtitles-error-text">No se pudo generar subtítulos.</span>
+            <span data-ref="subtitles-error-text" data-i18n="video.subtitles_error">No se pudo generar subtítulos.</span>
           </div>
         </div>
       </div>
@@ -740,24 +740,24 @@
   <div class="menu-panel menu-panel--dropdown video-clip-context-menu" data-ref="video-clip-context-menu" style="display: none;">
     <button type="button" class="menu-item" data-ref="ctx-btn-detach-audio" data-action="detach-audio">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_split"></use></svg>
-      <span>Separar Audio</span>
+      <span data-i18n="video.detach_audio_btn">Separar Audio</span>
     </button>
     <button type="button" class="menu-item" data-ref="ctx-btn-split" data-action="split">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
-      <span>Dividir en Cabezal (S)</span>
+      <span data-i18n="video.split_playhead">Dividir en Cabezal (S)</span>
     </button>
     <button type="button" class="menu-item" data-ref="ctx-btn-duplicate" data-action="duplicate">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-      <span>Duplicar (Ctrl+D)</span>
+      <span data-i18n="canvas.duplicate_shortcut">Duplicar (Ctrl+D)</span>
     </button>
     <div class="menu-divider" aria-hidden="true"></div>
     <button type="button" class="menu-item" data-ref="ctx-btn-ripple-delete" data-action="ripple-delete">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_delete"></use></svg>
-      <span>Eliminar con Ripple (Shift+Supr)</span>
+      <span data-i18n="video.ripple_delete_shortcut">Eliminar con Ripple (Shift+Supr)</span>
     </button>
     <button type="button" class="menu-item menu-item--danger" data-ref="ctx-btn-delete" data-action="delete">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-      <span>Eliminar (Supr)</span>
+      <span data-i18n="canvas.delete_shortcut">Eliminar (Supr)</span>
     </button>
   </div>
 </div>

@@ -104,11 +104,16 @@ export function translateElement(rootEl: HTMLElement): HTMLElement {
     if (i18nAriaKey) {
       el.setAttribute('aria-label', t(i18nAriaKey));
     }
+
+    const i18nTitleKey = el.getAttribute('data-i18n-title');
+    if (i18nTitleKey) {
+      el.setAttribute('title', t(i18nTitleKey));
+    }
   };
 
   processNode(rootEl);
   const elements = rootEl.querySelectorAll<HTMLElement>(
-    '[data-i18n], [data-i18n-html], [data-i18n-placeholder], [data-i18n-tooltip], [data-i18n-aria]'
+    '[data-i18n], [data-i18n-html], [data-i18n-placeholder], [data-i18n-tooltip], [data-i18n-aria], [data-i18n-title]'
   );
   elements.forEach(processNode);
 

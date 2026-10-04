@@ -201,10 +201,6 @@ export async function getUserEffectivePermissions(
     }
   }
 
-  if (activeRoles.includes('SYSTEM_ACCOUNT')) {
-    return Array.from(new Set(DEFAULT_ROLE_PERMISSIONS.SYSTEM_ACCOUNT || []));
-  }
-
   if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {
     const all = PLATFORM_PERMISSIONS.map((p) => p.name);
     return Array.from(new Set(['*', ...all]));

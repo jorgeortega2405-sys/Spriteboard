@@ -3,27 +3,27 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sanctions-scrollable">
       <div class="view-header" data-ref="sanctions-floating-top">
         <div class="view-header__left" data-ref="sanctions-floating-left" style="display: flex; align-items: center; gap: 8px;">
-          <h1 class="view-header__title" data-ref="sanctions-title" style="margin: 0;">Historial de Sanciones</h1>
-          <span class="component-badge component-badge--sm" data-ref="badge-sanctions-user">@usuario</span>
+          <h1 class="view-header__title" data-ref="sanctions-title" data-i18n="admin.user_sanctions.title" style="margin: 0;">Historial de Sanciones</h1>
+          <span class="component-badge component-badge--sm" data-ref="badge-sanctions-user" data-no-i18n>@usuario</span>
         </div>
 
         <div class="view-header__right" data-ref="sanctions-floating-right">
           <div class="view-header__actions" data-ref="sanctions-default-actions" style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar en historial" aria-label="Buscar en historial">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-i18n-aria="admin.user_sanctions.search_history_aria" data-i18n-tooltip="admin.user_sanctions.search_history_tooltip" data-tooltip="Buscar en historial" aria-label="Buscar en historial">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only view-header__btn" data-ref="btn-apply-sanction" data-tooltip="Aplicar nueva sanción" aria-label="Aplicar nueva sanción">
+            <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only view-header__btn" data-ref="btn-apply-sanction" data-i18n-aria="admin.user_sanctions.apply_sanction_aria" data-i18n-tooltip="admin.user_sanctions.apply_sanction_tooltip" data-tooltip="Aplicar nueva sanción" aria-label="Aplicar nueva sanción">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
             </button>
           </div>
 
           <div class="view-header__actions" data-ref="sanctions-selected-actions" style="display: none; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Deseleccionar (Esc)" aria-label="Deseleccionar">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-i18n-aria="admin.user_sanctions.deselect_aria" data-i18n-tooltip="admin.user_sanctions.deselect_tooltip" data-tooltip="Deseleccionar (Esc)" aria-label="Deseleccionar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only view-header__btn" data-ref="btn-action-revoke" data-tooltip="Revocar sanción" aria-label="Revocar sanción">
+            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only view-header__btn" data-ref="btn-action-revoke" data-i18n-aria="admin.user_sanctions.revoke_sanction_aria" data-i18n-tooltip="admin.user_sanctions.revoke_sanction_tooltip" data-tooltip="Revocar sanción" aria-label="Revocar sanción">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
@@ -35,9 +35,9 @@
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </div>
             <div class="component-search__input-box" data-ref="search-input-box">
-              <input class="component-search__input" data-ref="sanctions-search-input" placeholder="Buscar por motivo, tipo o administrador..." type="text" maxlength="100" autocomplete="off" />
+              <input class="component-search__input" data-ref="sanctions-search-input" data-i18n-placeholder="admin.user_sanctions.search_placeholder" placeholder="Buscar por motivo, tipo o administrador..." type="text" maxlength="100" autocomplete="off" />
             </div>
-            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" data-i18n-aria="admin.user_sanctions.clear_search_aria" aria-label="Limpiar búsqueda">
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -49,12 +49,12 @@
           <table class="component-table" data-ref="sanctions-table">
             <thead class="component-table__head" data-ref="sanctions-thead">
               <tr>
-                <th data-ref="th-type" style="width: 170px;">Tipo de Sanción</th>
-                <th data-ref="th-status" style="width: 110px;">Estado</th>
-                <th data-ref="th-reason">Motivo / Causa</th>
-                <th data-ref="th-duration" style="width: 180px;">Duración / Vencimiento</th>
-                <th data-ref="th-admin" style="width: 150px;">Aplicado Por</th>
-                <th data-ref="th-date" style="width: 140px;">Fecha</th>
+                <th data-ref="th-type" data-i18n="admin.user_sanctions.th_type" style="width: 170px;">Tipo de Sanción</th>
+                <th data-ref="th-status" data-i18n="admin.user_sanctions.th_status" style="width: 110px;">Estado</th>
+                <th data-ref="th-reason" data-i18n="admin.user_sanctions.th_reason">Motivo / Causa</th>
+                <th data-ref="th-duration" data-i18n="admin.user_sanctions.th_duration" style="width: 180px;">Duración / Vencimiento</th>
+                <th data-ref="th-admin" data-i18n="admin.user_sanctions.th_applied_by" style="width: 150px;">Aplicado Por</th>
+                <th data-ref="th-date" data-i18n="admin.user_sanctions.th_date" style="width: 140px;">Fecha</th>
               </tr>
             </thead>
             <tbody class="component-table__body" data-ref="sanctions-tbody">

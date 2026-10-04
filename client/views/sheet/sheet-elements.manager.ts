@@ -1,4 +1,5 @@
 import { MOCKUP_TEMPLATES } from '../../config/mockups.config.js';
+import { DEFAULT_STICKY_COLOR } from '../../config/sticky-notes.config.js';
 import { createChartElement, createConnectorElement, createImageElement, createMockupElement, createShapeElement, createStickyElement, createTextElement, getElementBoundingBox, hitTestBoundingBoxResizeHandle, hitTestElement } from '../board/board-elements.manager.js';
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { drawChart, drawConnector, drawImage, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText } from '../board/board-renderer.js';
@@ -131,7 +132,7 @@ export class SheetElementsManager {
     return el;
   }
 
-  public addSticky(text: string = 'Nota', color: string = '#fef08a', x: number = 200, y: number = 200): BoardStickyElement {
+  public addSticky(text: string = 'Nota', color: string = DEFAULT_STICKY_COLOR, x: number = 200, y: number = 200): BoardStickyElement {
     const el = createStickyElement(text, {
       color,
       height: 140,

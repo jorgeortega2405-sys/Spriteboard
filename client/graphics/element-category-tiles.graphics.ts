@@ -37,9 +37,9 @@ export const ELEMENT_CATEGORY_TILES: ElementCategoryTile[] = [
             <path d="M44 42L56 42C54 46 50 52 44 54L44 42Z" fill="url(#cva-grad-sticky-fold)" />
             <defs>
               <linearGradient id="cva-grad-sticky-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FEF08A" />
-                <stop offset="0.3" stop-color="#FDE047" />
-                <stop offset="1" stop-color="#F59E0B" />
+                <stop stop-color="#FCCB07" />
+                <stop offset="0.5" stop-color="#F59E0B" />
+                <stop offset="1" stop-color="#D97706" />
               </linearGradient>
               <linearGradient id="cva-grad-sticky-fold" x1="44" y1="42" x2="56" y2="54" gradientUnits="userSpaceOnUse">
                 <stop stop-color="#FB7185" />

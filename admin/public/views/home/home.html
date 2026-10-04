@@ -4,7 +4,7 @@
       <div class="view-body" data-ref="home-container" style="width: 100%; max-width: 100%; box-sizing: border-box; padding: 24px 28px 60px;">
         <div class="view-header" data-ref="home-header">
           <div class="view-header__left" data-ref="home-header-left">
-            <h1 class="view-header__title" data-ref="home-title">Panel de Administración</h1>
+            <h1 class="view-header__title" data-ref="home-title" data-i18n="admin.home.title">Panel de Administración</h1>
           </div>
         </div>
 
@@ -16,16 +16,16 @@
               </div>
 
               <h1 class="view-hero__title" data-ref="admin-welcome-title" style="margin-bottom: 8px; font-size: 28px;">
-                Hola <span data-ref="admin-user-name" style="color: var(--color-brand, #ea580c);"></span>
+                <span data-i18n="admin.home.welcome_hello">Hola</span> <span data-ref="admin-user-name" style="color: var(--color-brand, #ea580c);"></span>
               </h1>
-              <p class="card__subtitle" data-ref="admin-welcome-subtitle" style="margin-bottom: 24px;">
+              <p class="card__subtitle" data-ref="admin-welcome-subtitle" data-i18n="admin.home.welcome_subtitle" style="margin-bottom: 24px;">
                 Bienvenido al centro de administración de Spriteboard.
               </p>
 
               <div class="admin-roles-container" data-ref="admin-roles-container" style="text-align: left; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); padding: 20px; border: 1px solid var(--border-color-subtle, var(--border-color));">
                 <div class="admin-roles-header" data-ref="admin-roles-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
                   <svg class="component-icon" style="width: 20px; height: 20px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
-                  <span style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Tus roles asignados:</span>
+                  <span data-i18n="admin.home.assigned_roles" style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Tus roles asignados:</span>
                 </div>
                 <div class="admin-roles-badges" data-ref="admin-roles-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
                 </div>

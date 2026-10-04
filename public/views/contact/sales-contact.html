@@ -15,9 +15,9 @@
           <div class="designer-wizard__top" data-ref="wizard-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
             <button type="button" class="component-button component-button--h32 component-button--bordered" data-ref="btn-wizard-back" style="visibility: hidden;">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-              <span>Atrás</span>
+              <span data-i18n="sales_contact.back">Atrás</span>
             </button>
-            <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator" style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Etapa 1 de 2: Información de contacto</span>
+            <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator" data-i18n="sales_contact.step_1_indicator" style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Etapa 1 de 2: Información de contacto</span>
           </div>
 
           <div class="designer-wizard__content" data-ref="wizard-content">
@@ -25,8 +25,8 @@
             <!-- STAGE 1 -->
             <div class="designer-step is-active" data-ref="stage-1">
               <div class="card__header" data-ref="stage-1-header" style="margin-bottom: 24px;">
-                <h2 class="card__title" data-ref="stage-1-title" style="font-size: 24px; font-weight: 800; margin: 0 0 6px;">Hablemos sobre las necesidades de tu organización</h2>
-                <p class="card__subtitle" data-ref="stage-1-desc" style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
+                <h2 class="card__title" data-ref="stage-1-title" data-i18n="sales_contact.stage1_title" style="font-size: 24px; font-weight: 800; margin: 0 0 6px;">Hablemos sobre las necesidades de tu organización</h2>
+                <p class="card__subtitle" data-ref="stage-1-desc" data-i18n="sales_contact.stage1_desc" style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
                   Descubre cómo Spriteboard Empresas puede impulsar la productividad creativa, seguridad y colaboración de tus equipos.
                 </p>
               </div>
@@ -35,27 +35,27 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
                   <label class="field" data-ref="field-first-name">
                     <input class="field__input" data-ref="input-first-name" type="text" placeholder=" " autocomplete="given-name" required />
-                    <span class="field__label">Nombre *</span>
+                    <span class="field__label" data-i18n="sales_contact.first_name_label">Nombre *</span>
                   </label>
 
                   <label class="field" data-ref="field-last-name">
                     <input class="field__input" data-ref="input-last-name" type="text" placeholder=" " autocomplete="family-name" required />
-                    <span class="field__label">Apellido *</span>
+                    <span class="field__label" data-i18n="sales_contact.last_name_label">Apellido *</span>
                   </label>
                 </div>
 
                 <label class="field" data-ref="field-company-email">
                   <input class="field__input" data-ref="input-company-email" type="email" placeholder=" " autocomplete="email" required />
-                  <span class="field__label">Correo electrónico corporativo *</span>
+                  <span class="field__label" data-i18n="sales_contact.email_label">Correo electrónico corporativo *</span>
                 </label>
 
                 <div class="field-group" data-ref="field-contact-reason">
-                  <span class="field-group__label">Motivo de contacto *</span>
+                  <span class="field-group__label" data-i18n="sales_contact.reason_label">Motivo de contacto *</span>
                   <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-reason">
-                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-reason" aria-label="Motivo de contacto">
+                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-reason" data-i18n-aria="sales_contact.reason_label" aria-label="Motivo de contacto">
                       <div class="dropdown-trigger__left">
                         <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#shopping_cart"></use></svg>
-                        <span class="dropdown-trigger__text" data-ref="reason-selected-text">Estoy interesado en comprar Spriteboard Enterprise</span>
+                        <span class="dropdown-trigger__text" data-ref="reason-selected-text" data-i18n="sales_contact.reason_buy">Estoy interesado en comprar Spriteboard Enterprise</span>
                       </div>
                       <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                     </button>
@@ -63,13 +63,13 @@
                       <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-reason" style="max-height: 240px; overflow-y: auto;">
                         <div class="menu-panel__list" data-ref="list-reason">
                           <button type="button" class="menu-item is-selected" data-ref="btn-reason-buy" data-value="Estoy interesado en comprar Spriteboard Enterprise">
-                            <span class="menu-item__text">Estoy interesado en comprar Spriteboard Enterprise</span>
+                            <span class="menu-item__text" data-i18n="sales_contact.reason_buy">Estoy interesado en comprar Spriteboard Enterprise</span>
                           </button>
                           <button type="button" class="menu-item" data-ref="btn-reason-demo" data-value="Solicitar una demostración personalizada para mi equipo">
-                            <span class="menu-item__text">Solicitar una demostración personalizada para mi equipo</span>
+                            <span class="menu-item__text" data-i18n="sales_contact.reason_demo">Solicitar una demostración personalizada para mi equipo</span>
                           </button>
                           <button type="button" class="menu-item" data-ref="btn-reason-custom" data-value="Consultar planes a medida y licenciamiento por volumen">
-                            <span class="menu-item__text">Consultar planes a medida y licenciamiento por volumen</span>
+                            <span class="menu-item__text" data-i18n="sales_contact.reason_custom">Consultar planes a medida y licenciamiento por volumen</span>
                           </button>
                         </div>
                       </div>
@@ -79,7 +79,7 @@
 
                 <div class="card__actions" data-ref="stage-1-actions" style="margin-top: 12px;">
                   <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-next-stage1">
-                    <span>Continuar</span>
+                    <span data-i18n="sales_contact.continue">Continuar</span>
                     <svg class="component-icon" style="margin-left: 6px;" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
                   </button>
 
@@ -94,8 +94,8 @@
             <!-- STAGE 2 -->
             <div class="designer-step" data-ref="stage-2" style="display: none;">
               <div class="card__header" data-ref="stage-2-header" style="margin-bottom: 24px;">
-                <h2 class="card__title" data-ref="stage-2-title" style="font-size: 24px; font-weight: 800; margin: 0 0 6px;">Cuéntanos sobre tu empresa</h2>
-                <p class="card__subtitle" data-ref="stage-2-desc" style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
+                <h2 class="card__title" data-ref="stage-2-title" data-i18n="sales_contact.stage2_title" style="font-size: 24px; font-weight: 800; margin: 0 0 6px;">Cuéntanos sobre tu empresa</h2>
+                <p class="card__subtitle" data-ref="stage-2-desc" data-i18n="sales_contact.stage2_desc" style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
                   Esta información nos permitirá preparar una propuesta adaptada a la escala y flujo de trabajo de tu equipo.
                 </p>
               </div>
@@ -104,27 +104,27 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
                   <label class="field" data-ref="field-company-name">
                     <input class="field__input" data-ref="input-company-name" type="text" placeholder=" " autocomplete="organization" required />
-                    <span class="field__label">Nombre de la empresa *</span>
+                    <span class="field__label" data-i18n="sales_contact.company_name_label">Nombre de la empresa *</span>
                   </label>
 
                   <div class="field-group" data-ref="field-company-size">
-                    <span class="field-group__label">Tamaño de la empresa *</span>
+                    <span class="field-group__label" data-i18n="sales_contact.company_size_label">Tamaño de la empresa *</span>
                     <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-size">
-                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-size" aria-label="Tamaño de la empresa">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-size" data-i18n-aria="sales_contact.company_size_label" aria-label="Tamaño de la empresa">
                         <div class="dropdown-trigger__left">
                           <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                          <span class="dropdown-trigger__text" data-ref="size-selected-text">Selecciona el tamaño *</span>
+                          <span class="dropdown-trigger__text" data-ref="size-selected-text" data-i18n="sales_contact.select_size">Selecciona el tamaño *</span>
                         </div>
                         <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                       </button>
                       <div class="dropdown-backdrop" data-ref="dropdown-backdrop-size">
                         <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-size" style="max-height: 240px; overflow-y: auto;">
                           <div class="menu-panel__list" data-ref="list-size">
-                            <button type="button" class="menu-item" data-ref="btn-size-1" data-value="1-10 empleados"><span class="menu-item__text">1 - 10 empleados</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-size-2" data-value="11-50 empleados"><span class="menu-item__text">11 - 50 empleados</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-size-3" data-value="51-200 empleados"><span class="menu-item__text">51 - 200 empleados</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-size-4" data-value="201-1000 empleados"><span class="menu-item__text">201 - 1,000 empleados</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-size-5" data-value="1000+ empleados"><span class="menu-item__text">Más de 1,000 empleados</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-size-1" data-value="1-10 empleados"><span class="menu-item__text" data-i18n="sales_contact.size_1">1 - 10 empleados</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-size-2" data-value="11-50 empleados"><span class="menu-item__text" data-i18n="sales_contact.size_2">11 - 50 empleados</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-size-3" data-value="51-200 empleados"><span class="menu-item__text" data-i18n="sales_contact.size_3">51 - 200 empleados</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-size-4" data-value="201-1000 empleados"><span class="menu-item__text" data-i18n="sales_contact.size_4">201 - 1,000 empleados</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-size-5" data-value="1000+ empleados"><span class="menu-item__text" data-i18n="sales_contact.size_5">Más de 1,000 empleados</span></button>
                           </div>
                         </div>
                       </div>
@@ -134,18 +134,18 @@
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
                   <div class="field-group" data-ref="field-country-region">
-                    <span class="field-group__label">País o región *</span>
+                    <span class="field-group__label" data-i18n="sales_contact.country_label">País o región *</span>
                     <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-country">
-                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-country" aria-label="País o región">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-country" data-i18n-aria="sales_contact.country_label" aria-label="País o región">
                         <div class="dropdown-trigger__left">
                           <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
-                          <span class="dropdown-trigger__text" data-ref="country-selected-text">Selecciona tu país o región *</span>
+                          <span class="dropdown-trigger__text" data-ref="country-selected-text" data-i18n="sales_contact.select_country">Selecciona tu país o región *</span>
                         </div>
                         <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                       </button>
                       <div class="dropdown-backdrop" data-ref="dropdown-backdrop-country">
                         <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-country" style="max-height: 240px; overflow-y: auto;">
-                          <div class="menu-panel__list" data-ref="list-country">
+                          <div class="menu-panel__list" data-ref="list-country" data-no-i18n>
                             <button type="button" class="menu-item" data-ref="btn-country-ar" data-value="Argentina"><span class="menu-item__text">Argentina</span></button>
                             <button type="button" class="menu-item" data-ref="btn-country-bo" data-value="Bolivia"><span class="menu-item__text">Bolivia</span></button>
                             <button type="button" class="menu-item" data-ref="btn-country-br" data-value="Brasil"><span class="menu-item__text">Brasil</span></button>
@@ -167,7 +167,7 @@
                             <button type="button" class="menu-item" data-ref="btn-country-do" data-value="República Dominicana"><span class="menu-item__text">República Dominicana</span></button>
                             <button type="button" class="menu-item" data-ref="btn-country-uy" data-value="Uruguay"><span class="menu-item__text">Uruguay</span></button>
                             <button type="button" class="menu-item" data-ref="btn-country-ve" data-value="Venezuela"><span class="menu-item__text">Venezuela</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-country-other" data-value="Otro"><span class="menu-item__text">Otro país / región</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-country-other" data-value="Otro"><span class="menu-item__text" data-i18n="sales_contact.country_other">Otro país / región</span></button>
                           </div>
                         </div>
                       </div>
@@ -175,24 +175,24 @@
                   </div>
 
                   <div class="field-group" data-ref="field-role-level">
-                    <span class="field-group__label">Nivel de cargo / Rol *</span>
+                    <span class="field-group__label" data-i18n="sales_contact.role_label">Nivel de cargo / Rol *</span>
                     <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-role">
-                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-role" aria-label="Nivel de cargo">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-role" data-i18n-aria="sales_contact.role_label" aria-label="Nivel de cargo">
                         <div class="dropdown-trigger__left">
                           <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
-                          <span class="dropdown-trigger__text" data-ref="role-selected-text">Selecciona tu rol *</span>
+                          <span class="dropdown-trigger__text" data-ref="role-selected-text" data-i18n="sales_contact.select_role">Selecciona tu rol *</span>
                         </div>
                         <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                       </button>
                       <div class="dropdown-backdrop" data-ref="dropdown-backdrop-role">
                         <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-role" style="max-height: 240px; overflow-y: auto;">
                           <div class="menu-panel__list" data-ref="list-role">
-                            <button type="button" class="menu-item" data-ref="btn-role-exec" data-value="Ejecutivo / C-Level"><span class="menu-item__text">Ejecutivo / C-Level (CEO, CTO, CPO)</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-role-director" data-value="Director / VP"><span class="menu-item__text">Director / Vicepresidente (VP)</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-role-manager" data-value="Gerente / Manager"><span class="menu-item__text">Gerente / Manager</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-role-lead" data-value="Líder de Equipo"><span class="menu-item__text">Líder de Equipo / Lead</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-role-contributor" data-value="Especialista / Diseñador"><span class="menu-item__text">Especialista / Individual Contributor</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-role-other" data-value="Otro"><span class="menu-item__text">Otro</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-exec" data-value="Ejecutivo / C-Level"><span class="menu-item__text" data-i18n="sales_contact.role_exec">Ejecutivo / C-Level (CEO, CTO, CPO)</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-director" data-value="Director / VP"><span class="menu-item__text" data-i18n="sales_contact.role_director">Director / Vicepresidente (VP)</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-manager" data-value="Gerente / Manager"><span class="menu-item__text" data-i18n="sales_contact.role_manager">Gerente / Manager</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-lead" data-value="Líder de Equipo"><span class="menu-item__text" data-i18n="sales_contact.role_lead">Líder de Equipo / Lead</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-contributor" data-value="Especialista / Diseñador"><span class="menu-item__text" data-i18n="sales_contact.role_contributor">Especialista / Individual Contributor</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-role-other" data-value="Otro"><span class="menu-item__text" data-i18n="sales_contact.role_other">Otro</span></button>
                           </div>
                         </div>
                       </div>
@@ -202,25 +202,25 @@
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
                   <div class="field-group" data-ref="field-department">
-                    <span class="field-group__label">Departamento *</span>
+                    <span class="field-group__label" data-i18n="sales_contact.dept_label">Departamento *</span>
                     <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-department">
-                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-department" aria-label="Departamento">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-department" data-i18n-aria="sales_contact.dept_label" aria-label="Departamento">
                         <div class="dropdown-trigger__left">
                           <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
-                          <span class="dropdown-trigger__text" data-ref="department-selected-text">Selecciona tu departamento *</span>
+                          <span class="dropdown-trigger__text" data-ref="department-selected-text" data-i18n="sales_contact.select_dept">Selecciona tu departamento *</span>
                         </div>
                         <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                       </button>
                       <div class="dropdown-backdrop" data-ref="dropdown-backdrop-department">
                         <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-department" style="max-height: 240px; overflow-y: auto;">
                           <div class="menu-panel__list" data-ref="list-department">
-                            <button type="button" class="menu-item" data-ref="btn-dept-design" data-value="Diseño y Arte"><span class="menu-item__text">Diseño, Arte & UI/UX</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-engineering" data-value="Ingeniería y TI"><span class="menu-item__text">Ingeniería / Tecnología / TI</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-product" data-value="Producto"><span class="menu-item__text">Producto & Gestión de Proyectos</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-marketing" data-value="Marketing y Creatividad"><span class="menu-item__text">Marketing, Publicidad & Contenido</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-operations" data-value="Operaciones"><span class="menu-item__text">Operaciones & Administración</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-sales" data-value="Ventas"><span class="menu-item__text">Ventas & Negocios</span></button>
-                            <button type="button" class="menu-item" data-ref="btn-dept-other" data-value="Otro"><span class="menu-item__text">Otro departamento</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-design" data-value="Diseño y Arte"><span class="menu-item__text" data-i18n="sales_contact.dept_design">Diseño, Arte & UI/UX</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-engineering" data-value="Ingeniería y TI"><span class="menu-item__text" data-i18n="sales_contact.dept_eng">Ingeniería / Tecnología / TI</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-product" data-value="Producto"><span class="menu-item__text" data-i18n="sales_contact.dept_product">Producto & Gestión de Proyectos</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-marketing" data-value="Marketing y Creatividad"><span class="menu-item__text" data-i18n="sales_contact.dept_marketing">Marketing, Publicidad & Contenido</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-operations" data-value="Operaciones"><span class="menu-item__text" data-i18n="sales_contact.dept_ops">Operaciones & Administración</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-sales" data-value="Ventas"><span class="menu-item__text" data-i18n="sales_contact.dept_sales">Ventas & Negocios</span></button>
+                            <button type="button" class="menu-item" data-ref="btn-dept-other" data-value="Otro"><span class="menu-item__text" data-i18n="sales_contact.dept_other">Otro departamento</span></button>
                           </div>
                         </div>
                       </div>
@@ -229,19 +229,19 @@
 
                   <label class="field" data-ref="field-phone-number">
                     <input class="field__input" data-ref="input-phone-number" type="tel" placeholder=" " autocomplete="tel" required />
-                    <span class="field__label">Teléfono de contacto *</span>
+                    <span class="field__label" data-i18n="sales_contact.phone_label">Teléfono de contacto *</span>
                   </label>
                 </div>
 
                 <label class="field field--textarea" data-ref="field-how-can-we-help">
                   <textarea class="field__input field__textarea" data-ref="textarea-how-can-we-help" placeholder=" " rows="4" style="resize: vertical; min-height: 90px;" required></textarea>
-                  <span class="field__label">¿Cómo podemos ayudarte? Cuéntanos sobre tu caso de uso o dudas *</span>
+                  <span class="field__label" data-i18n="sales_contact.help_label">¿Cómo podemos ayudarte? Cuéntanos sobre tu caso de uso o dudas *</span>
                 </label>
 
                 <div class="card__actions" data-ref="stage-2-actions" style="margin-top: 12px;">
                   <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-sales">
                     <svg class="component-icon" style="margin-right: 6px;" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
-                    <span data-ref="btn-submit-sales-text">Enviar Solicitud a Ventas</span>
+                    <span data-ref="btn-submit-sales-text" data-i18n="sales_contact.btn_submit">Enviar Solicitud a Ventas</span>
                   </button>
 
                   <div class="banner banner--danger" data-ref="stage-2-error" style="display: none; margin-top: 16px;">
@@ -258,19 +258,19 @@
                 <svg class="component-icon" style="font-size: 38px;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
               </div>
 
-              <h2 style="font-size: 26px; font-weight: 800; margin: 0 0 10px; color: var(--text-primary);">¡Solicitud recibida con éxito!</h2>
-              <p style="font-size: 15px; color: var(--text-secondary); max-width: 500px; margin: 0 auto 28px; line-height: 1.5;">
+              <h2 data-i18n="sales_contact.success_title" style="font-size: 26px; font-weight: 800; margin: 0 0 10px; color: var(--text-primary);">¡Solicitud recibida con éxito!</h2>
+              <p data-i18n="sales_contact.success_desc" style="font-size: 15px; color: var(--text-secondary); max-width: 500px; margin: 0 auto 28px; line-height: 1.5;">
                 Gracias por tu interés en Spriteboard Empresas. Un especialista comercial se pondrá en contacto contigo muy pronto a través de tu correo corporativo.
               </p>
 
               <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                 <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-success-go-plans">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
-                  <span>Explorar Planes</span>
+                  <span data-i18n="sales_contact.btn_explore_plans">Explorar Planes</span>
                 </button>
                 <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-success-go-home">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-                  <span>Ir al Inicio</span>
+                  <span data-i18n="sales_contact.btn_go_home">Ir al Inicio</span>
                 </button>
               </div>
             </div>

@@ -48,7 +48,7 @@ export interface RoleDefinition {
 export const PLATFORM_ROLES: readonly RoleDefinition[] = [
   { category: 'platform', description: 'Acceso excepcional a toda la plataforma.', display_name: 'Super Admin', name: 'SUPER_ADMIN' },
   { category: 'platform', description: 'Administración general de la plataforma.', display_name: 'Platform Admin', name: 'PLATFORM_ADMIN' },
-  { category: 'platform', description: 'Cuenta institucional o de sistema inmutable.', display_name: 'Cuenta del Sistema', name: 'SYSTEM_ACCOUNT' },
+  { category: 'platform', description: 'Cuenta institucional o de sistema inmutable.', display_name: 'System Account', name: 'SYSTEM_ACCOUNT' },
   { category: 'platform', description: 'IAM, MFA, SSO, sesiones, políticas de seguridad.', display_name: 'Security Admin', name: 'SECURITY_ADMIN' },
   { category: 'platform', description: 'Usuarios, grupos, roles, permisos y provisioning.', display_name: 'IAM Admin', name: 'IAM_ADMIN' },
   { category: 'platform', description: 'Compliance, retención, controles regulatorios.', display_name: 'Compliance Admin', name: 'COMPLIANCE_ADMIN' },
@@ -78,8 +78,8 @@ export const PLATFORM_ROLES: readonly RoleDefinition[] = [
   { category: 'operations', description: 'Supervisión operacional.', display_name: 'Operations Manager', name: 'OPERATIONS_MANAGER' },
   { category: 'operations', description: 'Workflows, jobs y procesos.', display_name: 'Workflow Admin', name: 'WORKFLOW_ADMIN' },
   { category: 'operations', description: 'Operaciones sensibles sobre sistemas.', display_name: 'System Operator', name: 'SYSTEM_OPERATOR' },
-  { category: 'general', description: 'Diseñador con permisos de publicación de plantillas.', display_name: 'Diseñador', name: 'DESIGNER' },
-  { category: 'general', description: 'Usuario estándar de la plataforma.', display_name: 'Usuario', name: 'USER' },
+  { category: 'general', description: 'Diseñador con permisos de publicación de plantillas.', display_name: 'Designer', name: 'DESIGNER' },
+  { category: 'general', description: 'Usuario estándar de la plataforma.', display_name: 'User', name: 'USER' },
 ] as const;
 
 export const USER_ROLES = PLATFORM_ROLES.map((r) => r.name) as readonly UserRole[];

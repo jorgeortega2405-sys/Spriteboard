@@ -4,30 +4,30 @@
   <div class="ai-studio-workspace" data-ref="ai-studio-workspace">
     <section class="ai-studio-chat-panel" data-ref="ai-studio-chat-panel">
       <div class="ai-studio-hero" data-ref="ai-studio-hero">
-        <h2 class="ai-studio-hero__title" data-ref="ai-studio-hero-title">¿Qué vamos a diseñar hoy, <span data-ref="hero-username"></span>?</h2>
-        <p class="ai-studio-hero__subtitle">Describe tu idea y Spritebot diseñará presentaciones, mapas conceptuales, documentos o posts listos para editar.</p>
+        <h2 class="ai-studio-hero__title" data-ref="ai-studio-hero-title"><span data-i18n="ai.hero_greeting_prefix">¿Qué vamos a diseñar hoy,</span> <span data-ref="hero-username"></span>?</h2>
+        <p class="ai-studio-hero__subtitle" data-i18n="ai.hero_subtitle">Describe tu idea y Spritebot diseñará presentaciones, mapas conceptuales, documentos o posts listos para editar.</p>
       </div>
 
       <div class="chat-messages ai-studio-messages" data-ref="ai-studio-messages" style="display: none;"></div>
 
       <div class="chat-panel__bottom ai-studio-chat-bottom" data-ref="chat-panel-bottom">
         <div class="chat-pill-input" data-ref="chat-input-box">
-          <textarea class="chat-pill-input__field" data-ref="chat-input" placeholder="Escribe un mensaje..." rows="1" maxlength="2500"></textarea>
-          <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
+          <textarea class="chat-pill-input__field" data-ref="chat-input" data-i18n-placeholder="chat.input_placeholder" placeholder="Escribe un mensaje..." rows="1" maxlength="2500"></textarea>
+          <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-i18n-tooltip="chat.send" data-i18n-aria="chat.send" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
           </button>
         </div>
-        <p class="chat-disclaimer" data-ref="chat-disclaimer">Las conversaciones son procesadas por IA y auditadas para garantizar la calidad y seguridad.</p>
+        <p class="chat-disclaimer" data-ref="chat-disclaimer" data-i18n="ai.disclaimer">Las conversaciones son procesadas por IA y auditadas para garantizar la calidad y seguridad.</p>
       </div>
     </section>
 
     <aside class="ai-studio-preview-panel" data-ref="ai-studio-preview-panel" style="display: none;">
       <div class="ai-studio-preview-floating-bar" data-ref="ai-studio-preview-floating-bar">
-        <button type="button" class="component-button component-button--h36 component-button--black ai-studio-floating-btn" data-ref="btn-open-in-canvas" aria-label="Abrir en lienzo">
+        <button type="button" class="component-button component-button--h36 component-button--black ai-studio-floating-btn" data-ref="btn-open-in-canvas" data-i18n-aria="ai.open_in_canvas" aria-label="Abrir en lienzo">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
-          <span>Abrir en lienzo</span>
+          <span data-i18n="ai.open_in_canvas">Abrir en lienzo</span>
         </button>
-        <button type="button" class="component-button component-button--h36 component-button--icon-only component-button--ghost ai-studio-floating-close" data-ref="btn-close-preview" data-tooltip="Cerrar vista previa" aria-label="Cerrar vista previa">
+        <button type="button" class="component-button component-button--h36 component-button--icon-only component-button--ghost ai-studio-floating-close" data-ref="btn-close-preview" data-i18n-tooltip="ai.close_preview" data-i18n-aria="ai.close_preview" data-tooltip="Cerrar vista previa" aria-label="Cerrar vista previa">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
         </button>
       </div>

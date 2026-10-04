@@ -5,7 +5,7 @@
       <!-- Top View Header -->
       <div class="view-header" data-ref="analytics-floating-top">
         <div class="view-header__left" data-ref="analytics-floating-left">
-          <h1 class="view-header__title" data-ref="analytics-title">Analítica de Plataforma</h1>
+          <h1 class="view-header__title" data-ref="analytics-title" data-i18n="admin.analytics.title">Analítica de Plataforma</h1>
         </div>
 
         <div class="view-header__right" data-ref="analytics-floating-right">
@@ -15,30 +15,30 @@
             <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="analytics-range-carousel">
               <div class="component-tags-carousel" data-ref="analytics-range-tabs">
                 <button type="button" class="component-badge component-badge--interactive" data-ref="range-7d" data-range="7d">
-                  <span>7 días</span>
+                  <span data-i18n="admin.analytics.range_7d">7 días</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive is-active" data-ref="range-30d" data-range="30d">
-                  <span>30 días</span>
+                  <span data-i18n="admin.analytics.range_30d">30 días</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="range-90d" data-range="90d">
-                  <span>90 días</span>
+                  <span data-i18n="admin.analytics.range_90d">90 días</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="range-1y" data-range="1y">
-                  <span>1 año</span>
+                  <span data-i18n="admin.analytics.range_1y">1 año</span>
                 </button>
               </div>
             </div>
 
             <!-- Ask AI Button -->
-            <button type="button" class="component-button component-button--h40 component-button--primary view-header__btn" data-ref="btn-open-ai-analytics" data-tooltip="Consultar al Asistente IA sobre métricas y lienzos" aria-label="Consultar al Asistente IA sobre métricas y lienzos">
+            <button type="button" class="component-button component-button--h40 component-button--primary view-header__btn" data-ref="btn-open-ai-analytics" data-i18n-aria="admin.analytics.ask_ai_aria" data-i18n-tooltip="admin.analytics.ask_ai_tooltip" data-tooltip="Consultar al Asistente IA sobre métricas y lienzos" aria-label="Consultar al Asistente IA sobre métricas y lienzos">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-              <span>Pregúntale a la IA</span>
+              <span data-i18n="admin.analytics.ask_ai_btn">Pregúntale a la IA</span>
             </button>
 
             <!-- Export CSV Dataset Button -->
-            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-analytics-csv" data-tooltip="Exportar dataset analítico en formato CSV" aria-label="Exportar dataset analítico en formato CSV">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-analytics-csv" data-i18n-aria="admin.analytics.export_dataset_aria" data-i18n-tooltip="admin.analytics.export_dataset_tooltip" data-tooltip="Exportar dataset analítico en formato CSV" aria-label="Exportar dataset analítico en formato CSV">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>Exportar Dataset (CSV)</span>
+              <span data-i18n="admin.analytics.export_dataset_btn">Exportar Dataset (CSV)</span>
             </button>
           </div>
         </div>
@@ -50,29 +50,29 @@
           <div class="component-tags-carousel" data-ref="analytics-module-tabs" style="display: flex; gap: 8px;">
             <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-btn-overview" data-tab="overview">
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#insights"></use></svg>
-              <span>1. Vista General & Crecimiento</span>
+              <span data-i18n="admin.analytics.tab_overview">1. Vista General & Crecimiento</span>
             </button>
             <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-canvases" data-tab="canvases">
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-              <span>2. Lienzos & Almacenamiento</span>
+              <span data-i18n="admin.analytics.tab_storage">2. Lienzos & Almacenamiento</span>
             </button>
             <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-users" data-tab="users">
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-              <span>3. Geografía & Demografía</span>
+              <span data-i18n="admin.analytics.tab_geo">3. Geografía & Demografía</span>
             </button>
             <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-monetization" data-tab="monetization">
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-              <span>4. Monetización, Equipos & IA</span>
+              <span data-i18n="admin.analytics.tab_revenue">4. Monetización, Equipos & IA</span>
             </button>
             <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-sql-studio" data-tab="sql-studio">
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#terminal"></use></svg>
-              <span>5. Esquema & SQL Studio</span>
+              <span data-i18n="admin.analytics.tab_sql">5. Esquema & SQL Studio</span>
             </button>
           </div>
         </div>
         <div data-ref="analytics-tab-indicator" style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
           <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10b981;"></span>
-          <span>Datos en tiempo real sincronizados</span>
+          <span data-i18n="admin.analytics.realtime_synced">Datos en tiempo real sincronizados</span>
         </div>
       </div>
 
@@ -88,79 +88,79 @@
             
             <div class="dashboard-stat-card" data-ref="metric-dau-mau" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Usuarios Activos (DAU / MAU)</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_dau_mau">Usuarios Activos (DAU / MAU)</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-dau-mau" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
-                <div data-ref="val-dau-ratio" style="font-size: 12px; color: var(--text-secondary);">Calculando stickiness...</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-dau-mau" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
+                <div data-no-i18n data-ref="val-dau-ratio" style="font-size: 12px; color: var(--text-secondary);">Calculando stickiness...</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-users-growth" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Base de Usuarios & WAU</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_userbase_wau">Base de Usuarios & WAU</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-users-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-                <div data-ref="val-users-wau" style="font-size: 12px; color: var(--text-secondary);">0 nuevos en 30 días · 0 WAU</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-users-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-no-i18n data-ref="val-users-wau" style="font-size: 12px; color: var(--text-secondary);">0 nuevos en 30 días · 0 WAU</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-mrr-arr" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">MRR / ARR Estimado</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_mrr_arr">MRR / ARR Estimado</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-mrr-overview" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
-                <div data-ref="val-arr-overview" style="font-size: 12px; color: var(--text-secondary);">$0.00 USD proyectado anual (ARR)</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-mrr-overview" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+                <div data-no-i18n data-ref="val-arr-overview" style="font-size: 12px; color: var(--text-secondary);">$0.00 USD proyectado anual (ARR)</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-conversion" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Conversión a Planes de Pago</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_paid_conversion">Conversión a Planes de Pago</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(6, 182, 212, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(6, 182, 212, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #06b6d4;" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-conversion-rate" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00%</div>
-                <div data-ref="val-subscribers-count" style="font-size: 12px; color: var(--text-secondary);">0 usuarios en Pro / Business</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-conversion-rate" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00%</div>
+                <div data-no-i18n data-ref="val-subscribers-count" style="font-size: 12px; color: var(--text-secondary);">0 usuarios en Pro / Business</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-canvases-total" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Creados</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_canvases_created">Lienzos Creados</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-canvases-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-                <div data-ref="val-canvases-active" style="font-size: 12px; color: var(--text-secondary);">0 modificados recientemente</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-canvases-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-no-i18n data-ref="val-canvases-active" style="font-size: 12px; color: var(--text-secondary);">0 modificados recientemente</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-storage-savings" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Almacenamiento Optimizado</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_opt_storage">Almacenamiento Optimizado</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
-                <div data-ref="val-storage-savings" style="font-size: 12px; color: var(--text-secondary);">0.0% ahorro por compresión</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
+                <div data-no-i18n data-ref="val-storage-savings" style="font-size: 12px; color: var(--text-secondary);">0.0% ahorro por compresión</div>
               </div>
             </div>
 
@@ -172,10 +172,10 @@
             <div class="dashboard-chart-card" data-ref="chart-growth-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Crecimiento de Usuarios vs. Creación de Lienzos</h3>
-                  <span style="font-size: 12px; color: var(--text-secondary);">Velocidad diaria de captación de usuarios y producción creativa</span>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_user_canvas_growth">Crecimiento de Usuarios vs. Creación de Lienzos</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_user_canvas_desc">Velocidad diaria de captación de usuarios y producción creativa</span>
                 </div>
-                <span class="component-badge component-badge--sm" data-ref="chart-growth-range-label">Últimos 30 días</span>
+                <span class="component-badge component-badge--sm" data-ref="chart-growth-range-label" data-i18n="admin.analytics.badge_last_30d">Últimos 30 días</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-growth-container" style="height: 250px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-growth"></canvas>
@@ -185,10 +185,10 @@
             <div class="dashboard-chart-card" data-ref="chart-activity-trend-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Tráfico e Interacción Diaria (Visualizaciones)</h3>
-                  <span style="font-size: 12px; color: var(--text-secondary);">Volumen de visualizaciones de lienzos en la galería y perfiles</span>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_traffic">Tráfico e Interacción Diaria (Visualizaciones)</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_traffic_desc">Volumen de visualizaciones de lienzos en la galería y perfiles</span>
                 </div>
-                <span class="component-badge component-badge--sm" data-ref="chart-activity-range-label">Últimos 30 días</span>
+                <span class="component-badge component-badge--sm" data-ref="chart-activity-range-label" data-i18n="admin.analytics.badge_last_30d">Últimos 30 días</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-activity-container" style="height: 250px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-activity-trend"></canvas>
@@ -202,8 +202,8 @@
             
             <div class="dashboard-chart-card" data-ref="chart-tiers-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución de Suscripciones</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Composición actual de planes (Free, Pro, Business)</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_subscriptions">Distribución de Suscripciones</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_subscriptions_desc">Composición actual de planes (Free, Pro, Business)</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-tiers-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-tiers"></canvas>
@@ -212,8 +212,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-auth-security-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Adopción de Seguridad & Autenticación</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">2FA, Google OAuth vs. Contraseña estándar</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_security">Adopción de Seguridad & Autenticación</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_security_desc">2FA, Google OAuth vs. Contraseña estándar</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-auth-security-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-auth-security"></canvas>
@@ -222,8 +222,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-dow-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Actividad por Día de la Semana</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Días de mayor concurrencia de creación y guardado</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_weekday_activity">Actividad por Día de la Semana</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_weekday_activity_desc">Días de mayor concurrencia de creación y guardado</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-dow-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-dow"></canvas>
@@ -245,53 +245,53 @@
             
             <div class="dashboard-stat-card" data-ref="metric-canvases-privacy" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Privacidad de Lienzos</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_canvas_privacy">Privacidad de Lienzos</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-public-canvases" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Públicos</div>
-                <div data-ref="val-private-canvases" style="font-size: 12px; color: var(--text-secondary);">0 Privados guardados en la nube</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-public-canvases" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Públicos</div>
+                <div data-no-i18n data-ref="val-private-canvases" style="font-size: 12px; color: var(--text-secondary);">0 Privados guardados en la nube</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-storage-breakdown" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Almacenamiento Bruto vs Optimizado</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_raw_vs_opt">Almacenamiento Bruto vs Optimizado</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-raw-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
-                <div data-ref="val-raw-storage-details" style="font-size: 12px; color: var(--text-secondary);">0.00 MB en bruto sin comprimir</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-raw-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
+                <div data-no-i18n data-ref="val-raw-storage-details" style="font-size: 12px; color: var(--text-secondary);">0.00 MB en bruto sin comprimir</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-avg-canvas" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Peso Promedio & Versiones</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_avg_size_versions">Peso Promedio & Versiones</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(244, 63, 94, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(244, 63, 94, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #f43f5e;" aria-hidden="true"><use href="/icons.svg#data_object"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-avg-canvas-size-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 KB</div>
-                <div data-ref="val-snapshots-count" style="font-size: 12px; color: var(--text-secondary);">0 snapshots y versiones históricas</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-avg-canvas-size-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 KB</div>
+                <div data-no-i18n data-ref="val-snapshots-count" style="font-size: 12px; color: var(--text-secondary);">0 snapshots y versiones históricas</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-views-duration" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Interacción & Tiempo en Editor</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_engagement_time">Interacción & Tiempo en Editor</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(139, 92, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(139, 92, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #8b5cf6;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-views-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Vistas</div>
-                <div data-ref="val-duration-tab" style="font-size: 12px; color: var(--text-secondary);">0s duración media de sesión de edición</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-views-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Vistas</div>
+                <div data-no-i18n data-ref="val-duration-tab" style="font-size: 12px; color: var(--text-secondary);">0s duración media de sesión de edición</div>
               </div>
             </div>
 
@@ -302,8 +302,8 @@
             
             <div class="dashboard-chart-card" data-ref="chart-resolutions-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución de Resoluciones</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Dimensiones de cuadrícula elegidas (Micro, Sprite, Estándar, HD)</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_resolutions">Distribución de Resoluciones</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_resolutions_desc">Dimensiones de cuadrícula elegidas (Micro, Sprite, Estándar, HD)</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-resolutions-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-resolutions"></canvas>
@@ -312,8 +312,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-formats-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Formatos y Tipología de Lienzo</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Pixel Art estándar vs. Vectorial vs. Lienzo Mixto</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_canvas_types">Formatos y Tipología de Lienzo</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_canvas_types_desc">Pixel Art estándar vs. Vectorial vs. Lienzo Mixto</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-formats-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-formats"></canvas>
@@ -323,10 +323,10 @@
             <div class="dashboard-chart-card" data-ref="chart-storage-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
-                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Almacenamiento Bruto vs. Optimizado (MB)</h3>
-                  <span style="font-size: 12px; color: var(--text-secondary);">Evolución temporal del peso comprimido</span>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_storage_mb">Almacenamiento Bruto vs. Optimizado (MB)</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_storage_mb_desc">Evolución temporal del peso comprimido</span>
                 </div>
-                <span class="component-badge component-badge--sm" data-ref="chart-storage-range-label">Últimos 30 días</span>
+                <span class="component-badge component-badge--sm" data-ref="chart-storage-range-label" data-i18n="admin.analytics.badge_last_30d">Últimos 30 días</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-storage-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-storage"></canvas>
@@ -340,24 +340,24 @@
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <svg class="component-icon" style="color: #3b82f6; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Top 10 Lienzos con Mayor Impacto</h3>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;" data-i18n="admin.analytics.table_top_canvases">Top 10 Lienzos con Mayor Impacto</h3>
               </div>
-              <span class="component-badge component-badge--sm">Visualizaciones & Engagement</span>
+              <span class="component-badge component-badge--sm" data-i18n="admin.analytics.badge_views_engagement">Visualizaciones & Engagement</span>
             </div>
             <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
               <table class="component-table" data-ref="table-top-canvases" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <thead>
                   <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lienzo</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Creador</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Dimensiones</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Acceso</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Impacto</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_canvas">Lienzo</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_creator">Creador</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_dimensions">Dimensiones</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_access">Acceso</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;" data-i18n="admin.analytics.th_impact">Impacto</th>
                   </tr>
                 </thead>
                 <tbody data-ref="analytics-top-canvases-tbody">
                   <tr>
-                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando ranking de lienzos...</td>
+                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);" data-i18n="admin.analytics.loading_canvases">Cargando ranking de lienzos...</td>
                   </tr>
                 </tbody>
               </table>
@@ -377,53 +377,53 @@
             
             <div class="dashboard-stat-card" data-ref="metric-users-total-tab" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Usuarios Registrados</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_registered_users">Usuarios Registrados</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-users-count-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-                <div data-ref="val-users-active-pct" style="font-size: 12px; color: var(--text-secondary);">0 activos en los últimos 30 días</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-users-count-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-no-i18n data-ref="val-users-active-pct" style="font-size: 12px; color: var(--text-secondary);">0 activos en los últimos 30 días</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-security-2fa" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Adopción de 2FA & Google</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_2fa_google_adoption">Adopción de 2FA & Google</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-2fa-adoption-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0% 2FA</div>
-                <div data-ref="val-google-auth-pct" style="font-size: 12px; color: var(--text-secondary);">0.0% Google OAuth vinculado</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-2fa-adoption-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0% 2FA</div>
+                <div data-no-i18n data-ref="val-google-auth-pct" style="font-size: 12px; color: var(--text-secondary);">0.0% Google OAuth vinculado</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-engagement-community" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Interacción Social & Carpetas</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_social_folders">Interacción Social & Carpetas</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-comments-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-                <div data-ref="val-folders-tab" style="font-size: 12px; color: var(--text-secondary);">0 carpetas creadas para organizar</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-comments-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-no-i18n data-ref="val-folders-tab" style="font-size: 12px; color: var(--text-secondary);">0 carpetas creadas para organizar</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-dau-wau-ratio" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Densidad de Uso (DAU / WAU)</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_usage_density">Densidad de Uso (DAU / WAU)</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#timeline"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-dau-wau-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
-                <div data-ref="val-stickiness-tab" style="font-size: 12px; color: var(--text-secondary);">Stickiness: 0.0%</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-dau-wau-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
+                <div data-no-i18n data-ref="val-stickiness-tab" style="font-size: 12px; color: var(--text-secondary);">Stickiness: 0.0%</div>
               </div>
             </div>
 
@@ -434,8 +434,8 @@
             
             <div class="dashboard-chart-card" data-ref="chart-geo-distribution-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución Geográfica (Top 10 Países)</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Países con mayor concentración de cuentas registradas</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_geo_distribution">Distribución Geográfica (Top 10 Países)</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_geo_desc">Países con mayor concentración de cuentas registradas</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-geo-container" style="height: 250px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-geo-distribution"></canvas>
@@ -444,8 +444,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-preferences-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Preferencia de Idiomas & Temas Visuales</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Idiomas de interfaz y adopción de tema Claro vs Oscuro</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_lang_theme">Preferencia de Idiomas & Temas Visuales</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_lang_theme_desc">Idiomas de interfaz y adopción de tema Claro vs Oscuro</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-preferences-container" style="height: 250px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-preferences"></canvas>
@@ -459,24 +459,24 @@
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <svg class="component-icon" style="color: #ea580c; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Top 10 Creadores Más Activos</h3>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;" data-i18n="admin.analytics.table_top_creators">Top 10 Creadores Más Activos</h3>
               </div>
-              <span class="component-badge component-badge--sm">Volumen de Creación & Audiencia</span>
+              <span class="component-badge component-badge--sm" data-i18n="admin.analytics.badge_creation_audience">Volumen de Creación & Audiencia</span>
             </div>
             <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
               <table class="component-table" data-ref="table-top-creators" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <thead>
                   <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Usuario</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Plan</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lienzos</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Vistas Acumuladas</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Espacio Usado</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_user">Usuario</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_plan">Plan</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_canvases">Lienzos</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_views_accum">Vistas Acumuladas</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;" data-i18n="admin.analytics.th_used_storage">Espacio Usado</th>
                   </tr>
                 </thead>
                 <tbody data-ref="analytics-top-creators-tbody">
                   <tr>
-                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando ranking de creadores...</td>
+                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);" data-i18n="admin.analytics.loading_creators">Cargando ranking de creadores...</td>
                   </tr>
                 </tbody>
               </table>
@@ -496,53 +496,53 @@
             
             <div class="dashboard-stat-card" data-ref="metric-finance-revenue" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Ingresos Totales (Revenue)</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_total_revenue">Ingresos Totales (Revenue)</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-total-revenue" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
-                <div data-ref="val-avg-order-value" style="font-size: 12px; color: var(--text-secondary);">Ticket promedio (AOV): $0.00 USD</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-total-revenue" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+                <div data-no-i18n data-ref="val-avg-order-value" style="font-size: 12px; color: var(--text-secondary);">Ticket promedio (AOV): $0.00 USD</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-finance-purchases" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Transacciones de Suscripción</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_subscription_tx">Transacciones de Suscripción</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-purchases-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-                <div data-ref="val-purchases-status" style="font-size: 12px; color: var(--text-secondary);">Pagos procesados exitosamente</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-purchases-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-no-i18n data-ref="val-purchases-status" style="font-size: 12px; color: var(--text-secondary);">Pagos procesados exitosamente</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-teams-education" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Equipos B2B & Educación</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_b2b_edu">Equipos B2B & Educación</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-teams-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Equipos</div>
-                <div data-ref="val-classrooms-schools" style="font-size: 12px; color: var(--text-secondary);">0 Aulas · 0 Instituciones escolares</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-teams-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Equipos</div>
+                <div data-no-i18n data-ref="val-classrooms-schools" style="font-size: 12px; color: var(--text-secondary);">0 Aulas · 0 Instituciones escolares</div>
               </div>
             </div>
 
             <div class="dashboard-stat-card" data-ref="metric-ai-health" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Satisfacción del Asistente IA</span>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.analytics.card_ai_satisfaction">Satisfacción del Asistente IA</span>
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
                   <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#smart_toy"></use></svg>
                 </div>
               </div>
               <div>
-                <div class="stat-card-value" data-ref="val-ai-satisfaction-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0%</div>
-                <div data-ref="val-ai-feedback-detail" style="font-size: 12px; color: var(--text-secondary);">0 👍 Likes vs. 0 👎 Dislikes</div>
+                <div class="stat-card-value" data-no-i18n data-ref="val-ai-satisfaction-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0%</div>
+                <div data-no-i18n data-ref="val-ai-feedback-detail" style="font-size: 12px; color: var(--text-secondary);">0 👍 Likes vs. 0 👎 Dislikes</div>
               </div>
             </div>
 
@@ -553,8 +553,8 @@
             
             <div class="dashboard-chart-card" data-ref="chart-financial-periods-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Facturación: Mensual vs. Anual</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Ingresos generados según el período de facturación</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_billing_cycle">Facturación: Mensual vs. Anual</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_billing_cycle_desc">Ingresos generados según el período de facturación</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-financial-periods-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-financial-periods"></canvas>
@@ -563,8 +563,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-purchases-plan-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Ingresos por Plan Contratado</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Volumen de ventas por categoría de plan</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_revenue_plan">Ingresos por Plan Contratado</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_revenue_plan_desc">Volumen de ventas por categoría de plan</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-purchases-plan-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-purchases-plan"></canvas>
@@ -573,8 +573,8 @@
 
             <div class="dashboard-chart-card" data-ref="chart-ai-feedback-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
               <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Aprobación del Asistente IA</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">Proporción de retroalimentación positiva vs negativa</span>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.chart_ai_approval">Aprobación del Asistente IA</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.analytics.chart_ai_approval_desc">Proporción de retroalimentación positiva vs negativa</span>
               </div>
               <div class="dashboard-chart-container" data-ref="chart-ai-feedback-container" style="height: 220px; position: relative; width: 100%;">
                 <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-ai-feedback"></canvas>
@@ -588,25 +588,25 @@
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <svg class="component-icon" style="color: #10b981; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Transacciones y Compras Recientes</h3>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;" data-i18n="admin.analytics.table_recent_tx">Transacciones y Compras Recientes</h3>
               </div>
-              <span class="component-badge component-badge--sm">Últimos pagos auditados</span>
+              <span class="component-badge component-badge--sm" data-i18n="admin.analytics.badge_audited_payments">Últimos pagos auditados</span>
             </div>
             <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
               <table class="component-table" data-ref="table-recent-purchases" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <thead>
                   <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Usuario</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Plan</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Período</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Fecha</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Estado</th>
-                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Monto</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_user">Usuario</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_plan">Plan</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_period">Período</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_date">Fecha</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.th_status">Estado</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;" data-i18n="admin.analytics.th_amount">Monto</th>
                   </tr>
                 </thead>
                 <tbody data-ref="analytics-recent-purchases-tbody">
                   <tr>
-                    <td colspan="6" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando transacciones recientes...</td>
+                    <td colspan="6" style="padding: 18px; text-align: center; color: var(--text-secondary);" data-i18n="admin.analytics.loading_tx">Cargando transacciones recientes...</td>
                   </tr>
                 </tbody>
               </table>
@@ -627,17 +627,17 @@
                 <svg class="component-icon" style="width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#database"></use></svg>
               </div>
               <div>
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Entorno de Exploración de Datos & SQL Studio</h3>
-                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Consulta los esquemas relacionales (MySQL) y en memoria (Redis) o ejecuta consultas SELECT analíticas seguras en tiempo real.</p>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;" data-i18n="admin.analytics.sql_studio_title">Entorno de Exploración de Datos & SQL Studio</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="admin.analytics.sql_studio_desc">Consulta los esquemas relacionales (MySQL) y en memoria (Redis) o ejecuta consultas SELECT analíticas seguras en tiempo real.</p>
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <span class="component-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">
                 <svg class="component-icon" style="width: 12px; height: 12px; margin-right: 4px;" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-                Modo Solo Lectura (SELECT/EXPLAIN)
+                <span data-i18n="admin.analytics.sql_readonly_badge">Modo Solo Lectura (SELECT/EXPLAIN)</span>
               </span>
               <span class="component-badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);">
-                Límite máx. 500 filas
+                <span data-i18n="admin.analytics.sql_row_limit">Límite máx. 500 filas</span>
               </span>
             </div>
           </div>
@@ -650,34 +650,34 @@
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <svg class="component-icon" style="color: #6366f1; width: 18px; height: 18px;" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-                  <h3 style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0;">Diccionario de Datos</h3>
+                  <h3 style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0;" data-i18n="admin.analytics.sql_data_dict">Diccionario de Datos</h3>
                 </div>
-                <button type="button" class="component-button component-button--sm component-button--ghost" data-ref="btn-refresh-schema" data-tooltip="Recargar esquema" aria-label="Recargar esquema">
+                <button type="button" class="component-button component-button--sm component-button--ghost" data-ref="btn-refresh-schema" data-i18n-aria="admin.analytics.sql_refresh_schema_aria" data-i18n-tooltip="admin.analytics.sql_refresh_schema_tooltip" data-tooltip="Recargar esquema" aria-label="Recargar esquema">
                   <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
                 </button>
               </div>
 
               <!-- Search / Filter Input for Schema -->
               <div style="margin-bottom: 12px; flex-shrink: 0;">
-                <input class="component-input component-input--sm" data-ref="input-filter-schema" type="text" placeholder="Filtrar tablas o campos..." style="width: 100%; box-sizing: border-box; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card-subtle); color: var(--text-primary);" />
+                <input class="component-input component-input--sm" data-ref="input-filter-schema" type="text" placeholder="Filtrar tablas o campos..." data-i18n-placeholder="admin.analytics.sql_filter_schema_placeholder" style="width: 100%; box-sizing: border-box; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card-subtle); color: var(--text-primary);" />
               </div>
 
               <!-- Database Tabs / Segmented Switcher -->
               <div style="display: flex; gap: 4px; background: var(--bg-card-subtle); padding: 3px; border-radius: 8px; margin-bottom: 12px; flex-shrink: 0;">
-                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="schema-tab-db-identity" data-schemadb="db_identity" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="schema-tab-db-identity" data-schemadb="db_identity" data-no-i18n style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
                   db_identity
                 </button>
-                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-db-canvas" data-schemadb="db_canvas" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-db-canvas" data-schemadb="db_canvas" data-no-i18n style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
                   db_canvas
                 </button>
-                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-redis" data-schemadb="redis" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-redis" data-schemadb="redis" data-no-i18n style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
                   Redis NoSQL
                 </button>
               </div>
 
               <!-- Schema Tree Container (Scrollable) -->
               <div class="layout-scrollable" data-ref="schema-tree-container" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="text-align: center; padding: 30px 10px; color: var(--text-secondary); font-size: 12px;">
+                <div style="text-align: center; padding: 30px 10px; color: var(--text-secondary); font-size: 12px;" data-i18n="admin.analytics.sql_loading_schema">
                   Cargando esquema de base de datos...
                 </div>
               </div>
@@ -693,22 +693,22 @@
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#lightbulb"></use></svg>
-                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Consultas Rápidas (Snippets Analíticos):</span>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.sql_quick_queries">Consultas Rápidas (Snippets Analíticos):</span>
                   </div>
                   <div style="display: flex; gap: 6px; flex-wrap: wrap;" data-ref="sql-snippets-bar">
-                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-top-users" data-snippet="top-users" style="font-size: 11px;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-top-users" data-i18n="admin.analytics.sql_snippet_top_users" data-snippet="top-users" style="font-size: 11px;">
                       Top Usuarios
                     </button>
-                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-canvases-storage" data-snippet="canvases-storage" style="font-size: 11px;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-canvases-storage" data-i18n="admin.analytics.sql_snippet_heavy_canvases" data-snippet="canvases-storage" style="font-size: 11px;">
                       Lienzos + Pesados
                     </button>
-                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-revenue-plans" data-snippet="revenue-plans" style="font-size: 11px;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-revenue-plans" data-i18n="admin.analytics.sql_snippet_revenue_plans" data-snippet="revenue-plans" style="font-size: 11px;">
                       Ingresos x Plan
                     </button>
-                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-ai-satisfaction" data-snippet="ai-satisfaction" style="font-size: 11px;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-ai-satisfaction" data-i18n="admin.analytics.sql_snippet_ai_feedback" data-snippet="ai-satisfaction" style="font-size: 11px;">
                       Feedback IA
                     </button>
-                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-2fa-adoption" data-snippet="2fa-adoption" style="font-size: 11px;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-2fa-adoption" data-i18n="admin.analytics.sql_snippet_2fa" data-snippet="2fa-adoption" style="font-size: 11px;">
                       Adopción 2FA
                     </button>
                   </div>
@@ -716,7 +716,7 @@
 
                 <!-- SQL Textarea Box -->
                 <div style="position: relative; margin-bottom: 12px;">
-                  <textarea class="component-textarea" data-ref="sql-query-input" rows="7" placeholder="Escribe tu consulta SQL aquí... Ej: SELECT id, username, email, created_at FROM db_identity.users ORDER BY id DESC LIMIT 50;" style="width: 100%; box-sizing: border-box; font-family: 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace; font-size: 13px; line-height: 1.5; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: #0f172a; color: #f8fafc; resize: vertical; tab-size: 2; outline: none;"></textarea>
+                  <textarea class="component-textarea" data-ref="sql-query-input" rows="7" placeholder="Escribe tu consulta SQL aquí... Ej: SELECT id, username, email, created_at FROM db_identity.users ORDER BY id DESC LIMIT 50;" data-i18n-placeholder="admin.analytics.sql_query_placeholder" style="width: 100%; box-sizing: border-box; font-family: 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace; font-size: 13px; line-height: 1.5; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: #0f172a; color: #f8fafc; resize: vertical; tab-size: 2; outline: none;"></textarea>
                 </div>
 
                 <!-- Actions Bar -->
@@ -724,17 +724,17 @@
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-execute-sql" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
                       <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
-                      <span>Ejecutar Consulta</span>
-                      <kbd style="font-size: 10px; background: rgba(255, 255, 255, 0.2); padding: 2px 5px; border-radius: 4px; margin-left: 4px;">Ctrl+Enter</kbd>
+                      <span data-i18n="admin.analytics.sql_execute_query">Ejecutar Consulta</span>
+                      <kbd data-no-i18n style="font-size: 10px; background: rgba(255, 255, 255, 0.2); padding: 2px 5px; border-radius: 4px; margin-left: 4px;">Ctrl+Enter</kbd>
                     </button>
                     <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-clear-sql">
-                      <span>Limpiar</span>
+                      <span data-i18n="admin.analytics.sql_clear">Limpiar</span>
                     </button>
                   </div>
                   <div style="display: flex; align-items: center; gap: 10px;">
                     <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-export-sql-csv" disabled style="display: flex; align-items: center; gap: 6px;">
                       <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                      <span>Exportar Resultado (CSV)</span>
+                      <span data-i18n="admin.analytics.sql_export_csv">Exportar Resultado (CSV)</span>
                     </button>
                   </div>
                 </div>
@@ -749,11 +749,11 @@
               <!-- Execution Status / Results Info Header -->
               <div data-ref="sql-results-meta" style="display: none; align-items: center; justify-content: space-between; background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 14px; font-size: 12px; color: var(--text-secondary);">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                  <span>Filas: <strong data-ref="sql-meta-rows" style="color: var(--text-primary);">0</strong></span>
-                  <span>Tiempo: <strong data-ref="sql-meta-time" style="color: var(--text-primary);">0.00 ms</strong></span>
-                  <span>Columnas: <strong data-ref="sql-meta-cols" style="color: var(--text-primary);">0</strong></span>
+                  <span data-no-i18n>Filas: <strong data-ref="sql-meta-rows" style="color: var(--text-primary);">0</strong></span>
+                  <span data-no-i18n>Tiempo: <strong data-ref="sql-meta-time" style="color: var(--text-primary);">0.00 ms</strong></span>
+                  <span data-no-i18n>Columnas: <strong data-ref="sql-meta-cols" style="color: var(--text-primary);">0</strong></span>
                 </div>
-                <div style="color: var(--text-secondary); font-size: 11px;">
+                <div style="color: var(--text-secondary); font-size: 11px;" data-i18n="admin.analytics.sql_readonly_masked">
                   Solo lectura &bull; Datos enmascarados
                 </div>
               </div>
@@ -764,12 +764,12 @@
                   <table class="component-table" data-ref="table-sql-results" style="width: 100%; border-collapse: collapse; font-size: 12px;">
                     <thead data-ref="sql-thead">
                       <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
-                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Resultado de la consulta</th>
+                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);" data-i18n="admin.analytics.sql_result_title">Resultado de la consulta</th>
                       </tr>
                     </thead>
                     <tbody data-ref="sql-tbody">
                       <tr>
-                        <td style="padding: 30px; text-align: center; color: var(--text-secondary);">
+                        <td style="padding: 30px; text-align: center; color: var(--text-secondary);" data-i18n="admin.analytics.sql_prompt_run">
                           Ejecuta una consulta SQL para visualizar los datos aquí.
                         </td>
                       </tr>

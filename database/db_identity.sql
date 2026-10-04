@@ -304,9 +304,9 @@ INSERT INTO roles (name, display_name, description, category) VALUES
 ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones sensibles sobre sistemas.', 'operations'),
 ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
 ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de personal.', 'operations'),
-('DESIGNER', 'Diseñador', 'Diseñador con permisos de publicación de plantillas.', 'general'),
-('SYSTEM_ACCOUNT', 'Cuenta del Sistema', 'Cuenta institucional o de sistema inmutable.', 'platform'),
-('USER', 'Usuario', 'Usuario estándar de la plataforma.', 'general')
+('DESIGNER', 'Designer', 'Designer with template publication permissions.', 'general'),
+('SYSTEM_ACCOUNT', 'System Account', 'Immutable institutional or system account.', 'platform'),
+('USER', 'User', 'Standard platform user.', 'general')
 ON DUPLICATE KEY UPDATE
     display_name = VALUES(display_name),
     description = VALUES(description),
@@ -957,7 +957,7 @@ CREATE TABLE IF NOT EXISTS backups (
 
 CREATE TABLE IF NOT EXISTS backup_schedules (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL DEFAULT 'Copia Automática Programada',
+    name VARCHAR(255) NOT NULL DEFAULT 'Scheduled Automatic Backup',
     enabled BOOLEAN NOT NULL DEFAULT FALSE,
     interval_type ENUM('hourly', 'every_6_hours', 'every_12_hours', 'daily', 'weekly', 'monthly', 'custom_hours') NOT NULL DEFAULT 'daily',
     interval_hours INT NOT NULL DEFAULT 24,

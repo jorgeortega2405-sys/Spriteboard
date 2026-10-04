@@ -87,10 +87,6 @@ export async function getUserEffectivePermissions(
     activeRoles.push(role);
   }
 
-  if (activeRoles.includes('SYSTEM_ACCOUNT')) {
-    return ['templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
-  }
-
   if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {
     return ['*'];
   }
@@ -124,10 +120,6 @@ export async function getUserEffectivePermissions(
         if (!activeRoles.includes(roleName)) {
           activeRoles.push(roleName);
         }
-      }
-
-      if (activeRoles.includes('SYSTEM_ACCOUNT')) {
-        return ['templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
       }
 
       if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {

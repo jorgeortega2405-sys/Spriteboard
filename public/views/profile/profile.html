@@ -8,7 +8,7 @@
           <div class="profile-banner-fallback" data-ref="profile-banner-fallback"></div>
           <div class="profile-banner-overlay" data-ref="profile-banner-overlay"></div>
           
-          <button type="button" class="component-button component-button--h36 component-button--outline profile-banner-upload-btn" data-ref="btn-upload-banner" style="display: none;" data-tooltip="Cambiar foto de portada" aria-label="Cambiar foto de portada">
+          <button type="button" class="component-button component-button--h36 component-button--outline profile-banner-upload-btn" data-ref="btn-upload-banner" data-i18n-tooltip="profile.change_banner" data-i18n-aria="profile.change_banner" style="display: none;" data-tooltip="Cambiar foto de portada" aria-label="Cambiar foto de portada">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
             <span data-i18n="profile.change_banner">Cambiar portada</span>
           </button>
@@ -35,7 +35,7 @@
                 <span data-i18n="profile.edit_profile">Editar perfil</span>
               </button>
 
-              <button type="button" class="component-button component-button--h40 component-button--bordered profile-action-btn" data-ref="btn-share-profile" data-tooltip="Compartir enlace de perfil" aria-label="Compartir perfil">
+              <button type="button" class="component-button component-button--h40 component-button--bordered profile-action-btn" data-ref="btn-share-profile" data-i18n-tooltip="profile.share" data-i18n-aria="profile.share" data-tooltip="Compartir enlace de perfil" aria-label="Compartir perfil">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
                 <span data-i18n="profile.share">Compartir</span>
               </button>
@@ -47,22 +47,22 @@
               <h1 class="profile-display-name" data-ref="profile-display-name"></h1>
               <span class="component-badge component-badge--primary profile-badge-designer" data-ref="badge-designer" style="display: none;">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-                <span>Diseñador</span>
+                <span data-i18n="nav.designer">Diseñador</span>
               </span>
             </div>
 
             <div class="profile-handle-row" data-ref="profile-handle-row">
               <span class="component-badge component-badge--neutral" data-ref="badge-username">
                 <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#alternate_email"></use></svg>
-                <span data-ref="profile-username">@usuario</span>
+                <span data-ref="profile-username" data-no-i18n>@usuario</span>
               </span>
               <span class="component-badge component-badge--neutral" data-ref="badge-followers">
                 <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-                <span data-ref="profile-followers-count">0 seguidores</span>
+                <span data-ref="profile-followers-count" data-no-i18n>0 seguidores</span>
               </span>
               <span class="component-badge component-badge--neutral" data-ref="badge-templates">
                 <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
-                <span data-ref="profile-templates-count">0 plantillas</span>
+                <span data-ref="profile-templates-count" data-no-i18n>0 plantillas</span>
               </span>
             </div>
 
@@ -100,12 +100,12 @@
           <div class="profile-info-grid" data-ref="profile-info-grid">
             <div class="profile-info-card" data-ref="profile-card-about">
               <h3 class="profile-info-card__title" data-i18n="profile.about_title">Acerca de</h3>
-              <p class="profile-info-card__bio" data-ref="profile-info-bio">Sin descripción disponible.</p>
+              <p class="profile-info-card__bio" data-ref="profile-info-bio" data-i18n="profile.no_bio">Sin descripción disponible.</p>
               
               <div class="profile-info-card__meta-list" data-ref="profile-meta-list">
                 <div class="profile-info-meta-item" data-ref="profile-meta-joined">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
-                  <span data-ref="profile-meta-joined-text">Miembro desde recién</span>
+                  <span data-ref="profile-meta-joined-text" data-no-i18n>Miembro desde recién</span>
                 </div>
                 <div class="profile-info-meta-item" data-ref="profile-meta-country" style="display: none;">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>

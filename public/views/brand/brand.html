@@ -9,7 +9,7 @@
             <button type="button" class="brand-kit-picker__btn" data-ref="btn-trigger-kit-picker">
               <div style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 <span class="brand-kit-picker__dot" data-ref="active-kit-dot" style="background-color: #6366f1;"></span>
-                <span data-ref="active-kit-name">Cargando...</span>
+                <span data-ref="active-kit-name" data-i18n="app.loading">Cargando...</span>
               </div>
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-left: 6px;"><use href="/icons.svg#expand_more"></use></svg>
             </button>
@@ -29,10 +29,10 @@
 
         <div class="view-header__right" data-ref="brand-floating-right">
           <div class="view-header__actions" data-ref="brand-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-kit-options" data-tooltip="Opciones del kit" aria-label="Opciones del kit">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-kit-options" data-i18n-tooltip="brand.kit_options" data-i18n-aria="brand.kit_options" data-tooltip="Opciones del kit" aria-label="Opciones del kit">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-create-kit" data-tooltip="Crear kit de marca" aria-label="Crear kit de marca">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-create-kit" data-i18n-tooltip="brand.create_kit" data-i18n-aria="brand.create_kit" data-tooltip="Crear kit de marca" aria-label="Crear kit de marca">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             </button>
           </div>
@@ -68,63 +68,68 @@
           <div class="view-search-pill" data-ref="brand-search-box">
             <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             <input class="view-search-pill__input" data-ref="brand-search-input" data-i18n-placeholder="brand.search_placeholder" type="text" placeholder="Buscar en kit de marca..." autocomplete="off" />
-            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-brand-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-brand-clear-search" data-i18n-aria="common.clear_search" style="display: none;" aria-label="Limpiar búsqueda">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
 
           <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="brand-tags-carousel-wrapper">
-            <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
+            <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-i18n-tooltip="brand.scroll_categories_left" data-i18n-aria="brand.scroll_categories_left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
             </button>
 
             <div class="component-tags-carousel" data-ref="brand-categories-badges">
-              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-all" data-tab="all">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
-                <span data-i18n="brand.tab_all">Todos los recursos</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-logos" data-tab="logos">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-                <span data-i18n="brand.tab_logos">Logotipos</span>
-                <span class="brand-nav-tab__count" data-ref="count-logos">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-colors" data-tab="colors">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-                <span data-i18n="brand.tab_colors">Colores y Paletas</span>
-                <span class="brand-nav-tab__count" data-ref="count-colors">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-fonts" data-tab="fonts">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
-                <span data-i18n="brand.tab_fonts">Tipografías</span>
-                <span class="brand-nav-tab__count" data-ref="count-fonts">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-photos" data-tab="photos">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
-                <span data-i18n="brand.tab_photos">Fotografías</span>
-                <span class="brand-nav-tab__count" data-ref="count-photos">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-elements" data-tab="elements">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-                <span data-i18n="brand.tab_elements">Elementos Gráficos</span>
-                <span class="brand-nav-tab__count" data-ref="count-elements">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-charts" data-tab="charts">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
-                <span data-i18n="brand.tab_charts">Gráficas</span>
-                <span class="brand-nav-tab__count" data-ref="count-charts">0</span>
+              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-guidelines" data-tab="guidelines">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-guidelines" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-guidelines)"/><rect x="8.5" y="7" width="15" height="18" rx="2.5" fill="#FFFFFF"/><path d="M11.5 11h9M11.5 15h9M11.5 19h5" stroke="#1D4ED8" stroke-width="1.8" stroke-linecap="round"/><circle cx="18.5" cy="19" r="1.5" fill="#1D4ED8"/></svg>
+                <span data-i18n="brand.tab_guidelines">Pautas</span>
               </button>
               <button type="button" class="component-badge component-badge--interactive" data-ref="tab-templates" data-tab="templates">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-templates" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#915AF0"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-templates)"/><rect x="8" y="8" width="16" height="5" rx="1.75" fill="#FFFFFF"/><rect x="8" y="15.5" width="7" height="8.5" rx="1.75" fill="#FFFFFF"/><rect x="17" y="15.5" width="7" height="3.5" rx="1.75" fill="#FFFFFF" fill-opacity=".72"/><rect x="17" y="20.5" width="7" height="3.5" rx="1.75" fill="#FFFFFF" fill-opacity=".72"/></svg>
                 <span data-i18n="brand.tab_templates">Plantillas</span>
                 <span class="brand-nav-tab__count" data-ref="count-templates">0</span>
               </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-logos" data-tab="logos">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-logos" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#D97706"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-logos)"/><path d="M16 6.5l8 4.6v9.2l-8 4.6-8-4.6v-9.2z" fill="#FFFFFF"/><path d="M16 10l5 2.9v5.8l-5 2.9-5-2.9v-5.8z" fill="#D97706"/><circle cx="16" cy="15.8" r="2.2" fill="#FFFFFF"/></svg>
+                <span data-i18n="brand.tab_logos">Logos</span>
+                <span class="brand-nav-tab__count" data-ref="count-logos">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-colors" data-tab="colors">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-colors" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#DB2777"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-colors)"/><path d="M16 7c-4.97 0-9 4.03-9 9 0 3.86 3.14 7 7 7h1.5c1.1 0 2-.9 2-2 0-.46-.16-.89-.42-1.24-.26-.34-.42-.77-.42-1.26 0-1.1.9-2 2-2H20c2.76 0 5-2.24 5-5 0-4.97-4.03-9-9-9z" fill="#FFFFFF"/><circle cx="11.5" cy="13.5" r="1.5" fill="#DB2777"/><circle cx="15" cy="10.5" r="1.5" fill="#F59E0B"/><circle cx="19" cy="12" r="1.5" fill="#10B981"/><circle cx="21" cy="16" r="1.5" fill="#3B82F6"/></svg>
+                <span data-i18n="brand.tab_colors">Colores</span>
+                <span class="brand-nav-tab__count" data-ref="count-colors">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-fonts" data-tab="fonts">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-fonts" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0284C7"/><stop offset="1" stop-color="#0369A1"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-fonts)"/><path d="M12.5 8.5h-2.2l-4.5 13.5h2.5l1.1-3.5h4.8l1.1 3.5h2.5L13.3 8.5h-.8zm-2.4 7.9l1.7-5.3 1.7 5.3h-3.4zM20 13.8c-2.5 0-4 1.2-4 3.1 0 1.8 1.4 3.1 3.4 3.1 1.2 0 2.2-.6 2.8-1.5v1.3h2V14.3c0-2.2-1.6-3.4-4.2-3.4zm.2 4.8c-1 0-1.8-.7-1.8-1.6 0-1.1.8-1.7 1.8-1.7 1.1 0 1.9.6 1.9 1.7 0 1-.8 1.6-1.9 1.6z" fill="#FFFFFF"/></svg>
+                <span data-i18n="brand.tab_fonts">Fuentes</span>
+                <span class="brand-nav-tab__count" data-ref="count-fonts">0</span>
+              </button>
               <button type="button" class="component-badge component-badge--interactive" data-ref="tab-voice" data-tab="voice">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#record_voice_over"></use></svg>
-                <span data-i18n="brand.tab_voice">Voz y Pautas</span>
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-voice" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#059669"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-voice)"/><path d="M7 13.5v5h3l5 4.5V9l-5 4.5H7z" fill="#FFFFFF"/><path d="M19 11.5a6 6 0 0 1 0 9M21.5 8.5a10 10 0 0 1 0 15" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>
+                <span data-i18n="brand.tab_voice">Voz de la marca</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-photos" data-tab="photos">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-photos" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F97316"/><stop offset="1" stop-color="#EA580C"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-photos)"/><rect x="7" y="10.5" width="18" height="13.5" rx="3" fill="#FFFFFF"/><circle cx="16" cy="17.2" r="4.2" fill="#EA580C"/><circle cx="16" cy="17.2" r="2.2" fill="#FFFFFF"/><circle cx="21.5" cy="13" r="1" fill="#EA580C"/><path d="M12 8h8l1.5 2.5h-11z" fill="#FFFFFF"/></svg>
+                <span data-i18n="brand.tab_photos">Fotos</span>
+                <span class="brand-nav-tab__count" data-ref="count-photos">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-elements" data-tab="elements">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-elements" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8B5CF6"/><stop offset="1" stop-color="#6D28D9"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-elements)"/><circle cx="12" cy="13" r="4.5" fill="#FFFFFF"/><rect x="16.5" y="14" width="8" height="8" rx="1.5" fill="#FFFFFF"/><polygon points="12,24 8,17 16,17" fill="#FFFFFF" fill-opacity=".85"/></svg>
+                <span data-i18n="brand.tab_elements">Elementos gráficos</span>
+                <span class="brand-nav-tab__count" data-ref="count-elements">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-icons" data-tab="icons">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-icons" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#EAB308"/><stop offset="1" stop-color="#CA8A04"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-icons)"/><path d="M16 6.5l2.2 5.8 5.8 2.2-5.8 2.2L16 22.5l-2.2-5.8-5.8-2.2 5.8-2.2z" fill="#FFFFFF"/><path d="M22.5 7.5l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#FFFFFF" fill-opacity=".85"/><path d="M9.5 19.5l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#FFFFFF" fill-opacity=".75"/></svg>
+                <span data-i18n="brand.tab_icons">Íconos</span>
+                <span class="brand-nav-tab__count" data-ref="count-icons">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-charts" data-tab="charts">
+                <svg class="component-badge__icon component-badge__icon--colored" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="g-brand-charts" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#06B6D4"/><stop offset="1" stop-color="#0891B2"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#g-brand-charts)"/><rect x="7" y="17" width="4" height="8" rx="1" fill="#FFFFFF"/><rect x="14" y="12" width="4" height="13" rx="1" fill="#FFFFFF"/><rect x="21" y="7" width="4" height="18" rx="1" fill="#FFFFFF"/><path d="M8 13l6-5 7-3" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-i18n="brand.tab_charts">Gráficas</span>
+                <span class="brand-nav-tab__count" data-ref="count-charts">0</span>
               </button>
             </div>
 
-            <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar categorías a la derecha" aria-label="Desplazar categorías a la derecha">
+            <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-i18n-tooltip="brand.scroll_categories_right" data-i18n-aria="brand.scroll_categories_right" data-tooltip="Desplazar categorías a la derecha" aria-label="Desplazar categorías a la derecha">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
             </button>
           </div>
@@ -167,123 +172,137 @@
       </div>
 
       <div class="canvas-section brand-content-view" data-ref="brand-content-view">
-        <div class="brand-pane" data-ref="pane-all">
-          <div class="brand-banner-hero" data-ref="brand-overview-banner">
-            <div class="brand-banner-hero__content">
-              <h2 class="brand-banner-hero__title" data-i18n="brand.banner_title">Crea diseños fieles a tu marca</h2>
-              <p class="brand-banner-hero__desc" data-i18n="brand.banner_desc">Prepara tu Kit de Marca con tus recursos y tus pautas. Vas a crear diseños llamativos sin dejar de ser fiel a la marca.</p>
-              <div class="brand-banner-hero__actions">
-                <button type="button" class="component-button component-button--h36 brand-banner-hero__btn-primary" data-ref="btn-banner-upgrade">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
-                  <span data-i18n="brand.banner_btn_upgrade">Suscríbete a Negocios</span>
-                </button>
-                <button type="button" class="component-button component-button--h36 brand-banner-hero__btn-secondary" data-ref="btn-banner-secondary">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                  <span data-i18n="brand.banner_btn_secondary">Empieza con tres colores gratis</span>
-                </button>
-              </div>
+        <div class="brand-pane" data-ref="pane-guidelines">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.guidelines_title">Pautas de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.guidelines_desc">Establece la misión, historia, valores y directrices de uso de los recursos oficiales de tu marca.</p>
             </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-edit-guidelines">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <span data-i18n="brand.btn_edit_guidelines">Editar pautas</span>
+            </button>
+          </div>
 
-            <div class="brand-banner-hero__visual" aria-hidden="true">
-              <div class="brand-banner-hero__art-text">Aa<span class="brand-banner-hero__art-tag" data-ref="banner-art-tag">Kit</span></div>
-              <div class="brand-banner-hero__art-avatar">
-                <svg class="component-icon brand-banner-hero__art-avatar-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-              </div>
-              <div class="brand-banner-hero__art-palette" data-ref="banner-art-palette">
-                <span class="brand-banner-hero__art-palette-dot" style="background-color: #2563eb;"></span>
-                <span class="brand-banner-hero__art-palette-dot" style="background-color: #3b82f6;"></span>
-                <span class="brand-banner-hero__art-palette-dot" style="background-color: #60a5fa;"></span>
-                <span class="brand-banner-hero__art-palette-dot" style="background-color: #93c5fd;"></span>
-              </div>
+          <div class="component-empty-state" data-ref="empty-state-guidelines">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandGlCover" x1="28" y1="24" x2="98" y2="108" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="50%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#18181b"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandGlRibbon" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6"/>
+                    <stop offset="100%" stop-color="#1d4ed8"/>
+                  </linearGradient>
+                </defs>
+                <rect x="34" y="26" width="72" height="88" rx="8" fill="url(#illBrandGlCover)" stroke="var(--border-color, #52525b)" stroke-width="1.5"/>
+                <rect x="40" y="32" width="60" height="76" rx="5" fill="var(--bg-surface, #18181b)"/>
+                <path d="M50 26 L50 68 L56 60 L62 68 L62 26 Z" fill="url(#illBrandGlRibbon)"/>
+                <rect x="48" y="44" width="44" height="4" rx="2" fill="#71717a"/>
+                <rect x="48" y="54" width="34" height="3" rx="1.5" fill="#52525b"/>
+                <rect x="48" y="62" width="44" height="3" rx="1.5" fill="#52525b"/>
+                <rect x="48" y="70" width="38" height="3" rx="1.5" fill="#3f3f46"/>
+                <circle cx="70" cy="86" r="10" fill="#27272a" stroke="#71717a" stroke-width="1.5"/>
+                <path d="M70 79 L72.2 83.5 L77 84.2 L73.5 87.6 L74.3 92.4 L70 90.1 L65.7 92.4 L66.5 87.6 L63 84.2 L67.8 83.5 Z" fill="#fbbf24"/>
+                <g>
+                  <path d="M116 24 L117.5 28.5 L122 30 L117.5 31.5 L116 36 L114.5 31.5 L110 30 L114.5 28.5 Z" fill="#e4e4e7"/>
+                  <path d="M22 66 L23 69 L26 70 L23 71 L22 74 L21 71 L18 70 L21 69 Z" fill="#a1a1aa"/>
+                  <path d="M102 96 L103 98 L105 99 L103 100 L102 102 L101 100 L99 99 L101 98 Z" fill="#71717a"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_guidelines_title">Define las pautas de tu marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_guidelines_desc">Establece las reglas de uso, historia, misión y directrices oficiales para que tu equipo diseñe con coherencia.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-guidelines">
+                <span data-i18n="brand.btn_add_guidelines">Agregar pautas de la marca</span>
+              </button>
             </div>
           </div>
 
-          <div class="brand-overview-grid" data-ref="brand-overview-grid">
-            <div class="brand-overview-card" data-ref="card-overview-templates" data-target-tab="templates">
-              <div class="brand-overview-card__preview">
-                <svg class="component-icon" style="font-size: 48px; color: #2563eb;" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_templates">Plantillas de la marca</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-templates">0</span>
-              </div>
+          <div class="brand-guidelines-container is-hidden" data-ref="container-guidelines"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-templates">
+          <div class="brand-recent-box is-hidden" data-ref="brand-recent-box">
+            <div class="brand-recent-box__header">
+              <h2 class="brand-recent-box__title" data-ref="brand-recent-title">Convierte un diseño reciente en una plantilla de la marca</h2>
+              <p class="brand-recent-box__desc" data-ref="brand-recent-desc">Las plantillas de la marca son diseños reutilizables con layouts y recursos de la marca listos para usar. Selecciona un diseño para publicarlo en este Kit de Marca.</p>
             </div>
 
-            <div class="brand-overview-card" data-ref="card-overview-logos" data-target-tab="logos">
-              <div class="brand-overview-card__preview">
-                <svg class="component-icon" style="font-size: 48px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_logos">Logos</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-logos">0</span>
-              </div>
-            </div>
+            <div class="brand-recent-grid" data-ref="brand-recent-canvases-grid"></div>
 
-            <div class="brand-overview-card" data-ref="card-overview-colors" data-target-tab="colors">
-              <div class="brand-overview-card__preview" data-ref="preview-overview-colors">
-                <div style="display: flex; gap: 4px; width: 80%; height: 28px; border-radius: 6px; overflow: hidden;">
-                  <div style="flex: 1; background-color: #2563eb;"></div>
-                  <div style="flex: 1; background-color: #3b82f6;"></div>
-                  <div style="flex: 1; background-color: #60a5fa;"></div>
-                  <div style="flex: 1; background-color: #10b981;"></div>
-                </div>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_colors">Colores</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-colors">0</span>
-              </div>
-            </div>
-
-            <div class="brand-overview-card" data-ref="card-overview-fonts" data-target-tab="fonts">
-              <div class="brand-overview-card__preview">
-                <span style="font-size: 38px; font-weight: 700; color: var(--text-primary); font-family: 'Inter', sans-serif;">Aa</span>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_fonts">Fuentes</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-fonts">0</span>
-              </div>
-            </div>
-
-            <div class="brand-overview-card" data-ref="card-overview-voice" data-target-tab="voice">
-              <div class="brand-overview-card__preview">
-                <span style="font-size: 56px; font-family: Georgia, serif; line-height: 1; color: #1d4ed8;">“</span>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_voice">Voz de la marca</span>
-                <svg class="component-icon" style="font-size: 16px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-              </div>
-            </div>
-
-            <div class="brand-overview-card" data-ref="card-overview-photos" data-target-tab="photos">
-              <div class="brand-overview-card__preview">
-                <svg class="component-icon" style="font-size: 48px; color: #0284c7;" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_photos">Fotos</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-photos">0</span>
-              </div>
-            </div>
-
-            <div class="brand-overview-card" data-ref="card-overview-elements" data-target-tab="elements">
-              <div class="brand-overview-card__preview">
-                <svg class="component-icon" style="font-size: 48px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_elements">Elementos gráficos</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-elements">0</span>
-              </div>
-            </div>
-
-            <div class="brand-overview-card" data-ref="card-overview-charts" data-target-tab="charts">
-              <div class="brand-overview-card__preview">
-                <svg class="component-icon" style="font-size: 48px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
-              </div>
-              <div class="brand-overview-card__footer">
-                <span class="brand-overview-card__title" data-i18n="brand.overview_charts">Gráficas</span>
-                <span class="brand-overview-card__badge" data-ref="overview-count-charts">0</span>
-              </div>
+            <div class="brand-recent-box__actions" data-ref="brand-recent-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-publish-recent-template" disabled>
+                <span>Publicar como plantilla de la marca</span>
+              </button>
             </div>
           </div>
+
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.templates_title">Plantillas de este Kit</h2>
+              <p class="brand-section-desc" data-i18n="brand.templates_desc">Lienzos y documentos oficiales vinculados a este Kit de Marca listos para usar.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-add-template">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_template">Vincular plantilla</span>
+            </button>
+          </div>
+
+          <div class="component-empty-state" data-ref="empty-state-templates">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandTplBoard" x1="20" y1="20" x2="90" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="50%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#18181b"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandTplFront" x1="30" y1="30" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandTplAccent" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#915af0"/>
+                    <stop offset="100%" stop-color="#7c3aed"/>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-10 54 68)">
+                  <rect x="24" y="28" width="60" height="74" rx="8" fill="url(#illBrandTplBoard)" stroke="var(--border-color, #52525b)" stroke-width="1.5" opacity="0.6"/>
+                  <rect x="30" y="36" width="48" height="12" rx="3" fill="#3f3f46" opacity="0.5"/>
+                  <rect x="30" y="54" width="22" height="20" rx="3" fill="#3f3f46" opacity="0.5"/>
+                  <rect x="56" y="54" width="22" height="20" rx="3" fill="#3f3f46" opacity="0.5"/>
+                </g>
+                <g transform="rotate(6 76 72)">
+                  <rect x="44" y="26" width="66" height="82" rx="9" fill="url(#illBrandTplFront)" stroke="#71717a" stroke-width="1.8"/>
+                  <rect x="50" y="32" width="54" height="70" rx="6" fill="var(--bg-surface, #18181b)"/>
+                  <rect x="54" y="38" width="46" height="16" rx="3" fill="url(#illBrandTplAccent)"/>
+                  <rect x="54" y="60" width="21" height="24" rx="3" fill="#3f3f46"/>
+                  <rect x="79" y="60" width="21" height="10" rx="2" fill="#52525b"/>
+                  <rect x="79" y="74" width="21" height="10" rx="2" fill="#71717a" opacity="0.6"/>
+                </g>
+                <g>
+                  <path d="M116 22 L117.5 26.5 L122 28 L117.5 29.5 L116 34 L114.5 29.5 L110 28 L114.5 26.5 Z" fill="#e4e4e7"/>
+                  <path d="M22 52 L23 55 L26 56 L23 57 L22 60 L21 57 L18 56 L21 55 Z" fill="#a1a1aa"/>
+                  <path d="M104 104 L105 106 L107 107 L105 108 L104 110 L103 108 L101 107 L103 106 Z" fill="#71717a"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_templates_title">Crea plantillas oficiales para tu equipo</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_templates_desc">Convierte tus mejores diseños en plantillas reutilizables para que todo el equipo diseñe con coherencia.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-templates">
+                <span data-i18n="brand.btn_add_template">Vincular plantilla</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="brand-grid is-hidden" data-ref="grid-templates"></div>
         </div>
 
         <div class="brand-pane is-hidden" data-ref="pane-logos">
@@ -298,15 +317,44 @@
             </button>
           </div>
 
-          <div class="brand-upload-dropzone" data-ref="dropzone-logos">
-            <div class="brand-upload-dropzone__icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <div class="component-empty-state" data-ref="empty-state-logos">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandLogoShield" x1="30" y1="20" x2="110" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandLogoGold" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#d97706"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="70" cy="68" r="46" stroke="var(--border-color, #52525b)" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.45"/>
+                <circle cx="70" cy="68" r="36" stroke="#71717a" stroke-width="1.2" opacity="0.3"/>
+                <path d="M70 32 L102 50 V86 L70 104 L38 86 V50 Z" fill="url(#illBrandLogoShield)" stroke="#71717a" stroke-width="2"/>
+                <path d="M70 42 L94 55 V81 L70 94 L46 81 V55 Z" fill="var(--bg-surface, #18181b)"/>
+                <path d="M70 48 L88 59 V81 L70 70 L52 81 V59 Z" fill="url(#illBrandLogoGold)"/>
+                <circle cx="70" cy="68" r="8" fill="#ffffff" opacity="0.9"/>
+                <path d="M70 63 L71.5 66.5 L75 67 L72.5 69.5 L73 73 L70 71.2 L67 73 L67.5 69.5 L65 67 L68.5 66.5 Z" fill="#d97706"/>
+                <g>
+                  <path d="M116 26 L117.5 30.5 L122 32 L117.5 33.5 L116 38 L114.5 33.5 L110 32 L114.5 30.5 Z" fill="#e4e4e7"/>
+                  <path d="M24 44 L25 47 L28 48 L25 49 L24 52 L23 49 L20 48 L23 47 Z" fill="#a1a1aa"/>
+                  <path d="M96 102 L97 104 L99 105 L97 106 L96 108 L95 106 L93 105 L95 104 Z" fill="#71717a"/>
+                </g>
+              </svg>
             </div>
-            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_logo_title">Arrastra y suelta tu logotipo aquí</span>
-            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_logo_desc">Formatos admitidos: PNG transparente, SVG, JPG, WebP hasta 20 MB</span>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_logos_title">Agrega logos para que reconozcan tu marca al instante</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_logos_desc">Representa a tu marca con los logos adecuados, listos para usar en diversos contextos y diseños.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-logos">
+                <span data-i18n="brand.btn_empty_logos_action">Agregar los recursos de mi marca</span>
+              </button>
+            </div>
           </div>
 
-          <div class="brand-grid" data-ref="grid-logos"></div>
+          <div class="brand-grid is-hidden" data-ref="grid-logos"></div>
         </div>
 
         <div class="brand-pane is-hidden" data-ref="pane-colors">
@@ -321,7 +369,48 @@
             </button>
           </div>
 
-          <div class="brand-palettes-container" data-ref="container-palettes"></div>
+          <div class="component-empty-state" data-ref="empty-state-colors">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandColPalette" x1="30" y1="24" x2="110" y2="108" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandColBrush" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#a1a1aa"/>
+                    <stop offset="100%" stop-color="#52525b"/>
+                  </linearGradient>
+                </defs>
+                <path d="M70 28 C44 28 26 44 26 70 C26 94 44 110 68 110 C76 110 82 104 82 98 C82 94 80 92 80 88 C80 82 86 78 92 78 H98 C112 78 122 68 122 52 C122 36 102 28 70 28 Z" fill="url(#illBrandColPalette)" stroke="#71717a" stroke-width="2"/>
+                <circle cx="48" cy="52" r="7" fill="#ec4899"/>
+                <circle cx="70" cy="44" r="7" fill="#f59e0b"/>
+                <circle cx="92" cy="50" r="7" fill="#10b981"/>
+                <circle cx="104" cy="66" r="7" fill="#06b6d4"/>
+                <circle cx="44" cy="74" r="7" fill="#8b5cf6"/>
+                <circle cx="68" cy="94" r="7" fill="#18181b" stroke="#52525b" stroke-width="1.5"/>
+                <g transform="rotate(38 96 82)">
+                  <rect x="94" y="46" width="6" height="52" rx="3" fill="url(#illBrandColBrush)"/>
+                  <rect x="93" y="94" width="8" height="8" rx="1.5" fill="#e4e4e7"/>
+                  <path d="M93 102 C93 109 101 109 101 102 Z" fill="#ec4899"/>
+                </g>
+                <g>
+                  <path d="M116 22 L117.5 26.5 L122 28 L117.5 29.5 L116 34 L114.5 29.5 L110 28 L114.5 26.5 Z" fill="#e4e4e7"/>
+                  <path d="M18 42 L19 45 L22 46 L19 47 L18 50 L17 47 L14 46 L17 45 Z" fill="#a1a1aa"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_colors_title">Define la paleta de colores de tu marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_colors_desc">Organiza tus colores oficiales en paletas para aplicarlos con un solo clic a cualquier diseño o texto.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-colors">
+                <span data-i18n="brand.btn_add_color">Agregar color</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="brand-palettes-container is-hidden" data-ref="container-palettes"></div>
         </div>
 
         <div class="brand-pane is-hidden" data-ref="pane-fonts">
@@ -342,19 +431,72 @@
             </div>
           </div>
 
-          <div class="brand-custom-fonts-section is-hidden" data-ref="section-custom-fonts">
-            <div class="brand-subsection-header">
-              <span class="brand-subsection-title" data-i18n="brand.uploaded_fonts_title">Fuentes subidas</span>
-              <span class="brand-nav-tab__count" data-ref="count-custom-fonts">0</span>
-            </div>
-            <div class="brand-custom-fonts-grid" data-ref="container-custom-fonts"></div>
-          </div>
-
           <div class="brand-text-styles-section" data-ref="section-text-styles">
             <div class="brand-subsection-header">
               <span class="brand-subsection-title" data-i18n="brand.text_styles_title">Estilos de texto de marca</span>
             </div>
             <div class="brand-fonts-container" data-ref="container-fonts"></div>
+          </div>
+
+          <div class="brand-custom-fonts-section is-hidden" data-ref="section-custom-fonts">
+            <div class="brand-subsection-header">
+              <span class="brand-subsection-title" data-i18n="brand.uploaded_fonts_title">Fuentes subidas</span>
+              <span class="brand-nav-tab__count" data-ref="count-custom-fonts">0</span>
+            </div>
+            <div class="brand-custom-fonts-grid is-hidden" data-ref="container-custom-fonts"></div>
+          </div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-voice">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.voice_title">Voz de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.voice_desc">Describe el tono de comunicación, valores, estilo y lineamientos para la redacción y generación de contenido con IA.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-save-voice">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span data-i18n="brand.btn_save_voice">Guardar voz</span>
+            </button>
+          </div>
+
+          <div class="component-empty-state" data-ref="empty-state-voice">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandVoiceHorn" x1="30" y1="35" x2="110" y2="105" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandVoiceRim" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#a1a1aa"/>
+                    <stop offset="100%" stop-color="#52525b"/>
+                  </linearGradient>
+                </defs>
+                <path d="M42 66 L52 50 L94 36 L94 94 L52 80 L42 80 Z" fill="url(#illBrandVoiceHorn)" stroke="#71717a" stroke-width="2"/>
+                <path d="M52 80 L56 106 L68 106 L64 80" fill="#3f3f46" stroke="#71717a" stroke-width="1.5"/>
+                <ellipse cx="94" cy="65" rx="6" ry="29" fill="#52525b" stroke="#71717a" stroke-width="2"/>
+                <path d="M106 52 C110 58 110 72 106 78 M114 44 C122 54 122 76 114 86" stroke="#a1a1aa" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <circle cx="42" cy="73" r="3" fill="#a1a1aa"/>
+                <g>
+                  <path d="M118 22 L119.5 26.5 L124 28 L119.5 29.5 L118 34 L116.5 29.5 L112 28 L116.5 26.5 Z" fill="#e4e4e7"/>
+                  <path d="M22 46 L23 49 L26 50 L23 51 L22 54 L21 51 L18 50 L21 49 Z" fill="#a1a1aa"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_voice_title">Define el tono y la voz de tu marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_voice_desc">Describe la personalidad, tono y estilo de redacción de tu marca para que la IA y tu equipo generen textos fieles a tu identidad.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-voice">
+                <span data-i18n="brand.btn_empty_voice_action">Definir voz de la marca</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="brand-voice-box is-hidden" data-ref="box-brand-voice">
+            <label class="field" data-ref="field-brand-voice" style="margin-bottom: 16px;">
+              <textarea class="brand-voice-textarea" data-ref="textarea-brand-voice" data-i18n-placeholder="brand.voice_placeholder" placeholder="Escribe aquí el tono de voz, eslogan, personalidad de marca y lineamientos de comunicación..."></textarea>
+            </label>
           </div>
         </div>
 
@@ -370,22 +512,56 @@
             </button>
           </div>
 
-          <div class="brand-upload-dropzone" data-ref="dropzone-photos">
-            <div class="brand-upload-dropzone__icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <div class="component-empty-state" data-ref="empty-state-photos">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandPhotoGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="50%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#18181b"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandPhotoSun" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#fbbf24"/>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-12 60 70)">
+                  <rect x="36" y="30" width="58" height="68" rx="8" fill="#27272a" stroke="#3f3f46" stroke-width="1.5"/>
+                  <rect x="42" y="36" width="46" height="42" rx="5" fill="#3f3f46" opacity="0.3"/>
+                </g>
+                <g transform="rotate(8 72 70)">
+                  <rect x="42" y="28" width="60" height="74" rx="8" fill="#18181b" stroke="#52525b" stroke-width="1.5"/>
+                  <rect x="48" y="34" width="48" height="48" rx="5" fill="url(#illBrandPhotoGrad)"/>
+                  <circle cx="82" cy="46" r="5" fill="url(#illBrandPhotoSun)"/>
+                  <path d="M48 76 L62 58 L72 68 L82 54 L96 76 Z" fill="rgba(255,255,255,0.18)"/>
+                  <path d="M58 76 L70 62 L80 72 L96 76 Z" fill="rgba(255,255,255,0.28)"/>
+                  <rect x="54" y="87" width="24" height="4" rx="2" fill="#71717a" opacity="0.5"/>
+                  <circle cx="88" cy="89" r="4" fill="#3f3f46"/>
+                </g>
+                <g>
+                  <path d="M114 24 L115.5 28.5 L120 30 L115.5 31.5 L114 36 L112.5 31.5 L108 30 L112.5 28.5 Z" fill="#e4e4e7"/>
+                  <path d="M24 42 L25 45 L28 46 L25 47 L24 50 L23 47 L20 46 L23 45 Z" fill="#a1a1aa"/>
+                </g>
+              </svg>
             </div>
-            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_photo_title">Arrastra y suelta tus fotos aquí</span>
-            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_photo_desc">Formatos admitidos: JPG, PNG, WebP hasta 20 MB</span>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_photos_title">Crea tu banco de fotografías de marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_photos_desc">Guarda fotos oficiales de productos, oficinas o equipo para que todos las usen sin salir del editor.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-photos">
+                <span data-i18n="brand.btn_add_photo">Subir fotografía</span>
+              </button>
+            </div>
           </div>
 
-          <div class="brand-grid" data-ref="grid-photos"></div>
+          <div class="brand-grid is-hidden" data-ref="grid-photos"></div>
         </div>
 
         <div class="brand-pane is-hidden" data-ref="pane-elements">
           <div class="brand-section-header">
             <div>
-              <h2 class="brand-section-title" data-i18n="brand.elements_title">Elementos Gráficos e Iconos</h2>
-              <p class="brand-section-desc" data-i18n="brand.elements_desc">Iconografía oficial, ilustraciones vectoriales, pegatinas y sellos de tu marca.</p>
+              <h2 class="brand-section-title" data-i18n="brand.elements_title">Elementos gráficos de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.elements_desc">Ilustraciones vectoriales, stickers, formas, patrones y sellos oficiales de tu identidad.</p>
             </div>
             <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-upload-element">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
@@ -393,15 +569,109 @@
             </button>
           </div>
 
-          <div class="brand-upload-dropzone" data-ref="dropzone-elements">
-            <div class="brand-upload-dropzone__icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <div class="component-empty-state" data-ref="empty-state-elements">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandElemCubeTop" x1="42" y1="42" x2="88" y2="66" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="100%" stop-color="#52525b"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandElemCubeLeft" x1="42" y1="54" x2="65" y2="92" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandElemCubeRight" x1="65" y1="54" x2="88" y2="92" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#3f3f46"/>
+                  </linearGradient>
+                  <radialGradient id="illBrandElemSphere" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#a1a1aa"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#18181b"/>
+                  </radialGradient>
+                </defs>
+                <path d="M65 42 L88 54 L65 66 L42 54 Z" fill="url(#illBrandElemCubeTop)" stroke="#71717a" stroke-width="1.5"/>
+                <path d="M42 54 L65 66 L65 92 L42 80 Z" fill="url(#illBrandElemCubeLeft)" stroke="#52525b" stroke-width="1.5"/>
+                <path d="M65 66 L88 54 L88 80 L65 92 Z" fill="url(#illBrandElemCubeRight)" stroke="#52525b" stroke-width="1.5"/>
+                <circle cx="98" cy="44" r="14" fill="url(#illBrandElemSphere)" stroke="#71717a" stroke-width="1.5"/>
+                <circle cx="94" cy="40" r="3" fill="#ffffff" opacity="0.4"/>
+                <g transform="rotate(-15 34 88)">
+                  <path d="M34 76 L44 94 L24 94 Z" fill="#6366f1" opacity="0.85"/>
+                  <path d="M34 76 L44 94 L38 97 L24 94 Z" fill="#4f46e5"/>
+                </g>
+                <g>
+                  <path d="M118 22 L119.5 26.5 L124 28 L119.5 29.5 L118 34 L116.5 29.5 L112 28 L116.5 26.5 Z" fill="#e4e4e7"/>
+                  <path d="M22 44 L23 47 L26 48 L23 49 L22 52 L21 49 L18 48 L21 47 Z" fill="#a1a1aa"/>
+                  <path d="M70 24 L71 26 L73 27 L71 28 L70 30 L69 28 L67 27 L69 26 Z" fill="#71717a"/>
+                </g>
+              </svg>
             </div>
-            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_element_title">Arrastra y suelta tus vectores o iconos aquí</span>
-            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_element_desc">Formatos admitidos: SVG vector o PNG transparente</span>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_elements_title">Organiza los elementos gráficos de tu marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_elements_desc">Sube ilustraciones, formas vectoriales, stickers y sellos distintivos de tu identidad corporativa.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-elements">
+                <span data-i18n="brand.btn_add_element">Subir elemento</span>
+              </button>
+            </div>
           </div>
 
-          <div class="brand-grid" data-ref="grid-elements"></div>
+          <div class="brand-grid is-hidden" data-ref="grid-elements"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-icons">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.icons_title">Iconos oficiales de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.icons_desc">Kit de iconos vectoriales SVG o PNG para interfaces, diagramas y señalética corporativa.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-upload-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_icon">Subir icono</span>
+            </button>
+          </div>
+
+          <div class="component-empty-state" data-ref="empty-state-icons">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandIconTile" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="50%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                  <linearGradient id="illBrandIconActiveTile" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#71717a"/>
+                    <stop offset="50%" stop-color="#52525b"/>
+                    <stop offset="100%" stop-color="#3f3f46"/>
+                  </linearGradient>
+                </defs>
+                <path d="M70 20 L70 28 M70 112 L70 120 M20 70 L28 70 M112 70 L120 70" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+                <rect x="36" y="34" width="30" height="30" rx="7" fill="url(#illBrandIconTile)" stroke="#52525b" stroke-width="1.5"/>
+                <path d="M51 43 L52.5 47.5 L57 48 L53.5 50.5 L54.5 55 L51 52.5 L47.5 55 L48.5 50.5 L45 48 L49.5 47.5 Z" fill="#fbbf24"/>
+                <rect x="74" y="34" width="30" height="30" rx="7" fill="url(#illBrandIconActiveTile)" stroke="#71717a" stroke-width="1.5"/>
+                <path d="M90 41 L84 49 L89 49 L87 57 L95 47 L90 47 Z" fill="#06b6d4"/>
+                <rect x="36" y="72" width="30" height="30" rx="7" fill="url(#illBrandIconTile)" stroke="#52525b" stroke-width="1.5"/>
+                <path d="M51 86 C50 84 47 84 47 86 C47 88 51 92 51 92 C51 92 55 88 55 86 C55 84 52 84 51 86 Z" fill="#f43f5e"/>
+                <rect x="74" y="72" width="30" height="30" rx="7" fill="url(#illBrandIconTile)" stroke="#52525b" stroke-width="1.5"/>
+                <path d="M89 79 L90.5 83.5 L95 85 L90.5 86.5 L89 91 L87.5 86.5 L83 85 L87.5 83.5 Z" fill="#10b981"/>
+                <g>
+                  <path d="M118 24 L119.5 28.5 L124 30 L119.5 31.5 L118 36 L116.5 31.5 L112 30 L116.5 28.5 Z" fill="#e4e4e7"/>
+                  <path d="M22 28 L23 31 L26 32 L23 33 L22 36 L21 33 L18 32 L21 31 Z" fill="#a1a1aa"/>
+                  <path d="M112 106 L113 108 L115 109 L113 110 L112 112 L111 110 L109 109 L111 108 Z" fill="#71717a"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_icons_title">Agrega los iconos oficiales de tu marca</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_icons_desc">Centraliza los iconos vectoriales SVG para señalética, interfaces, infografías y presentaciones.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-icons">
+                <span data-i18n="brand.btn_add_icon">Subir icono</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="brand-grid is-hidden" data-ref="grid-icons"></div>
         </div>
 
         <div class="brand-pane is-hidden" data-ref="pane-charts">
@@ -416,41 +686,48 @@
             </button>
           </div>
 
-          <div class="brand-grid" data-ref="grid-charts"></div>
-        </div>
-
-        <div class="brand-pane is-hidden" data-ref="pane-templates">
-          <div class="brand-section-header">
-            <div>
-              <h2 class="brand-section-title" data-i18n="brand.templates_title">Plantillas de Marca</h2>
-              <p class="brand-section-desc" data-i18n="brand.templates_desc">Lienzos y documentos oficiales que tu equipo puede reutilizar como punto de partida.</p>
+          <div class="component-empty-state" data-ref="empty-state-charts">
+            <div class="component-empty-state-graphic">
+              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="illBrandChartCard" x1="30" y1="28" x2="110" y2="108" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#52525b"/>
+                    <stop offset="50%" stop-color="#3f3f46"/>
+                    <stop offset="100%" stop-color="#27272a"/>
+                  </linearGradient>
+                </defs>
+                <rect x="30" y="32" width="80" height="76" rx="10" fill="url(#illBrandChartCard)" stroke="#71717a" stroke-width="2"/>
+                <rect x="38" y="40" width="20" height="4" rx="2" fill="#a1a1aa"/>
+                <circle cx="94" cy="42" r="2.5" fill="#71717a"/>
+                <circle cx="100" cy="42" r="2.5" fill="#71717a"/>
+                <line x1="38" y1="56" x2="102" y2="56" stroke="#52525b" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="38" y1="72" x2="102" y2="72" stroke="#52525b" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="38" y1="88" x2="102" y2="88" stroke="#52525b" stroke-width="1.5"/>
+                <rect x="44" y="66" width="10" height="22" rx="2" fill="#ec4899"/>
+                <rect x="58" y="52" width="10" height="36" rx="2" fill="#8b5cf6"/>
+                <rect x="72" y="60" width="10" height="28" rx="2" fill="#06b6d4"/>
+                <rect x="86" y="44" width="10" height="44" rx="2" fill="#10b981"/>
+                <path d="M49 64 L63 50 L77 58 L91 42" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="49" cy="64" r="3" fill="#ffffff" stroke="#ec4899" stroke-width="1.5"/>
+                <circle cx="63" cy="50" r="3" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5"/>
+                <circle cx="77" cy="58" r="3" fill="#ffffff" stroke="#06b6d4" stroke-width="1.5"/>
+                <circle cx="91" cy="42" r="3" fill="#ffffff" stroke="#10b981" stroke-width="1.5"/>
+                <g>
+                  <path d="M118 22 L119.5 26.5 L124 28 L119.5 29.5 L118 34 L116.5 29.5 L112 28 L116.5 26.5 Z" fill="#e4e4e7"/>
+                  <path d="M20 48 L21 51 L24 52 L21 53 L20 56 L19 53 L16 52 L19 51 Z" fill="#a1a1aa"/>
+                </g>
+              </svg>
             </div>
-            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-add-template">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span data-i18n="brand.btn_add_template">Vincular plantilla</span>
-            </button>
-          </div>
-
-          <div class="brand-grid" data-ref="grid-templates"></div>
-        </div>
-
-        <div class="brand-pane is-hidden" data-ref="pane-voice">
-          <div class="brand-section-header">
-            <div>
-              <h2 class="brand-section-title" data-i18n="brand.voice_title">Voz y Pautas de Marca</h2>
-              <p class="brand-section-desc" data-i18n="brand.voice_desc">Describe el tono de comunicación, valores, eslogan y pautas de estilo corporativo.</p>
+            <h2 class="component-empty-state-title" data-i18n="brand.empty_charts_title">Diseña estilos de gráficas para tus datos</h2>
+            <p class="component-empty-state-desc" data-i18n="brand.empty_charts_desc">Crea paletas de visualización de datos armonizadas con tus colores corporativos para informes y presentaciones.</p>
+            <div class="component-empty-state-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-empty-charts">
+                <span data-i18n="brand.btn_add_chart">Nuevo estilo de gráfica</span>
+              </button>
             </div>
-            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-save-voice">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
-              <span data-i18n="brand.btn_save_voice">Guardar pautas</span>
-            </button>
           </div>
 
-          <div class="brand-voice-box">
-            <label class="field" data-ref="field-brand-voice" style="margin-bottom: 16px;">
-              <textarea class="brand-voice-textarea" data-ref="textarea-brand-voice" placeholder="Escribe aquí el tono de voz, eslogan, personalidad de marca y lineamientos de comunicación..."></textarea>
-            </label>
-          </div>
+          <div class="brand-grid is-hidden" data-ref="grid-charts"></div>
         </div>
       </div>
     </div>
@@ -459,8 +736,8 @@
   <input class="brand-hidden-file-input" data-ref="file-input-logo" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" style="display: none;" />
   <input class="brand-hidden-file-input" data-ref="file-input-photo" type="file" accept="image/png,image/jpeg,image/webp,image/jpg" style="display: none;" />
   <input class="brand-hidden-file-input" data-ref="file-input-element" type="file" accept="image/svg+xml,image/png" style="display: none;" />
+  <input class="brand-hidden-file-input" data-ref="file-input-icon" type="file" accept="image/svg+xml,image/png" style="display: none;" />
   <input class="brand-hidden-file-input" data-ref="file-input-font" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" style="display: none;" />
-</div>
 
 <div class="modal-backdrop" data-ref="modal-kit-backdrop">
   <div class="modal-container" data-ref="modal-kit-container">
@@ -570,3 +847,41 @@
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop" data-ref="modal-guidelines-backdrop">
+  <div class="modal-container" data-ref="modal-guidelines-container">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-guidelines-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+    </button>
+    <div class="modal-card modal-card--w-520" data-ref="modal-guidelines-card">
+      <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+        <div class="modal-card__drag-handle"></div>
+      </div>
+      <div class="modal-card__header">
+        <h2 class="modal-card__title" data-ref="modal-guidelines-title" data-i18n="brand.modal_guidelines_title">Pautas de la marca</h2>
+      </div>
+      <form class="modal-card__body" data-ref="form-guidelines">
+        <label class="field" data-ref="field-guidelines-mission" style="margin-bottom: 14px;">
+          <textarea class="brand-voice-textarea" data-ref="input-guidelines-mission" placeholder=" " style="min-height: 70px;"></textarea>
+          <span class="field__label" data-ref="label-guidelines-mission" data-i18n="brand.guidelines_mission_label">Misión de la marca</span>
+        </label>
+        <label class="field" data-ref="field-guidelines-values" style="margin-bottom: 14px;">
+          <textarea class="brand-voice-textarea" data-ref="input-guidelines-values" placeholder=" " style="min-height: 70px;"></textarea>
+          <span class="field__label" data-ref="label-guidelines-values" data-i18n="brand.guidelines_values_label">Valores fundamentales</span>
+        </label>
+        <label class="field" data-ref="field-guidelines-rules" style="margin-bottom: 14px;">
+          <textarea class="brand-voice-textarea" data-ref="input-guidelines-rules" placeholder=" " style="min-height: 70px;"></textarea>
+          <span class="field__label" data-ref="label-guidelines-rules" data-i18n="brand.guidelines_rules_label">Reglas de uso y directrices</span>
+        </label>
+
+        <div class="modal-card__actions">
+          <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-guidelines" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-guidelines" data-i18n="brand.btn_save_guidelines">Guardar pautas</button>
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="banner-guidelines-error"></div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+

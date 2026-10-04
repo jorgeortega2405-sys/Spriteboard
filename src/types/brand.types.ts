@@ -111,6 +111,7 @@ export interface BrandKitDetail extends BrandKit {
   custom_fonts: BrandKitAsset[];
   elements: BrandKitAsset[];
   fonts: BrandKitFont[];
+  icons: BrandKitAsset[];
   logos: BrandKitAsset[];
   photos: BrandKitAsset[];
   templates: BrandKitTemplate[];

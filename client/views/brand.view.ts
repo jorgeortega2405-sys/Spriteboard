@@ -3,14 +3,14 @@ import { openModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { hasFeature } from '../config/plans.config.js';
-import { currentUser, escapeHtml, getApi } from '../services/api.service.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { addBrandChartApi, addBrandColorApi, addBrandTemplateApi, createBrandKitApi, deleteBrandAssetApi, deleteBrandChartApi, deleteBrandColorApi, deleteBrandFontApi, deleteBrandKitApi, deleteBrandTemplateApi, duplicateBrandKitApi, getBrandKitDetailApi, getBrandKitsApi, setBrandFontsApi, setDefaultBrandKitApi, updateBrandKitApi, uploadBrandAssetApi } from '../services/brand.service.js';
-import { t, translateElement } from '../services/i18n.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { BrandAssetType, BrandColorType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, BrandKitTemplate, SetBrandFontDto } from '../types/brand.types.js';
-import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, unregisterActiveDropdown, withButtonLoading } from '../utils/dom.util.js';
+import { BrandAssetType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, SetBrandFontDto } from '../types/brand.types.js';
+import { bindDragToScroll, CarouselController, initCarouselScroll, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 
 const AVAILABLE_GOOGLE_FONTS = [
   'Inter', 'Roboto', 'Montserrat', 'Playfair Display', 'Outfit',
@@ -23,22 +23,31 @@ export class BrandController {
   private activeKit: BrandKitDetail | null = null;
   private activeKitDot: HTMLElement | null = null;
   private activeKitName: HTMLElement | null = null;
-  private activeTab: 'all' | 'logos' | 'colors' | 'fonts' | 'photos' | 'elements' | 'charts' | 'templates' | 'voice' = 'all';
+  private activeTab: 'guidelines' | 'templates' | 'logos' | 'colors' | 'fonts' | 'voice' | 'photos' | 'elements' | 'icons' | 'charts' = 'guidelines';
   private allKits: BrandKit[] = [];
   private badgesContainer: HTMLElement | null = null;
-  private bannerArtPalette: HTMLElement | null = null;
-  private bannerArtTag: HTMLElement | null = null;
   private bannerColorError: HTMLElement | null = null;
+  private bannerGuidelinesError: HTMLElement | null = null;
   private bannerKitError: HTMLElement | null = null;
-  private bannerOverview: HTMLElement | null = null;
   private bannerTemplateError: HTMLElement | null = null;
-  private btnBannerSecondary: HTMLElement | null = null;
-  private btnBannerUpgrade: HTMLElement | null = null;
+  private boxBrandVoice: HTMLElement | null = null;
+  private brandRecentBox: HTMLElement | null = null;
+  private brandRecentGrid: HTMLElement | null = null;
   private btnCancelColor: HTMLElement | null = null;
+  private btnCancelGuidelines: HTMLElement | null = null;
   private btnCancelKit: HTMLElement | null = null;
   private btnCancelTemplate: HTMLElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
   private btnCreateKit: HTMLElement | null = null;
+  private btnEmptyCharts: HTMLElement | null = null;
+  private btnEmptyColors: HTMLElement | null = null;
+  private btnEmptyElements: HTMLElement | null = null;
+  private btnEmptyGuidelines: HTMLElement | null = null;
+  private btnEmptyIcons: HTMLElement | null = null;
+  private btnEmptyLogos: HTMLElement | null = null;
+  private btnEmptyPhotos: HTMLElement | null = null;
+  private btnEmptyTemplates: HTMLElement | null = null;
+  private btnEmptyVoice: HTMLElement | null = null;
   private btnKitOptions: HTMLElement | null = null;
   private btnLockedHome: HTMLElement | null = null;
   private btnLockedUpgrade: HTMLElement | null = null;
@@ -47,17 +56,21 @@ export class BrandController {
   private btnOptionEditKit: HTMLElement | null = null;
   private btnOptionSetDefault: HTMLElement | null = null;
   private btnPickerCreateKit: HTMLElement | null = null;
+  private btnPublishRecentTemplate: HTMLButtonElement | null = null;
   private btnSaveFonts: HTMLElement | null = null;
   private btnSaveVoice: HTMLElement | null = null;
   private btnSubmitColor: HTMLButtonElement | null = null;
+  private btnSubmitGuidelines: HTMLButtonElement | null = null;
   private btnSubmitKit: HTMLButtonElement | null = null;
   private btnSubmitTemplate: HTMLButtonElement | null = null;
   private btnTriggerAddChart: HTMLElement | null = null;
   private btnTriggerAddColor: HTMLElement | null = null;
   private btnTriggerAddTemplate: HTMLElement | null = null;
+  private btnTriggerEditGuidelines: HTMLElement | null = null;
   private btnTriggerKitPicker: HTMLElement | null = null;
   private btnTriggerUploadElement: HTMLElement | null = null;
   private btnTriggerUploadFont: HTMLElement | null = null;
+  private btnTriggerUploadIcon: HTMLElement | null = null;
   private btnTriggerUploadLogo: HTMLElement | null = null;
   private btnTriggerUploadPhoto: HTMLElement | null = null;
   private carouselController: CarouselController | null = null;
@@ -65,27 +78,40 @@ export class BrandController {
   private cleanupDrag: (() => void) | null = null;
   private container: HTMLElement;
   private containerCustomFonts: HTMLElement | null = null;
+  private containerGuidelines: HTMLElement | null = null;
   private contentViewEl: HTMLElement | null = null;
   private countCustomFonts: HTMLElement | null = null;
-  private dropzoneElements: HTMLElement | null = null;
-  private dropzoneLogos: HTMLElement | null = null;
-  private dropzonePhotos: HTMLElement | null = null;
   private editingKitUuid: string | null = null;
+  private emptyStateCharts: HTMLElement | null = null;
+  private emptyStateColors: HTMLElement | null = null;
+  private emptyStateElements: HTMLElement | null = null;
+  private emptyStateGuidelines: HTMLElement | null = null;
+  private emptyStateIcons: HTMLElement | null = null;
+  private emptyStateLogos: HTMLElement | null = null;
+  private emptyStatePhotos: HTMLElement | null = null;
+  private emptyStateTemplates: HTMLElement | null = null;
+  private emptyStateVoice: HTMLElement | null = null;
   private fileInputElement: HTMLInputElement | null = null;
   private fileInputFont: HTMLInputElement | null = null;
+  private fileInputIcon: HTMLInputElement | null = null;
   private fileInputLogo: HTMLInputElement | null = null;
   private fileInputPhoto: HTMLInputElement | null = null;
   private formColor: HTMLFormElement | null = null;
+  private formGuidelines: HTMLFormElement | null = null;
   private formKit: HTMLFormElement | null = null;
   private formTemplate: HTMLFormElement | null = null;
   private gridCharts: HTMLElement | null = null;
   private gridElements: HTMLElement | null = null;
+  private gridIcons: HTMLElement | null = null;
   private gridLogos: HTMLElement | null = null;
   private gridPhotos: HTMLElement | null = null;
   private gridTemplates: HTMLElement | null = null;
   private inputColorHex: HTMLInputElement | null = null;
   private inputColorName: HTMLInputElement | null = null;
   private inputColorPalette: HTMLInputElement | null = null;
+  private inputGuidelinesMission: HTMLTextAreaElement | null = null;
+  private inputGuidelinesRules: HTMLTextAreaElement | null = null;
+  private inputGuidelinesValues: HTMLTextAreaElement | null = null;
   private inputKitColor: HTMLInputElement | null = null;
   private inputKitDesc: HTMLInputElement | null = null;
   private inputKitName: HTMLInputElement | null = null;
@@ -99,12 +125,14 @@ export class BrandController {
   private kitPickerList: HTMLElement | null = null;
   private lockedStateEl: HTMLElement | null = null;
   private modalColorBackdrop: HTMLElement | null = null;
+  private modalGuidelinesBackdrop: HTMLElement | null = null;
   private modalKitBackdrop: HTMLElement | null = null;
   private modalTemplateBackdrop: HTMLElement | null = null;
   private palettesContainer: HTMLElement | null = null;
-  private previewOverviewColors: HTMLElement | null = null;
+  private recentCanvasesList: any[] = [];
   private searchInput: HTMLInputElement | null = null;
   private sectionCustomFonts: HTMLElement | null = null;
+  private selectedRecentCanvas: { name: string; uuid: string } | null = null;
   private templateCanvasPicker: HTMLElement | null = null;
   private textareaBrandVoice: HTMLTextAreaElement | null = null;
 
@@ -173,23 +201,32 @@ export class BrandController {
     this.btnOptionDeleteKit = this.container.querySelector<HTMLElement>('[data-ref="btn-option-delete-kit"]');
     this.btnCreateKit = this.container.querySelector<HTMLElement>('[data-ref="btn-create-kit"]');
 
-    this.btnBannerUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-banner-upgrade"]');
-    this.btnBannerSecondary = this.container.querySelector<HTMLElement>('[data-ref="btn-banner-secondary"]');
-    this.bannerArtTag = this.container.querySelector<HTMLElement>('[data-ref="banner-art-tag"]');
-    this.bannerArtPalette = this.container.querySelector<HTMLElement>('[data-ref="banner-art-palette"]');
-    this.bannerOverview = this.container.querySelector<HTMLElement>('[data-ref="brand-overview-banner"]');
-    this.previewOverviewColors = this.container.querySelector<HTMLElement>('[data-ref="preview-overview-colors"]');
-
     this.carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="brand-tags-carousel-wrapper"]');
     this.badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="brand-categories-badges"]');
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="brand-search-input"]');
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-brand-clear-search"]');
 
+    this.emptyStateGuidelines = this.container.querySelector<HTMLElement>('[data-ref="empty-state-guidelines"]');
+    this.btnEmptyGuidelines = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-guidelines"]');
+    this.btnTriggerEditGuidelines = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-edit-guidelines"]');
+    this.containerGuidelines = this.container.querySelector<HTMLElement>('[data-ref="container-guidelines"]');
+
+    this.emptyStateTemplates = this.container.querySelector<HTMLElement>('[data-ref="empty-state-templates"]');
+    this.btnEmptyTemplates = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-templates"]');
+    this.gridTemplates = this.container.querySelector<HTMLElement>('[data-ref="grid-templates"]');
+    this.btnTriggerAddTemplate = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-add-template"]');
+    this.brandRecentBox = this.container.querySelector<HTMLElement>('[data-ref="brand-recent-box"]');
+    this.brandRecentGrid = this.container.querySelector<HTMLElement>('[data-ref="brand-recent-canvases-grid"]');
+    this.btnPublishRecentTemplate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-publish-recent-template"]');
+
+    this.emptyStateLogos = this.container.querySelector<HTMLElement>('[data-ref="empty-state-logos"]');
+    this.btnEmptyLogos = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-logos"]');
     this.gridLogos = this.container.querySelector<HTMLElement>('[data-ref="grid-logos"]');
-    this.dropzoneLogos = this.container.querySelector<HTMLElement>('[data-ref="dropzone-logos"]');
     this.btnTriggerUploadLogo = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-upload-logo"]');
     this.fileInputLogo = this.container.querySelector<HTMLInputElement>('[data-ref="file-input-logo"]');
 
+    this.emptyStateColors = this.container.querySelector<HTMLElement>('[data-ref="empty-state-colors"]');
+    this.btnEmptyColors = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-colors"]');
     this.palettesContainer = this.container.querySelector<HTMLElement>('[data-ref="container-palettes"]');
     this.btnTriggerAddColor = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-add-color"]');
 
@@ -200,24 +237,34 @@ export class BrandController {
     this.countCustomFonts = this.container.querySelector<HTMLElement>('[data-ref="count-custom-fonts"]');
     this.btnSaveFonts = this.container.querySelector<HTMLElement>('[data-ref="btn-save-fonts"]');
 
+    this.emptyStateVoice = this.container.querySelector<HTMLElement>('[data-ref="empty-state-voice"]');
+    this.btnEmptyVoice = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-voice"]');
+    this.boxBrandVoice = this.container.querySelector<HTMLElement>('[data-ref="box-brand-voice"]');
+    this.textareaBrandVoice = this.container.querySelector<HTMLTextAreaElement>('[data-ref="textarea-brand-voice"]');
+    this.btnSaveVoice = this.container.querySelector<HTMLElement>('[data-ref="btn-save-voice"]');
+
+    this.emptyStatePhotos = this.container.querySelector<HTMLElement>('[data-ref="empty-state-photos"]');
+    this.btnEmptyPhotos = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-photos"]');
     this.gridPhotos = this.container.querySelector<HTMLElement>('[data-ref="grid-photos"]');
-    this.dropzonePhotos = this.container.querySelector<HTMLElement>('[data-ref="dropzone-photos"]');
     this.btnTriggerUploadPhoto = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-upload-photo"]');
     this.fileInputPhoto = this.container.querySelector<HTMLInputElement>('[data-ref="file-input-photo"]');
 
+    this.emptyStateElements = this.container.querySelector<HTMLElement>('[data-ref="empty-state-elements"]');
+    this.btnEmptyElements = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-elements"]');
     this.gridElements = this.container.querySelector<HTMLElement>('[data-ref="grid-elements"]');
-    this.dropzoneElements = this.container.querySelector<HTMLElement>('[data-ref="dropzone-elements"]');
     this.btnTriggerUploadElement = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-upload-element"]');
     this.fileInputElement = this.container.querySelector<HTMLInputElement>('[data-ref="file-input-element"]');
 
+    this.emptyStateIcons = this.container.querySelector<HTMLElement>('[data-ref="empty-state-icons"]');
+    this.btnEmptyIcons = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-icons"]');
+    this.gridIcons = this.container.querySelector<HTMLElement>('[data-ref="grid-icons"]');
+    this.btnTriggerUploadIcon = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-upload-icon"]');
+    this.fileInputIcon = this.container.querySelector<HTMLInputElement>('[data-ref="file-input-icon"]');
+
+    this.emptyStateCharts = this.container.querySelector<HTMLElement>('[data-ref="empty-state-charts"]');
+    this.btnEmptyCharts = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-charts"]');
     this.gridCharts = this.container.querySelector<HTMLElement>('[data-ref="grid-charts"]');
     this.btnTriggerAddChart = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-add-chart"]');
-
-    this.gridTemplates = this.container.querySelector<HTMLElement>('[data-ref="grid-templates"]');
-    this.btnTriggerAddTemplate = this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-add-template"]');
-
-    this.textareaBrandVoice = this.container.querySelector<HTMLTextAreaElement>('[data-ref="textarea-brand-voice"]');
-    this.btnSaveVoice = this.container.querySelector<HTMLElement>('[data-ref="btn-save-voice"]');
 
     this.modalKitBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-kit-backdrop"]');
     this.formKit = this.container.querySelector<HTMLFormElement>('[data-ref="form-kit"]');
@@ -245,6 +292,15 @@ export class BrandController {
     this.btnCancelTemplate = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-template"]');
     this.btnSubmitTemplate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-template"]');
     this.bannerTemplateError = this.container.querySelector<HTMLElement>('[data-ref="banner-template-error"]');
+
+    this.modalGuidelinesBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-guidelines-backdrop"]');
+    this.formGuidelines = this.container.querySelector<HTMLFormElement>('[data-ref="form-guidelines"]');
+    this.inputGuidelinesMission = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-guidelines-mission"]');
+    this.inputGuidelinesValues = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-guidelines-values"]');
+    this.inputGuidelinesRules = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-guidelines-rules"]');
+    this.btnCancelGuidelines = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-guidelines"]');
+    this.btnSubmitGuidelines = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-guidelines"]');
+    this.bannerGuidelinesError = this.container.querySelector<HTMLElement>('[data-ref="banner-guidelines-error"]');
   }
 
   private bindEvents(): void {
@@ -252,8 +308,6 @@ export class BrandController {
 
     this.btnLockedUpgrade?.addEventListener('click', () => openUpgradeModal('business'), { signal });
     this.btnLockedHome?.addEventListener('click', () => navigate('/'), { signal });
-    this.btnBannerUpgrade?.addEventListener('click', () => openUpgradeModal('business'), { signal });
-    this.btnBannerSecondary?.addEventListener('click', () => this.switchToTab('colors'), { signal });
 
     if (this.btnTriggerKitPicker && this.kitPickerDropdownBackdrop) {
       this.kitPickerDropdownController = setupDropdown(this.btnTriggerKitPicker.parentElement, {
@@ -353,8 +407,26 @@ export class BrandController {
       }, { signal });
     });
 
+    this.btnTriggerEditGuidelines?.addEventListener('click', () => this.openGuidelinesModal(), { signal });
+    this.btnEmptyGuidelines?.addEventListener('click', () => this.openGuidelinesModal(), { signal });
+    this.btnCancelGuidelines?.addEventListener('click', () => this.closeGuidelinesModal(), { signal });
+    this.container.querySelector('[data-ref="btn-close-guidelines-modal"]')?.addEventListener('click', () => this.closeGuidelinesModal(), { signal });
+    this.formGuidelines?.addEventListener('submit', (e) => this.handleGuidelinesSubmit(e), { signal });
+
+    this.btnEmptyTemplates?.addEventListener('click', () => this.openTemplateModal(), { signal });
+    this.btnEmptyLogos?.addEventListener('click', () => this.fileInputLogo?.click(), { signal });
+    this.btnEmptyColors?.addEventListener('click', () => this.openColorModal(), { signal });
+    this.btnEmptyVoice?.addEventListener('click', () => {
+      this.emptyStateVoice?.classList.add('is-hidden');
+      this.boxBrandVoice?.classList.remove('is-hidden');
+      this.textareaBrandVoice?.focus();
+    }, { signal });
+    this.btnEmptyPhotos?.addEventListener('click', () => this.fileInputPhoto?.click(), { signal });
+    this.btnEmptyElements?.addEventListener('click', () => this.fileInputElement?.click(), { signal });
+    this.btnEmptyIcons?.addEventListener('click', () => this.fileInputIcon?.click(), { signal });
+    this.btnEmptyCharts?.addEventListener('click', () => this.handleAddChartPreset(), { signal });
+
     this.btnTriggerUploadLogo?.addEventListener('click', () => this.fileInputLogo?.click(), { signal });
-    this.dropzoneLogos?.addEventListener('click', () => this.fileInputLogo?.click(), { signal });
     this.fileInputLogo?.addEventListener('change', () => {
       if (this.fileInputLogo?.files && this.fileInputLogo.files[0] && this.activeKit) {
         void this.handleUploadAsset(this.fileInputLogo.files[0], 'logo');
@@ -363,7 +435,6 @@ export class BrandController {
     }, { signal });
 
     this.btnTriggerUploadPhoto?.addEventListener('click', () => this.fileInputPhoto?.click(), { signal });
-    this.dropzonePhotos?.addEventListener('click', () => this.fileInputPhoto?.click(), { signal });
     this.fileInputPhoto?.addEventListener('change', () => {
       if (this.fileInputPhoto?.files && this.fileInputPhoto.files[0] && this.activeKit) {
         void this.handleUploadAsset(this.fileInputPhoto.files[0], 'photo');
@@ -372,11 +443,18 @@ export class BrandController {
     }, { signal });
 
     this.btnTriggerUploadElement?.addEventListener('click', () => this.fileInputElement?.click(), { signal });
-    this.dropzoneElements?.addEventListener('click', () => this.fileInputElement?.click(), { signal });
     this.fileInputElement?.addEventListener('change', () => {
       if (this.fileInputElement?.files && this.fileInputElement.files[0] && this.activeKit) {
         void this.handleUploadAsset(this.fileInputElement.files[0], 'element');
         this.fileInputElement.value = '';
+      }
+    }, { signal });
+
+    this.btnTriggerUploadIcon?.addEventListener('click', () => this.fileInputIcon?.click(), { signal });
+    this.fileInputIcon?.addEventListener('change', () => {
+      if (this.fileInputIcon?.files && this.fileInputIcon.files[0] && this.activeKit) {
+        void this.handleUploadAsset(this.fileInputIcon.files[0], 'icon');
+        this.fileInputIcon.value = '';
       }
     }, { signal });
 
@@ -391,6 +469,9 @@ export class BrandController {
     this.btnTriggerAddColor?.addEventListener('click', () => this.openColorModal(), { signal });
     this.btnTriggerAddChart?.addEventListener('click', () => this.handleAddChartPreset(), { signal });
     this.btnTriggerAddTemplate?.addEventListener('click', () => this.openTemplateModal(), { signal });
+    this.btnPublishRecentTemplate?.addEventListener('click', () => {
+      void this.handlePublishRecentTemplate();
+    }, { signal });
 
     this.btnSaveFonts?.addEventListener('click', () => this.handleSaveFonts(), { signal });
     this.btnSaveVoice?.addEventListener('click', () => this.handleSaveVoice(), { signal });
@@ -508,8 +589,11 @@ export class BrandController {
     const q = this.searchInput?.value.trim().toLowerCase() || '';
 
     switch (this.activeTab) {
-      case 'all':
-        this.renderAllTab();
+      case 'guidelines':
+        this.renderGuidelinesTab();
+        break;
+      case 'templates':
+        void this.renderTemplatesTab(q);
         break;
       case 'logos':
         this.renderLogosTab(q);
@@ -520,67 +604,22 @@ export class BrandController {
       case 'fonts':
         this.renderFontsTab();
         break;
+      case 'voice':
+        this.renderVoiceTab();
+        break;
       case 'photos':
         this.renderPhotosTab(q);
         break;
       case 'elements':
         this.renderElementsTab(q);
         break;
+      case 'icons':
+        this.renderIconsTab(q);
+        break;
       case 'charts':
         this.renderChartsTab(q);
         break;
-      case 'templates':
-        this.renderTemplatesTab(q);
-        break;
-      case 'voice':
-        this.renderVoiceTab();
-        break;
     }
-  }
-
-  private renderAllTab(): void {
-    if (!this.activeKit) return;
-
-    const hasBrandSubscription = Boolean(currentUser && hasFeature('brand_kits', currentUser));
-    if (this.bannerOverview) {
-      this.bannerOverview.style.display = hasBrandSubscription ? 'none' : 'flex';
-    }
-
-    if (this.bannerArtTag) {
-      this.bannerArtTag.textContent = this.activeKit.name || 'Kit';
-    }
-
-    if (this.bannerArtPalette) {
-      const colors = this.activeKit.colors.length > 0
-        ? this.activeKit.colors.slice(0, 4).map((c) => c.hex)
-        : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'];
-      while (colors.length < 4) colors.push('#2563eb');
-      this.bannerArtPalette.innerHTML = colors.map((hex) => `<span class="brand-banner-hero__art-palette-dot" style="background-color: ${escapeHtml(hex)};"></span>`).join('');
-    }
-
-    if (this.previewOverviewColors) {
-      const colors = this.activeKit.colors.length > 0
-        ? this.activeKit.colors.slice(0, 5).map((c) => c.hex)
-        : ['#2563eb', '#3b82f6', '#60a5fa', '#10b981'];
-      this.previewOverviewColors.innerHTML = `
-        <div style="display: flex; gap: 4px; width: 80%; height: 28px; border-radius: 6px; overflow: hidden;">
-          ${colors.map((hex) => `<div style="flex: 1; background-color: ${escapeHtml(hex)};"></div>`).join('')}
-        </div>
-      `;
-    }
-
-    const setOverviewCounter = (ref: string, val: number) => {
-      const el = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
-      if (el) el.textContent = String(val);
-    };
-
-    setOverviewCounter('overview-count-templates', this.activeKit.templates.length);
-    setOverviewCounter('overview-count-logos', this.activeKit.logos.length);
-    setOverviewCounter('overview-count-colors', this.activeKit.colors.length);
-    setOverviewCounter('overview-count-fonts', this.activeKit.fonts.length + (this.activeKit.custom_fonts?.length || 0));
-    setOverviewCounter('overview-count-photos', this.activeKit.photos.length);
-    setOverviewCounter('overview-count-elements', this.activeKit.elements.length);
-    setOverviewCounter('overview-count-charts', this.activeKit.charts.length);
   }
 
   private updateTabCounters(): void {
@@ -589,13 +628,109 @@ export class BrandController {
       const el = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
       if (el) el.textContent = String(val);
     };
+    setCounter('count-templates', this.activeKit.templates.length);
     setCounter('count-logos', this.activeKit.logos.length);
     setCounter('count-colors', this.activeKit.colors.length);
     setCounter('count-fonts', this.activeKit.fonts.length + (this.activeKit.custom_fonts?.length || 0));
     setCounter('count-photos', this.activeKit.photos.length);
     setCounter('count-elements', this.activeKit.elements.length);
+    setCounter('count-icons', this.activeKit.icons?.length || 0);
     setCounter('count-charts', this.activeKit.charts.length);
-    setCounter('count-templates', this.activeKit.templates.length);
+  }
+
+  private renderGuidelinesTab(): void {
+    if (!this.activeKit) return;
+    const gl = this.activeKit.brand_guidelines || {};
+    const hasMission = Boolean(gl.mission && gl.mission.trim());
+    const hasValues = Boolean(gl.values && gl.values.trim());
+    const hasRules = Boolean(gl.rules && gl.rules.trim());
+    const hasContent = hasMission || hasValues || hasRules;
+
+    if (!hasContent) {
+      this.emptyStateGuidelines?.classList.remove('is-hidden');
+      this.containerGuidelines?.classList.add('is-hidden');
+      if (this.containerGuidelines) this.containerGuidelines.innerHTML = '';
+      return;
+    }
+
+    this.emptyStateGuidelines?.classList.add('is-hidden');
+    this.containerGuidelines?.classList.remove('is-hidden');
+
+    if (!this.containerGuidelines) return;
+
+    this.containerGuidelines.innerHTML = `
+      ${hasMission ? `
+        <div class="brand-guidelines-card" data-ref="card-guidelines-mission">
+          <div class="brand-guidelines-card__header">
+            <svg class="component-icon brand-guidelines-card__icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+            <h3 class="brand-guidelines-card__title">Misión de la marca</h3>
+          </div>
+          <p class="brand-guidelines-card__text">${escapeHtml(gl.mission)}</p>
+        </div>
+      ` : ''}
+      ${hasValues ? `
+        <div class="brand-guidelines-card" data-ref="card-guidelines-values">
+          <div class="brand-guidelines-card__header">
+            <svg class="component-icon brand-guidelines-card__icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+            <h3 class="brand-guidelines-card__title">Valores fundamentales</h3>
+          </div>
+          <p class="brand-guidelines-card__text">${escapeHtml(gl.values)}</p>
+        </div>
+      ` : ''}
+      ${hasRules ? `
+        <div class="brand-guidelines-card" data-ref="card-guidelines-rules">
+          <div class="brand-guidelines-card__header">
+            <svg class="component-icon brand-guidelines-card__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <h3 class="brand-guidelines-card__title">Reglas de uso y directrices</h3>
+          </div>
+          <p class="brand-guidelines-card__text">${escapeHtml(gl.rules)}</p>
+        </div>
+      ` : ''}
+    `;
+    renderIcons(this.containerGuidelines);
+  }
+
+  private openGuidelinesModal(): void {
+    if (!this.modalGuidelinesBackdrop || !this.formGuidelines) return;
+    const gl = this.activeKit?.brand_guidelines || {};
+    if (this.inputGuidelinesMission) this.inputGuidelinesMission.value = gl.mission || '';
+    if (this.inputGuidelinesValues) this.inputGuidelinesValues.value = gl.values || '';
+    if (this.inputGuidelinesRules) this.inputGuidelinesRules.value = gl.rules || '';
+
+    if (this.bannerGuidelinesError) {
+      this.bannerGuidelinesError.classList.add('is-hidden');
+      this.bannerGuidelinesError.textContent = '';
+    }
+
+    this.modalGuidelinesBackdrop.classList.add('is-active');
+    setTimeout(() => this.inputGuidelinesMission?.focus(), 50);
+  }
+
+  private closeGuidelinesModal(): void {
+    this.modalGuidelinesBackdrop?.classList.remove('is-active');
+  }
+
+  private async handleGuidelinesSubmit(e: Event): Promise<void> {
+    e.preventDefault();
+    if (!this.activeKit || !this.btnSubmitGuidelines) return;
+
+    const mission = this.inputGuidelinesMission?.value.trim() || '';
+    const values = this.inputGuidelinesValues?.value.trim() || '';
+    const rules = this.inputGuidelinesRules?.value.trim() || '';
+
+    await withButtonLoading(this.btnSubmitGuidelines, 'Guardando...', async () => {
+      const res = await updateBrandKitApi(this.activeKit!.uuid, {
+        brand_guidelines: { mission, rules, values },
+      });
+      if (res.success && res.kit) {
+        this.activeKit = res.kit;
+        showToast('Pautas de la marca guardadas correctamente', 'success');
+        this.closeGuidelinesModal();
+        this.renderGuidelinesTab();
+      } else {
+        this.showBannerError(this.bannerGuidelinesError, res.error || 'Error al guardar pautas.');
+      }
+    });
   }
 
   private renderLogosTab(query = ''): void {
@@ -605,19 +740,14 @@ export class BrandController {
       : this.activeKit.logos;
 
     if (filtered.length === 0) {
-      if (this.dropzoneLogos) this.dropzoneLogos.style.display = 'none';
+      this.gridLogos.classList.add('is-hidden');
       this.gridLogos.innerHTML = '';
-      renderEmptyState({
-        container: this.gridLogos,
-        desc: t('brand.empty_logos_desc') || 'No hay logotipos subidos en este kit de marca. Sube tu logotipo con el botón superior.',
-        graphicType: 'gallery',
-        title: t('brand.empty_logos_title') || 'Sin logotipos',
-      });
+      this.emptyStateLogos?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.gridLogos);
-    if (this.dropzoneLogos) this.dropzoneLogos.style.display = 'flex';
+    this.emptyStateLogos?.classList.add('is-hidden');
+    this.gridLogos.classList.remove('is-hidden');
     this.gridLogos.innerHTML = filtered.map((logo) => `
       <div class="brand-card" data-ref="card-logo-${logo.uuid}">
         <div class="brand-card__preview brand-card__preview--checkerboard">
@@ -651,17 +781,14 @@ export class BrandController {
     }
 
     if (palettesMap.size === 0) {
+      this.palettesContainer.classList.add('is-hidden');
       this.palettesContainer.innerHTML = '';
-      renderEmptyState({
-        container: this.palettesContainer,
-        desc: t('brand.empty_colors_desc') || 'Define los colores de tu marca para aplicarlos al instante a tus diseños.',
-        graphicType: 'canvas',
-        title: t('brand.empty_colors_title') || 'Sin colores ni paletas',
-      });
+      this.emptyStateColors?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.palettesContainer);
+    this.emptyStateColors?.classList.add('is-hidden');
+    this.palettesContainer.classList.remove('is-hidden');
     let html = '';
     for (const [pName, colors] of palettesMap.entries()) {
       html += `
@@ -725,8 +852,11 @@ export class BrandController {
 
       if (customFonts.length === 0) {
         this.sectionCustomFonts.classList.add('is-hidden');
+        this.containerCustomFonts.classList.add('is-hidden');
+        this.containerCustomFonts.innerHTML = '';
       } else {
         this.sectionCustomFonts.classList.remove('is-hidden');
+        this.containerCustomFonts.classList.remove('is-hidden');
         this.containerCustomFonts.innerHTML = customFonts.map((cf) => {
           const ext = (cf.file_path.split('.').pop() || 'FONT').toUpperCase();
           return `
@@ -975,19 +1105,14 @@ export class BrandController {
       : this.activeKit.photos;
 
     if (filtered.length === 0) {
-      if (this.dropzonePhotos) this.dropzonePhotos.style.display = 'none';
+      this.gridPhotos.classList.add('is-hidden');
       this.gridPhotos.innerHTML = '';
-      renderEmptyState({
-        container: this.gridPhotos,
-        desc: t('brand.empty_photos_desc') || 'No hay fotografías guardadas en este kit de marca. Sube fotos con el botón superior.',
-        graphicType: 'snapshots',
-        title: t('brand.empty_photos_title') || 'Sin fotografías',
-      });
+      this.emptyStatePhotos?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.gridPhotos);
-    if (this.dropzonePhotos) this.dropzonePhotos.style.display = 'flex';
+    this.emptyStatePhotos?.classList.add('is-hidden');
+    this.gridPhotos.classList.remove('is-hidden');
     this.gridPhotos.innerHTML = filtered.map((photo) => `
       <div class="brand-card" data-ref="card-photo-${photo.uuid}">
         <div class="brand-card__preview">
@@ -1014,19 +1139,14 @@ export class BrandController {
       : this.activeKit.elements;
 
     if (filtered.length === 0) {
-      if (this.dropzoneElements) this.dropzoneElements.style.display = 'none';
+      this.gridElements.classList.add('is-hidden');
       this.gridElements.innerHTML = '';
-      renderEmptyState({
-        container: this.gridElements,
-        desc: t('brand.empty_elements_desc') || 'No hay iconos o ilustraciones vectoriales en este kit. Sube elementos con el botón superior.',
-        graphicType: 'canvas',
-        title: t('brand.empty_elements_title') || 'Sin elementos gráficos',
-      });
+      this.emptyStateElements?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.gridElements);
-    if (this.dropzoneElements) this.dropzoneElements.style.display = 'flex';
+    this.emptyStateElements?.classList.add('is-hidden');
+    this.gridElements.classList.remove('is-hidden');
     this.gridElements.innerHTML = filtered.map((el) => `
       <div class="brand-card" data-ref="card-element-${el.uuid}">
         <div class="brand-card__preview brand-card__preview--checkerboard">
@@ -1046,6 +1166,41 @@ export class BrandController {
     renderIcons(this.gridElements);
   }
 
+  private renderIconsTab(query = ''): void {
+    if (!this.gridIcons || !this.activeKit) return;
+    const iconsList = this.activeKit.icons || [];
+    const filtered = query
+      ? iconsList.filter((i) => i.name.toLowerCase().includes(query))
+      : iconsList;
+
+    if (filtered.length === 0) {
+      this.gridIcons.classList.add('is-hidden');
+      this.gridIcons.innerHTML = '';
+      this.emptyStateIcons?.classList.remove('is-hidden');
+      return;
+    }
+
+    this.emptyStateIcons?.classList.add('is-hidden');
+    this.gridIcons.classList.remove('is-hidden');
+    this.gridIcons.innerHTML = filtered.map((icon) => `
+      <div class="brand-card" data-ref="card-icon-${icon.uuid}">
+        <div class="brand-card__preview brand-card__preview--checkerboard">
+          <img class="brand-card__img" src="${escapeHtml(icon.url)}" alt="${escapeHtml(icon.name)}" loading="lazy" />
+          <button type="button" class="brand-card__delete" data-ref="btn-del-asset-${icon.uuid}" data-asset-uuid="${icon.uuid}" data-tooltip="Eliminar icono" aria-label="Eliminar icono">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+        <div class="brand-card__footer">
+          <span class="brand-card__name" title="${escapeHtml(icon.name)}">${escapeHtml(icon.name)}</span>
+          <span class="brand-card__tag">${escapeHtml(icon.category)}</span>
+        </div>
+      </div>
+    `).join('');
+
+    this.bindAssetDeleteButtons(this.gridIcons);
+    renderIcons(this.gridIcons);
+  }
+
   private renderChartsTab(query = ''): void {
     if (!this.gridCharts || !this.activeKit) return;
     const filtered = query
@@ -1053,17 +1208,14 @@ export class BrandController {
       : this.activeKit.charts;
 
     if (filtered.length === 0) {
+      this.gridCharts.classList.add('is-hidden');
       this.gridCharts.innerHTML = '';
-      renderEmptyState({
-        container: this.gridCharts,
-        desc: t('brand.empty_charts_desc') || 'Crea estilos de gráficas personalizados con los colores de tu marca.',
-        graphicType: 'reports',
-        title: t('brand.empty_charts_title') || 'Sin estilos de gráficas',
-      });
+      this.emptyStateCharts?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.gridCharts);
+    this.emptyStateCharts?.classList.add('is-hidden');
+    this.gridCharts.classList.remove('is-hidden');
     this.gridCharts.innerHTML = filtered.map((chart) => {
       const palette = chart.palette || ['#6366f1', '#8b5cf6', '#ec4899', '#3b82f6'];
       return `
@@ -1107,24 +1259,24 @@ export class BrandController {
     renderIcons(this.gridCharts);
   }
 
-  private renderTemplatesTab(query = ''): void {
+  private async renderTemplatesTab(query = ''): Promise<void> {
     if (!this.gridTemplates || !this.activeKit) return;
+
+    await this.renderRecentCanvasesForTemplates();
+
     const filtered = query
       ? this.activeKit.templates.filter((t) => t.name.toLowerCase().includes(query))
       : this.activeKit.templates;
 
     if (filtered.length === 0) {
+      this.gridTemplates.classList.add('is-hidden');
       this.gridTemplates.innerHTML = '';
-      renderEmptyState({
-        container: this.gridTemplates,
-        desc: t('brand.empty_templates_desc') || 'Vincula lienzos existentes como plantillas oficiales de marca.',
-        graphicType: 'templates',
-        title: t('brand.empty_templates_title') || 'Sin plantillas de marca',
-      });
+      this.emptyStateTemplates?.classList.remove('is-hidden');
       return;
     }
 
-    removeEmptyState(this.gridTemplates);
+    this.emptyStateTemplates?.classList.add('is-hidden');
+    this.gridTemplates.classList.remove('is-hidden');
     this.gridTemplates.innerHTML = filtered.map((tpl) => `
       <div class="brand-card" data-ref="card-template-${tpl.uuid}">
         <div class="brand-card__preview">
@@ -1135,12 +1287,34 @@ export class BrandController {
         </div>
         <div class="brand-card__footer">
           <span class="brand-card__name" title="${escapeHtml(tpl.name)}">${escapeHtml(tpl.name)}</span>
-          <button type="button" class="component-button component-button--h32 component-button--primary" data-ref="btn-use-tpl-${tpl.uuid}" data-tpl-canvas-id="${tpl.canvas_id || ''}">
+          <button type="button" class="component-button component-button--h32 component-button--primary" data-ref="btn-use-tpl-${tpl.uuid}" data-use-tpl-uuid="${tpl.uuid}" data-use-canvas-uuid="${tpl.canvas_uuid || ''}">
             <span>Usar</span>
           </button>
         </div>
       </div>
     `).join('');
+
+    this.gridTemplates.querySelectorAll<HTMLButtonElement>('[data-use-tpl-uuid]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const canvasUuid = btn.getAttribute('data-use-canvas-uuid');
+        if (canvasUuid) {
+          showToast('Creando diseño a partir de la plantilla...', 'info');
+          try {
+            const res = await postApi(API_ROUTES.canvases.duplicate(canvasUuid));
+            if (res.ok) {
+              const data = await res.json();
+              if (data.canvas?.uuid) {
+                const targetType = data.canvas.canvas_type || 'board';
+                navigate(`/${targetType}/${data.canvas.uuid}`);
+                return;
+              }
+            }
+          } catch {}
+        }
+        showToast('Abriendo plantilla...', 'info');
+      });
+    });
 
     this.gridTemplates.querySelectorAll<HTMLButtonElement>('[data-template-uuid]').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
@@ -1152,7 +1326,7 @@ export class BrandController {
         if (res.success) {
           showToast('Plantilla desvinculada', 'success');
           this.activeKit.templates = this.activeKit.templates.filter((t) => t.uuid !== tplUuid);
-          this.renderTemplatesTab(this.searchInput?.value || '');
+          void this.renderTemplatesTab(this.searchInput?.value || '');
           this.updateTabCounters();
         }
       });
@@ -1161,9 +1335,141 @@ export class BrandController {
     renderIcons(this.gridTemplates);
   }
 
+  private async renderRecentCanvasesForTemplates(): Promise<void> {
+    if (!this.brandRecentGrid) return;
+
+    if (this.recentCanvasesList.length === 0) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.base);
+        if (res.ok) {
+          const data = await res.json();
+          const canvases = data.canvases || [];
+          this.recentCanvasesList = canvases.filter((c: any) => {
+            const type = String(c.canvas_type || 'board').toLowerCase();
+            if (type === 'video' || type === 'sheet' || type === 'sheets') return false;
+            if (Array.isArray(c.page_types) && c.page_types.some((pt: string) => String(pt).toLowerCase().includes('sheet'))) return false;
+            return true;
+          }).slice(0, 4);
+        }
+      } catch {}
+    }
+
+    if (this.recentCanvasesList.length === 0) {
+      this.brandRecentBox?.classList.add('is-hidden');
+      if (this.btnPublishRecentTemplate) {
+        this.btnPublishRecentTemplate.disabled = true;
+      }
+      return;
+    }
+
+    this.brandRecentBox?.classList.remove('is-hidden');
+
+    const getMeta = (c: any): { color: string; icon: string; label: string } => {
+      const type = String(c.canvas_type || 'board').toLowerCase();
+      if (type === 'board') return { color: '#10b981', icon: 'space_dashboard', label: 'Pizarrón' };
+      if (type === 'doc') return { color: '#8b5cf6', icon: 'description', label: 'A4' };
+      if (type === 'presentation') return { color: '#f59e0b', icon: 'slideshow', label: 'Presentación' };
+      if (c.width && c.height) {
+        return { color: '#6366f1', icon: 'crop_free', label: `${c.width} × ${c.height} ${c.unit || 'px'}` };
+      }
+      return { color: '#3b82f6', icon: 'space_dashboard', label: 'Diseño' };
+    };
+
+    this.brandRecentGrid.innerHTML = this.recentCanvasesList.map((c) => {
+      const isSelected = this.selectedRecentCanvas?.uuid === c.uuid;
+      const meta = getMeta(c);
+      const previewHtml = c.preview_thumbnail
+        ? `<img class="brand-recent-card__img" src="${escapeHtml(c.preview_thumbnail)}" alt="${escapeHtml(c.name)}" loading="lazy" />`
+        : `<svg class="component-icon" style="font-size: 38px; color: ${meta.color};" aria-hidden="true"><use href="/icons.svg#${meta.icon}"></use></svg>`;
+
+      return `
+        <div class="brand-recent-card ${isSelected ? 'is-selected' : ''}" data-ref="card-recent-${c.uuid}" data-canvas-uuid="${escapeHtml(c.uuid)}" data-canvas-name="${escapeHtml(c.name)}">
+          <div class="brand-recent-card__check" aria-hidden="true">
+            <svg class="component-icon" style="font-size: 14px;" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </div>
+          <div class="brand-recent-card__preview">
+            ${previewHtml}
+          </div>
+          <div class="brand-recent-card__footer">
+            <span class="brand-recent-card__name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
+            <div class="brand-recent-card__meta">
+              <svg class="component-icon brand-recent-card__icon" style="color: ${meta.color};" aria-hidden="true"><use href="/icons.svg#${meta.icon}"></use></svg>
+              <span>${escapeHtml(meta.label)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.brandRecentGrid.querySelectorAll<HTMLElement>('[data-canvas-uuid]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const uuid = card.getAttribute('data-canvas-uuid');
+        const name = card.getAttribute('data-canvas-name');
+        if (!uuid || !name) return;
+
+        if (this.selectedRecentCanvas?.uuid === uuid) {
+          this.selectedRecentCanvas = null;
+        } else {
+          this.selectedRecentCanvas = { name, uuid };
+        }
+
+        this.brandRecentGrid?.querySelectorAll('.brand-recent-card').forEach((el) => {
+          const elUuid = el.getAttribute('data-canvas-uuid');
+          if (elUuid === this.selectedRecentCanvas?.uuid) {
+            el.classList.add('is-selected');
+          } else {
+            el.classList.remove('is-selected');
+          }
+        });
+
+        if (this.btnPublishRecentTemplate) {
+          this.btnPublishRecentTemplate.disabled = !this.selectedRecentCanvas;
+        }
+      });
+    });
+
+    renderIcons(this.brandRecentGrid);
+  }
+
+  private async handlePublishRecentTemplate(): Promise<void> {
+    if (!this.activeKit || !this.selectedRecentCanvas || !this.btnPublishRecentTemplate) return;
+
+    const { name, uuid } = this.selectedRecentCanvas;
+    await withButtonLoading(this.btnPublishRecentTemplate, 'Publicando...', async () => {
+      const res = await addBrandTemplateApi(this.activeKit!.uuid, {
+        canvas_uuid: uuid,
+        name,
+      });
+
+      if (res.success && res.template) {
+        showToast('Plantilla publicada en el Kit de Marca con éxito', 'success');
+        this.activeKit!.templates.unshift(res.template);
+        this.selectedRecentCanvas = null;
+        if (this.btnPublishRecentTemplate) {
+          this.btnPublishRecentTemplate.disabled = true;
+        }
+        await this.renderTemplatesTab(this.searchInput?.value || '');
+        this.updateTabCounters();
+      } else {
+        showToast(res.error || 'No se pudo publicar la plantilla.', 'danger');
+      }
+    });
+  }
+
   private renderVoiceTab(): void {
-    if (!this.textareaBrandVoice || !this.activeKit) return;
-    this.textareaBrandVoice.value = this.activeKit.brand_voice || '';
+    if (!this.activeKit) return;
+    const voiceText = this.activeKit.brand_voice?.trim() || '';
+    if (this.textareaBrandVoice) {
+      this.textareaBrandVoice.value = voiceText;
+    }
+
+    if (!voiceText) {
+      this.emptyStateVoice?.classList.remove('is-hidden');
+      this.boxBrandVoice?.classList.add('is-hidden');
+    } else {
+      this.emptyStateVoice?.classList.add('is-hidden');
+      this.boxBrandVoice?.classList.remove('is-hidden');
+    }
   }
 
   private bindAssetDeleteButtons(parentEl: HTMLElement): void {
@@ -1179,6 +1485,7 @@ export class BrandController {
           this.activeKit.logos = this.activeKit.logos.filter((a) => a.uuid !== assetUuid);
           this.activeKit.photos = this.activeKit.photos.filter((a) => a.uuid !== assetUuid);
           this.activeKit.elements = this.activeKit.elements.filter((a) => a.uuid !== assetUuid);
+          this.activeKit.icons = (this.activeKit.icons || []).filter((a) => a.uuid !== assetUuid);
           this.renderActiveTabContent();
         }
       });
@@ -1193,7 +1500,12 @@ export class BrandController {
       showToast('Recurso añadido al kit de marca', 'success');
       if (assetType === 'logo') this.activeKit.logos.unshift(res.asset);
       else if (assetType === 'photo') this.activeKit.photos.unshift(res.asset);
-      else this.activeKit.elements.unshift(res.asset);
+      else if (assetType === 'icon') {
+        if (!this.activeKit.icons) this.activeKit.icons = [];
+        this.activeKit.icons.unshift(res.asset);
+      } else {
+        this.activeKit.elements.unshift(res.asset);
+      }
       this.renderActiveTabContent();
     } else {
       showToast(res.error || 'No se pudo subir el archivo.', 'danger');

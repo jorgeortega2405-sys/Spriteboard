@@ -7,14 +7,14 @@
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; width: 100%;">
             <button type="button" class="component-button component-button--h34" data-ref="btn-back-hr">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-              <span>Volver a Recursos Humanos</span>
+              <span data-i18n="admin.hr_manage.back_hr" data-i18n="admin.hr_manage.back_hr">Volver a Recursos Humanos</span>
             </button>
           </div>
           <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
             <h1 class="settings-title" data-ref="emp-name">-</h1>
-            <span class="component-badge" data-ref="emp-status-badge">Activo</span>
+            <span class="component-badge" data-ref="emp-status-badge" data-i18n="admin.hr_manage.status_active" data-i18n="admin.hr_manage.status_active">Activo</span>
           </div>
-          <p class="settings-subtitle" data-ref="emp-subtitle">Expediente laboral, ficha contractual, compensación y bóveda de documentos oficiales.</p>
+          <p class="settings-subtitle" data-ref="emp-subtitle" data-i18n="admin.hr_manage.subtitle">Expediente laboral, ficha contractual, compensación y bóveda de documentos oficiales.</p>
         </div>
 
         <!-- Grupo 1: Ficha y Datos Personales -->
@@ -36,7 +36,7 @@
           <div class="settings-item" data-ref="item-document-id">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Documento de Identidad (DNI / RFC / Pasaporte)</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.identity_doc">Documento de Identidad (DNI / RFC / Pasaporte)</h2>
                 <span class="settings-item__value" data-ref="emp-doc-id">-</span>
               </div>
             </div>
@@ -47,7 +47,7 @@
           <div class="settings-item" data-ref="item-personal-email">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Correo electrónico personal</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.personal_email">Correo electrónico personal</h2>
                 <span class="settings-item__value" data-ref="emp-personal-email">-</span>
               </div>
             </div>
@@ -58,7 +58,7 @@
           <div class="settings-item" data-ref="item-phone">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Teléfono personal de contacto</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.personal_phone">Teléfono personal de contacto</h2>
                 <span class="settings-item__value" data-ref="emp-phone">-</span>
               </div>
             </div>
@@ -69,7 +69,7 @@
           <div class="settings-item" data-ref="item-emergency-contact">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Contacto de emergencia</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.emergency_contact">Contacto de emergencia</h2>
                 <span class="settings-item__value" data-ref="emp-emergency">-</span>
               </div>
             </div>
@@ -81,7 +81,7 @@
           <div class="settings-item" data-ref="item-department-role">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Departamento y Cargo</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.department_position">Departamento y Cargo</h2>
                 <span class="settings-item__value" data-ref="emp-job-dept">-</span>
               </div>
             </div>
@@ -92,12 +92,12 @@
           <div class="settings-item" data-ref="item-manager">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Responsable Directo / Manager</h2>
-                <span class="settings-item__value" data-ref="emp-manager-name">Sin manager asignado</span>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.direct_manager">Responsable Directo / Manager</h2>
+                <span class="settings-item__value" data-ref="emp-manager-name" data-i18n="admin.hr_manage.no_manager" data-i18n="admin.hr_manage.no_manager">Sin manager asignado</span>
               </div>
             </div>
             <div class="settings-item__actions" data-ref="item-manager-actions" style="display: none;">
-              <button type="button" class="component-button component-button--h34" data-ref="btn-view-manager">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-view-manager" data-i18n="admin.hr_manage.view_manager_dossier">
                 Ver expediente del manager
               </button>
             </div>
@@ -108,7 +108,7 @@
           <div class="settings-item" data-ref="item-contract-mode">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Tipo de Contrato y Modalidad</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.contract_type">Tipo de Contrato y Modalidad</h2>
                 <span class="settings-item__value" data-ref="emp-contract-workmode">-</span>
               </div>
             </div>
@@ -119,7 +119,7 @@
           <div class="settings-item" data-ref="item-hire-date">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Fecha de Ingreso</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.join_date">Fecha de Ingreso</h2>
                 <span class="settings-item__value" data-ref="emp-hire-date">-</span>
               </div>
             </div>
@@ -130,7 +130,7 @@
           <div class="settings-item" data-ref="item-salary">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Compensación / Salario pactado</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.compensation">Compensación / Salario pactado</h2>
                 <span class="settings-item__value" data-ref="emp-salary">-</span>
               </div>
             </div>
@@ -141,9 +141,9 @@
           <div class="settings-item" data-ref="item-platform-account">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Cuenta y Rol en Plataforma</h2>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.platform_role">Cuenta y Rol en Plataforma</h2>
                 <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                  <span class="component-badge component-badge--neutral" data-ref="emp-platform-role">USER</span>
+                  <span class="component-badge component-badge--neutral" data-ref="emp-platform-role" data-no-i18n>USER</span>
                   <span class="settings-item__value" data-ref="emp-work-email">-</span>
                 </div>
               </div>
@@ -156,14 +156,14 @@
           <div class="settings-item" data-ref="item-career-header">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Historial de Carrera y Revisiones Salariales</h2>
-                <p class="settings-item__desc">Registro cronológico de contrataciones, promociones, ascensos de puesto y ajustes salariales.</p>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.career_history_title">Historial de Carrera y Revisiones Salariales</h2>
+                <p class="settings-item__desc" data-i18n="admin.hr_manage.career_history_desc">Registro cronológico de contrataciones, promociones, ascensos de puesto y ajustes salariales.</p>
               </div>
             </div>
             <div class="settings-item__actions">
               <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-open-promote-modal">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#trending_up"></use></svg>
-                <span>Ajustar Puesto / Salario</span>
+                <span data-i18n="admin.hr_manage.adjust_salary" data-i18n="admin.hr_manage.adjust_salary">Ajustar Puesto / Salario</span>
               </button>
             </div>
           </div>
@@ -181,14 +181,14 @@
           <div class="settings-item" data-ref="item-pto-header">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Saldo de Vacaciones y Ausencias</h2>
-                <p class="settings-item__desc">Días disponibles, utilizados y solicitudes activas para el período actual.</p>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.vacation_balance_title">Saldo de Vacaciones y Ausencias</h2>
+                <p class="settings-item__desc" data-i18n="admin.hr_manage.vacation_balance_desc">Días disponibles, utilizados y solicitudes activas para el período actual.</p>
               </div>
             </div>
             <div class="settings-item__actions">
               <button type="button" class="component-button component-button--h34" data-ref="btn-open-request-pto">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                <span>Solicitar Ausencia</span>
+                <span data-i18n="admin.hr_manage.request_absence" data-i18n="admin.hr_manage.request_absence">Solicitar Ausencia</span>
               </button>
             </div>
           </div>
@@ -198,15 +198,15 @@
           <div class="settings-item" data-ref="item-pto-stats" style="padding: 16px 24px;">
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%;">
               <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Días Disponibles</div>
+                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;" data-i18n="admin.hr_manage.days_available" data-i18n="admin.hr_manage.days_available">Días Disponibles</div>
                 <div style="font-size: 22px; font-weight: 800; color: #10b981; margin-top: 4px;" data-ref="pto-days-remaining">15</div>
               </div>
               <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Días Utilizados</div>
+                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;" data-i18n="admin.hr_manage.days_used" data-i18n="admin.hr_manage.days_used">Días Utilizados</div>
                 <div style="font-size: 22px; font-weight: 800; color: var(--text-primary); margin-top: 4px;" data-ref="pto-days-used">0</div>
               </div>
               <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Licencias Médicas</div>
+                <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;" data-i18n="admin.hr_manage.medical_leaves" data-i18n="admin.hr_manage.medical_leaves">Licencias Médicas</div>
                 <div style="font-size: 22px; font-weight: 800; color: #3b82f6; margin-top: 4px;" data-ref="pto-sick-days">0</div>
               </div>
             </div>
@@ -218,14 +218,14 @@
           <div class="settings-item" data-ref="item-docs-header">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Documentos y Contratos Laborales</h2>
-                <p class="settings-item__desc">Contratos firmados, acuerdos de confidencialidad (NDA), identificación y expedientes en formato PDF.</p>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.documents_title">Documentos y Contratos Laborales</h2>
+                <p class="settings-item__desc" data-i18n="admin.hr_manage.documents_desc">Contratos firmados, acuerdos de confidencialidad (NDA), identificación y expedientes en formato PDF.</p>
               </div>
             </div>
             <div class="settings-item__actions">
               <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-open-upload-doc">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                <span>Adjuntar Documento</span>
+                <span data-i18n="admin.hr_manage.attach_document" data-i18n="admin.hr_manage.attach_document">Adjuntar Documento</span>
               </button>
             </div>
           </div>
@@ -236,7 +236,7 @@
             <div class="docs-list-wrapper" data-ref="docs-list-wrapper" style="width: 100%;">
               <div class="docs-list" data-ref="docs-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
               </div>
-              <div class="docs-empty" data-ref="docs-empty-state" style="display: none; padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">
+              <div class="docs-empty" data-ref="docs-empty-state" data-i18n="admin.hr_manage.no_documents" style="display: none; padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">
                 No hay documentos adjuntos en el expediente.
               </div>
             </div>
@@ -248,12 +248,12 @@
           <div class="settings-item" data-ref="item-lifecycle-status">
             <div class="settings-item__content">
               <div class="settings-item__text">
-                <h2 class="settings-item__title">Estado laboral del colaborador</h2>
-                <p class="settings-item__desc">Modifica la situación activa del empleado (Activo, Onboarding, Suspendido, Desvinculado).</p>
+                <h2 class="settings-item__title" data-i18n="admin.hr_manage.employment_status_title">Estado laboral del colaborador</h2>
+                <p class="settings-item__desc" data-i18n="admin.hr_manage.employment_status_desc">Modifica la situación activa del empleado (Activo, Onboarding, Suspendido, Desvinculado).</p>
               </div>
             </div>
             <div class="settings-item__actions">
-              <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-status">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-status" data-i18n="admin.hr_manage.change_status_btn">
                 Cambiar Estado
               </button>
             </div>
@@ -267,12 +267,12 @@
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_off"></use></svg>
               </div>
               <div class="settings-item__text">
-                <h2 class="settings-item__title" style="color: var(--action-danger);">Desvinculación definitiva (Offboarding)</h2>
-                <p class="settings-item__desc">Marca al colaborador como desvinculado, revoca de inmediato todas las sesiones activas en la plataforma y genera el registro en la auditoría de seguridad.</p>
+                <h2 class="settings-item__title" style="color: var(--action-danger);" data-i18n="admin.hr_manage.offboarding_title">Desvinculación definitiva (Offboarding)</h2>
+                <p class="settings-item__desc" data-i18n="admin.hr_manage.offboarding_desc">Marca al colaborador como desvinculado, revoca de inmediato todas las sesiones activas en la plataforma y genera el registro en la auditoría de seguridad.</p>
               </div>
             </div>
             <div class="settings-item__actions">
-              <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-open-offboard">
+              <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-open-offboard" data-i18n="admin.hr_manage.offboarding_btn">
                 Desvincular
               </button>
             </div>

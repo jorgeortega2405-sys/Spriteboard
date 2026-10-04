@@ -1,6 +1,7 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { DiagramComponentItem } from '../../config/diagram-components.data.js';
+import { DEFAULT_STICKY_COLOR, DEFAULT_STICKY_TEXT_COLOR } from '../../config/sticky-notes.config.js';
 import { currentUser, patchApi, postApi, uploadFilesApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -662,7 +663,8 @@ export class VideoController {
   public insertStickyPreset(color: string, text: string): void {
     const width = 300;
     const height = 240;
-    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240" width="300" height="240"><defs><filter id="sticky-shadow" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.3)"/></filter></defs><g filter="url(#sticky-shadow)"><path d="M 12 12 H 288 V 196 L 248 236 H 12 Z" fill="${color || '#fef08a'}" rx="8"/><path d="M 248 196 L 288 196 L 248 236 Z" fill="rgba(0,0,0,0.12)"/><path d="M 248 196 L 248 236 L 288 196 Z" fill="rgba(255,255,255,0.3)"/><text x="32" y="64" fill="#1e293b" font-size="22" font-family="Inter, system-ui, sans-serif" font-weight="600">${text || 'Nota'}</text></g></svg>`;
+    const baseColor = color || DEFAULT_STICKY_COLOR;
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240" width="300" height="240"><defs><filter id="sticky-shadow" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.18)"/></filter></defs><g filter="url(#sticky-shadow)"><rect x="12" y="12" width="276" height="216" rx="16" fill="${baseColor}"/><text x="36" y="64" fill="${DEFAULT_STICKY_TEXT_COLOR}" font-size="22" font-family="Inter, system-ui, sans-serif" font-weight="600">${text || 'Nota'}</text></g></svg>`;
     const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
     const playhead = this._project.currentTime || 0;
     const dur = 4;

@@ -28,6 +28,7 @@ export interface UserRecord extends RowDataPacket {
   avatar_url?: string;
   role?: UserRole;
   roles?: UserRole[];
+  permissions?: string[];
   google_id?: string;
   subscription_tier?: SubscriptionTierId;
   two_factor_enabled?: boolean | number;
@@ -58,6 +59,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
   if (rows.length === 0) return null;
   const user = rows[0];
   user.roles = await getUserRoles(user.id);
+  user.permissions = await getUserEffectivePermissions(user.id, user.role, user.roles, user.subscription_tier, 'active');
   return user;
 }
 
@@ -69,6 +71,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
   if (rows.length === 0) return null;
   const user = rows[0];
   user.roles = await getUserRoles(user.id);
+  user.permissions = await getUserEffectivePermissions(user.id, user.role, user.roles, user.subscription_tier, 'active');
   return user;
 }
 
@@ -98,7 +101,10 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
-      return JSON.parse(cached) as UserRecord;
+      const parsed = JSON.parse(cached) as UserRecord;
+      if (Array.isArray(parsed.permissions)) {
+        return parsed;
+      }
     }
   } catch {}
 
@@ -109,6 +115,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   if (rows.length === 0) return null;
   const user = rows[0];
   user.roles = await getUserRoles(user.id);
+  user.permissions = await getUserEffectivePermissions(user.id, user.role, user.roles, user.subscription_tier, 'active');
   try {
     await redis.setex(cacheKey, 300, JSON.stringify(user));
   } catch {}

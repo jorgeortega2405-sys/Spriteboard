@@ -73,11 +73,11 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       storageFormatted: '5 GB',
       trashRetentionDays: 30,
     },
-    name: 'Spriteboard Gratis',
+    name: 'Spriteboard Free',
     priceMonthly: 0,
     priceYearly: 0,
     ringBg: 'rgba(156, 163, 175, 0.1)',
-    tagline: 'Ideal para iniciar en el pixel art y proyectos personales',
+    tagline: 'Ideal for getting started with pixel art and personal projects',
   },
   pro: {
     borderColor: '#3b82f6',
@@ -113,7 +113,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     priceMonthly: 9.99,
     priceYearly: 95.9,
     ringBg: 'rgba(59, 130, 246, 0.15)',
-    tagline: 'Para profesionales y creadores exigentes',
+    tagline: 'For professionals and demanding creators',
   },
   business: {
     borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
@@ -147,11 +147,11 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       storageFormatted: '500 GB',
       trashRetentionDays: 30,
     },
-    name: 'Spriteboard Negocios',
+    name: 'Spriteboard Business',
     priceMonthly: 19.99,
     priceYearly: 191.9,
     ringBg: 'rgba(139, 92, 246, 0.18)',
-    tagline: 'Máxima potencia, colaboración y equipos centralizados',
+    tagline: 'Maximum power, collaboration, and centralized teams',
   },
   enterprise: {
     borderColor: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
@@ -169,7 +169,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
       allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'],
       maxAiStudioSessions: 1000,
-      maxAiTokensFormatted: 'Ilimitado',
+      maxAiTokensFormatted: 'Unlimited',
       maxAiTokensPerCycle: 10000000,
       maxBatchUploadCount: 100,
       maxBrandKits: 9999,
@@ -186,20 +186,20 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       storageFormatted: '5 TB',
       trashRetentionDays: 90,
     },
-    name: 'Spriteboard Empresas',
+    name: 'Spriteboard Enterprise',
     priceMonthly: 0,
     priceYearly: 0,
     ringBg: 'rgba(99, 102, 241, 0.25)',
-    tagline: 'Seguridad corporativa, control de accesos y soluciones a gran escala',
+    tagline: 'Corporate security, access control, and large-scale solutions',
   },
 };
 
 export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: SubscriptionTierId; name: string }> = {
-  teams: { minTier: 'business', name: 'Gestión de equipos' },
-  live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
-  enterprise_sso: { minTier: 'enterprise', name: 'Autenticación empresarial (SSO / SCIM)' },
-  brand_kits: { minTier: 'business', name: 'Kits de marca' },
-  ai_bg_removal: { minTier: 'pro', name: 'Eliminación de fondo con IA' },
+  teams: { minTier: 'business', name: 'Team Management' },
+  live_collaborators_extended: { minTier: 'pro', name: 'Extended Live Collaboration' },
+  enterprise_sso: { minTier: 'enterprise', name: 'Enterprise Authentication (SSO / SCIM)' },
+  brand_kits: { minTier: 'business', name: 'Brand Kits' },
+  ai_bg_removal: { minTier: 'pro', name: 'AI Background Removal' },
 };
 
 export const TIER_RANK: Record<SubscriptionTierId, number> = {

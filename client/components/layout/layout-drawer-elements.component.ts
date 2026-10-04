@@ -2,7 +2,7 @@ import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../../config/diagram-components.data.js';
 import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../../config/mockups.config.js';
-import { STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
+import { createStickyNoteSvg, DEFAULT_STICKY_COLOR, DEFAULT_STICKY_TEXT_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
 import { renderElementCategoryTilesHtml } from '../../graphics/element-category-tiles.graphics.js';
 import { escapeHtml, getApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
@@ -11,30 +11,113 @@ import { showToast } from '../../services/toast.service.js';
 import { ElementItem } from '../../types/element.types.js';
 import { FrameCategory, MockupGeneralCategory, MockupTemplate } from '../../types/mockups.types.js';
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../../utils/pixel-shapes.util.js';
-import { CHART_CATALOG } from '../../views/board/board-charts-panel.component.js';
+import { CHART_GROUPS } from '../../views/board/board-charts-panel.component.js';
 import { ChartType, Shape3DType, ShapeType } from '../../views/board/board.types.js';
-import { openInsertPixelGridModal } from '../insert-pixel-grid-modal.component.js';
-import { getActiveCanvasController, getActiveCanvasType, openChartInspectorInDrawer, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
+import { getActiveCanvasController, getActiveCanvasType, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
 
-let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' = 'root';
+let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid' = 'root';
+let activeShapeSection: string | null = null;
 let activeFramesFilter: FrameCategory | 'all' = 'all';
 let activeMockupsFilter: MockupGeneralCategory | 'all' = 'all';
 
+const BOARD_3D_2D_SVGS: Partial<Record<Shape3DType, string>> = {};
+
+
 interface TablePresetItem {
+  borderColor: string;
+  cellBg: string;
+  cellText: string;
   cols: number;
   description: string;
+  headerBg: string;
+  headerText: string;
   id: string;
   name: string;
+  previewSvg: string;
   rows: number;
 }
 
-const TABLE_PRESETS: TablePresetItem[] = [
-  { cols: 3, description: 'Tabla clásica de 3 filas por 3 columnas', id: 'table_3x3', name: 'Tabla 3 × 3', rows: 3 },
-  { cols: 4, description: 'Tabla mediana de 4 filas por 4 columnas', id: 'table_4x4', name: 'Tabla 4 × 4', rows: 4 },
-  { cols: 3, description: 'Tabla vertical de 5 filas por 3 columnas', id: 'table_5x3', name: 'Tabla 5 × 3', rows: 5 },
-  { cols: 4, description: 'Tabla horizontal de 2 filas por 4 columnas', id: 'table_2x4', name: 'Tabla 2 × 4', rows: 2 },
-  { cols: 6, description: 'Cuadrícula amplia de 6 filas por 6 columnas', id: 'table_6x6', name: 'Tabla 6 × 6', rows: 6 },
+const TABLE_THEMES = [
+  { borderColor: '#52525b', headerBg: '#52525b', id: 'slate', name: 'Gris pizarra', tintBg: '#f4f4f5' },
+  { borderColor: '#ef4444', headerBg: '#ef4444', id: 'red', name: 'Rojo coral', tintBg: '#fee2e2' },
+  { borderColor: '#f59e0b', headerBg: '#f59e0b', id: 'amber', name: 'Ámbar', tintBg: '#fef3c7' },
+  { borderColor: '#3b82f6', headerBg: '#3b82f6', id: 'blue', name: 'Azul', tintBg: '#dbeafe' },
+  { borderColor: '#8b5cf6', headerBg: '#8b5cf6', id: 'purple', name: 'Púrpura', tintBg: '#ede9fe' },
 ];
+
+function buildTablePreviewSvg(theme: typeof TABLE_THEMES[0], style: 'wireframe' | 'header' | 'filled'): string {
+  if (style === 'wireframe') {
+    return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="34" height="42" rx="2" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><line x1="2" y1="12.5" x2="36" y2="12.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="23" x2="36" y2="23" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="33.5" x2="36" y2="33.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="13.3" y1="2" x2="13.3" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="24.6" y1="2" x2="24.6" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
+  }
+  if (style === 'header') {
+    return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="34" height="42" rx="2" fill="#ffffff" stroke="${theme.borderColor}" stroke-width="2" /><path d="M2 4 C2 2.9 2.9 2 4 2 H34 C35.1 2 36 2.9 36 4 V12.5 H2 Z" fill="${theme.headerBg}" /><line x1="2" y1="12.5" x2="36" y2="12.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="23" x2="36" y2="23" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="2" y1="33.5" x2="36" y2="33.5" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="13.3" y1="12.5" x2="13.3" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /><line x1="24.6" y1="12.5" x2="24.6" y2="44" stroke="${theme.borderColor}" stroke-width="1.5" /></svg>`;
+  }
+  return `<svg viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 28px;"><rect x="2" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="14.2" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="26.5" y="2" width="9.5" height="9" rx="1.5" fill="${theme.headerBg}" /><rect x="2" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="13.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="2" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="25" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="2" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="14.2" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /><rect x="26.5" y="36.5" width="9.5" height="9" rx="1.5" fill="${theme.tintBg}" /></svg>`;
+}
+
+const TABLE_PRESETS: TablePresetItem[] = TABLE_THEMES.flatMap((theme) => [
+  {
+    borderColor: theme.borderColor,
+    cellBg: '#ffffff',
+    cellText: '#1e293b',
+    cols: 3,
+    description: `Tabla 3×3 ${theme.name} (Bordes)`,
+    headerBg: '#ffffff',
+    headerText: theme.borderColor,
+    id: `table_${theme.id}_wireframe`,
+    name: `${theme.name} - Bordes`,
+    previewSvg: buildTablePreviewSvg(theme, 'wireframe'),
+    rows: 4,
+  },
+  {
+    borderColor: theme.borderColor,
+    cellBg: '#ffffff',
+    cellText: '#1e293b',
+    cols: 3,
+    description: `Tabla 3×3 ${theme.name} (Encabezado)`,
+    headerBg: theme.headerBg,
+    headerText: '#ffffff',
+    id: `table_${theme.id}_header`,
+    name: `${theme.name} - Encabezado`,
+    previewSvg: buildTablePreviewSvg(theme, 'header'),
+    rows: 4,
+  },
+  {
+    borderColor: theme.borderColor,
+    cellBg: theme.tintBg,
+    cellText: '#1e293b',
+    cols: 3,
+    description: `Tabla 3×3 ${theme.name} (Celdas rellenas)`,
+    headerBg: theme.headerBg,
+    headerText: '#ffffff',
+    id: `table_${theme.id}_filled`,
+    name: `${theme.name} - Rellena`,
+    previewSvg: buildTablePreviewSvg(theme, 'filled'),
+    rows: 4,
+  },
+]);
+
+interface PixelGridPresetItem {
+  id: string;
+  name: string;
+  pixelSize: number;
+  previewSvg: string;
+  size: number;
+}
+
+const PIXEL_GRID_PRESETS: PixelGridPresetItem[] = [
+  { id: 'px_8', name: '8 × 8 (Iconos miniatura)', pixelSize: 24, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M10 3v26M17 3v26M24 3v26M3 10h26M3 17h26M3 24h26" opacity="0.7"/></svg>', size: 8 },
+  { id: 'px_16', name: '16 × 16 (Sprites clásicos)', pixelSize: 18, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M8 3v26M13 3v26M18 3v26M23 3v26M3 8h26M3 13h26M3 18h26M3 23h26" opacity="0.7"/></svg>', size: 16 },
+  { id: 'px_24', name: '24 × 24 (Iconografía)', pixelSize: 14, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.8"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M7 3v26M11 3v26M16 3v26M21 3v26M25 3v26M3 7h26M3 11h26M3 16h26M3 21h26M3 25h26" opacity="0.7"/></svg>', size: 24 },
+  { id: 'px_32', name: '32 × 32 (Sprites estándar)', pixelSize: 12, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.7"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M6 3v26M10 3v26M14 3v26M18 3v26M22 3v26M26 3v26M3 6h26M3 10h26M3 14h26M3 18h26M3 22h26M3 26h26" opacity="0.65"/></svg>', size: 32 },
+  { id: 'px_48', name: '48 × 48 (Personajes y retratos)', pixelSize: 8, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.6"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M6 3v26M9 3v26M12 3v26M15 3v26M18 3v26M21 3v26M24 3v26M27 3v26M3 6h26M3 9h26M3 12h26M3 15h26M3 18h26M3 21h26M3 24h26M3 27h26" opacity="0.6"/></svg>', size: 48 },
+  { id: 'px_64', name: '64 × 64 (Escenas y texturas)', pixelSize: 6, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.5"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M5 3v26M8 3v26M11 3v26M14 3v26M17 3v26M20 3v26M23 3v26M26 3v26M3 5h26M3 8h26M3 11h26M3 14h26M3 17h26M3 20h26M3 23h26M3 26h26" opacity="0.55"/></svg>', size: 64 },
+  { id: 'px_96', name: '96 × 96 (Alta definición retro)', pixelSize: 5, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.5"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M5 3v26M7.5 3v26M10 3v26M12.5 3v26M15 3v26M17.5 3v26M20 3v26M22.5 3v26M25 3v26M27 3v26M3 5h26M3 7.5h26M3 10h26M3 12.5h26M3 15h26M3 17.5h26M3 20h26M3 22.5h26M3 25h26M3 27h26" opacity="0.5"/></svg>', size: 96 },
+  { id: 'px_128', name: '128 × 128 (Lienzo amplio)', pixelSize: 4, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.4"><rect x="3" y="3" width="26" height="26" rx="2"/><path d="M5 3v26M7 3v26M9 3v26M11 3v26M13 3v26M15 3v26M17 3v26M19 3v26M21 3v26M23 3v26M25 3v26M27 3v26M3 5h26M3 7h26M3 9h26M3 11h26M3 13h26M3 15h26M3 17h26M3 19h26M3 21h26M3 23h26M3 25h26M3 27h26" opacity="0.45"/></svg>', size: 128 },
+  { id: 'px_256', name: '256 × 256 (Máxima resolución)', pixelSize: 3, previewSvg: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="0.35"><rect x="3" y="3" width="26" height="26" rx="2" fill="rgba(139,92,246,0.06)"/><path d="M4.5 3v26M6 3v26M7.5 3v26M9 3v26M10.5 3v26M12 3v26M13.5 3v26M15 3v26M16.5 3v26M18 3v26M19.5 3v26M21 3v26M22.5 3v26M24 3v26M25.5 3v26M27 3v26M3 4.5h26M3 6h26M3 7.5h26M3 9h26M3 10.5h26M3 12h26M3 13.5h26M3 15h26M3 16.5h26M3 18h26M3 19.5h26M3 21h26M3 22.5h26M3 24h26M3 25.5h26M3 27h26" opacity="0.4"/></svg>', size: 256 },
+];
+
+const ALL_CHART_ITEMS = CHART_GROUPS.flatMap((g) => g.items);
 
 interface RecentElementItem {
   category?: ShapeCategory;
@@ -209,7 +292,7 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
       });
       showToast(`«${item.name}» añadido al lienzo`, 'success');
     } else if (item.type === 'sticky') {
-      controller.insertStickyNote?.(item.fillColor || '#fef08a', item.text);
+      controller.insertStickyNote?.(item.fillColor || DEFAULT_STICKY_COLOR, item.text);
       showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
     } else if (item.type === 'connector') {
       controller.activateConnectorTool?.(item.connectorStyle);
@@ -348,10 +431,10 @@ function handleApplyStickyPreset(item: { color: string; id: string; name: string
 function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   if (item.type === 'sticky') {
     handleApplyStickyPreset({
-      color: item.fillColor || '#fef08a',
+      color: item.fillColor || DEFAULT_STICKY_COLOR,
       id: item.id,
       name: item.name,
-      stroke: item.strokeColor || '#fde047',
+      stroke: item.strokeColor || '#f59e0b',
       text: item.text || 'Nota',
     }, canvasType);
     return;
@@ -443,16 +526,28 @@ function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 
   }
 }
 
-function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
+function handleApplyTable(
+  rows: number,
+  cols: number,
+  canvasType: 'board' | 'doc' | 'presentation' | 'video',
+  options?: {
+    borderColor?: string;
+    borderWidth?: number;
+    cellBackgroundColor?: string;
+    cellTextColor?: string;
+    headerBackgroundColor?: string;
+    headerTextColor?: string;
+  }
+): void {
   const controller = getActiveCanvasController();
   if (canvasType === 'video' && controller) {
-    controller.insertTable?.(rows, cols);
+    controller.insertTable?.(rows, cols, options);
     showToast(`Tabla de ${rows}×${cols} añadida al video`, 'success');
   } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
-    controller.insertTable?.(rows, cols);
+    controller.insertTable?.(rows, cols, 450, 210, options);
     showToast(`Tabla de ${rows}×${cols} añadida al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
-    controller.insertTable?.(rows, cols);
+    controller.insertTable?.(rows, cols, options);
     showToast(`Tabla de ${rows}×${cols} añadida al documento`, 'success');
   }
   if (window.innerWidth <= 768) {
@@ -470,7 +565,10 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
       <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
         <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
-          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__back" data-ref="btn-elements-header-back" data-tooltip="Volver" aria-label="Volver" style="display: none; margin-right: 4px;">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <svg class="component-icon canvas-panel-card__icon" data-ref="canvas-panel-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.elements') || 'Elementos'}</span>
         </div>
         <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -483,26 +581,29 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
           <input class="menu-panel__search-input" data-ref="canvas-elements-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar foco, casa, estrella, formas..." />
         </div>
 
-        <div class="elements-quick-tags-row" data-ref="elements-quick-tags-row" style="display: flex; gap: 6px; overflow-x: auto; padding: 0 0 10px 0; scrollbar-width: none;">
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-foco" data-quick-search="foco" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">💡 Foco</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-casa" data-quick-search="casa" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🏠 Casa</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-estrella" data-quick-search="estrella" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">⭐ Estrella</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-cohete" data-quick-search="cohete" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🚀 Cohete</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-flecha" data-quick-search="flecha" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">➡️ Flecha</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-grafico" data-quick-search="grafico" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">📊 Gráfico</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-laptop" data-quick-search="computadora" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">💻 Laptop</button>
-          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-fuego" data-quick-search="fuego" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🔥 Fuego</button>
-        </div>
-
         <div class="elements-drawer-content" data-ref="elements-drawer-content"></div>
       </div>
     </div>
   `;
 
   const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  const btnHeaderBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-elements-header-back"]');
+  const panelTitle = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-panel-title"]');
+  const panelIcon = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-panel-icon"]');
+
   btnClose?.addEventListener('click', (e) => {
     e.preventDefault();
     toggleDrawer(false);
+  });
+
+  btnHeaderBack?.addEventListener('click', () => {
+    if (activeShapeSection !== null) {
+      activeShapeSection = null;
+      renderContent('');
+      return;
+    }
+    activeElementsCategory = 'root';
+    renderContent('');
   });
 
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
@@ -524,17 +625,22 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     const cleanQ = query.trim().toLowerCase();
 
     if (cleanQ) {
+      if (btnHeaderBack) btnHeaderBack.style.display = 'none';
+      if (panelIcon) panelIcon.style.display = 'inline-block';
+      if (panelTitle) panelTitle.textContent = t('nav.elements') || 'Elementos';
+
       const matchingDiagrams = DIAGRAM_COMPONENTS.filter((d) => d.name.toLowerCase().includes(cleanQ) || d.description.toLowerCase().includes(cleanQ) || d.categoryLabel.toLowerCase().includes(cleanQ));
       const matchingShapes = PIXEL_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ));
-      const matchingCharts = CHART_CATALOG.filter((c) => c.name.toLowerCase().includes(cleanQ) || c.description.toLowerCase().includes(cleanQ) || 'gráficas'.includes(cleanQ) || 'graficas'.includes(cleanQ) || 'charts'.includes(cleanQ));
+      const matchingCharts = ALL_CHART_ITEMS.filter((c) => c.name.toLowerCase().includes(cleanQ) || c.description.toLowerCase().includes(cleanQ) || 'gráficas'.includes(cleanQ) || 'graficas'.includes(cleanQ) || 'charts'.includes(cleanQ));
       const matching3D = BOARD_3D_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ) || '3d'.includes(cleanQ));
       const matchingMockups = ALL_MOCKUP_ITEMS.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ) || 'mockup'.includes(cleanQ) || 'maqueta'.includes(cleanQ) || 'marco'.includes(cleanQ) || 'cuadricula'.includes(cleanQ) || 'collage'.includes(cleanQ));
       const matchingTables = (cleanQ.includes('tabl') || cleanQ.includes('table') || cleanQ.includes('cuad')) ? TABLE_PRESETS : [];
+      const matchingPixel = (cleanQ.includes('pixel') || cleanQ.includes('píxel') || cleanQ.includes('grid') || cleanQ.includes('matriz') || cleanQ.includes('retro')) ? PIXEL_GRID_PRESETS : [];
 
       const apiElements = await fetchApiElements(cleanQ);
       currentLibraryElements = apiElements;
 
-      if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0 && apiElements.length === 0) {
+      if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0 && matchingPixel.length === 0 && apiElements.length === 0) {
         contentContainer.innerHTML = `
           <div class="canvas-panel-card__empty" data-ref="elements-empty">
             <span class="canvas-panel-card__empty-title">Sin resultados</span>
@@ -561,7 +667,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
             <button type="button" class="element-grid-item" data-ref="btn-library-item-${elem.uuid}" data-library-uuid="${elem.uuid}" data-tooltip="${escapeHtml(elem.title)} (${elem.is_official ? 'Oficial' : escapeHtml(elem.designer_name || 'Diseñador')})" aria-label="${escapeHtml(elem.title)}" style="position: relative;">
               ${elem.is_premium ? '<span class="component-badge component-badge--warning" style="position: absolute; top: 3px; right: 3px; font-size: 8px; padding: 1px 4px; font-weight: 700; border-radius: 4px; line-height: 1;">PRO</span>' : ''}
               ${preview}
-              <span class="element-grid-item__label" style="margin-top: 4px; font-size: 10px; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(elem.title)}</span>
             </button>
           `;
         }).join('');
@@ -570,11 +675,8 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       if (matchingCharts.length > 0) {
         html += '<div class="elements-section-title">Gráficas</div>';
         html += matchingCharts.map((item) => `
-          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.type}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
-            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-              ${item.iconSvg}
-            </div>
-            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.id}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            ${item.svg}
           </button>
         `).join('');
       }
@@ -583,10 +685,7 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
         html += '<div class="elements-section-title">Elementos 3D</div>';
         html += matching3D.map((shape) => `
           <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-3d-item-${shape.id}" data-shape3d-id="${shape.id}" data-tooltip="${escapeHtml(shape.name)}" aria-label="${escapeHtml(shape.name)}">
-            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.08); border-radius: 8px; color: #6366f1; pointer-events: none;">
-              <svg class="component-icon" aria-hidden="true" style="width: 22px; height: 22px;"><use href="/icons.svg#${shape.icon}"></use></svg>
-            </div>
-            <span class="element-grid-item__label">${escapeHtml(shape.name)}</span>
+            ${BOARD_3D_2D_SVGS[shape.id] || `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`}
           </button>
         `).join('');
       }
@@ -594,15 +693,17 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       if (matchingTables.length > 0) {
         html += '<div class="elements-section-title">Tablas</div>';
         html += matchingTables.map((item) => `
-          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-rows="${item.rows}" data-table-cols="${item.cols}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
-            <svg viewBox="0 0 48 48" aria-hidden="true" style="width: 32px; height: 32px;">
-              <rect x="6" y="8" width="36" height="32" rx="4" fill="none" stroke="#0284c7" stroke-width="2" />
-              <rect x="6" y="8" width="36" height="10" rx="4" fill="#38bdf8" fill-opacity="0.3" stroke="#0284c7" stroke-width="1.5" />
-              <line x1="6" y1="28" x2="42" y2="28" stroke="#cbd5e1" stroke-width="1.5" />
-              <line x1="18" y1="8" x2="18" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
-              <line x1="30" y1="8" x2="30" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
-            </svg>
-            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-id="${item.id}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+            ${item.previewSvg}
+          </button>
+        `).join('');
+      }
+
+      if (matchingPixel.length > 0) {
+        html += '<div class="elements-section-title">Píxel Art</div>';
+        html += matchingPixel.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-pixel-preset-${item.id}" data-pixel-size="${item.size}" data-pixel-scale="${item.pixelSize}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            ${item.previewSvg}
           </button>
         `).join('');
       }
@@ -614,7 +715,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
             <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
               ${tpl.thumbnailSvg}
             </div>
-            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
           </button>
         `).join('');
       }
@@ -624,7 +724,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
         html += matchingDiagrams.map((item) => `
           <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
             <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
-            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
           </button>
         `).join('');
       }
@@ -668,7 +767,7 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
               } else if (item.type === 'diagram' && item.previewSvg) {
                 preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;">${item.previewSvg}</svg>`;
               } else if (item.type === 'sticky') {
-                preview = `<div style="background-color: ${item.fillColor || '#fef08a'}; border: 1.5px solid ${item.strokeColor || '#fde047'}; border-radius: 4px; width: 24px; height: 24px;"></div>`;
+                preview = createStickyNoteSvg(item.fillColor || DEFAULT_STICKY_COLOR, undefined, 24);
               } else {
                 preview = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`;
               }
@@ -695,19 +794,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid';
-          if (cat === 'charts') {
-            openChartInspectorInDrawer();
-            return;
-          }
-          if (cat === 'pixel-grid') {
-            const controller = getActiveCanvasController();
-            openInsertPixelGridModal({
-              onInsert: (cfg) => {
-                controller?.insertPixelGrid?.(cfg);
-              },
-            });
-            return;
-          }
           if (cat) {
             activeElementsCategory = cat;
             renderContent('');
@@ -730,44 +816,91 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     if (activeElementsCategory === 'grids') backTitle = 'Cuadrícula';
     if (activeElementsCategory === 'mockups') backTitle = 'Mockups';
     if (activeElementsCategory === '3d') backTitle = 'Elementos 3D';
+    if (activeElementsCategory === 'pixel-grid') backTitle = 'Píxel Art';
 
-    let html = `
-      <button type="button" class="elements-back-btn" data-ref="btn-elements-back">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-        <span>Volver a categorías (${escapeHtml(backTitle)})</span>
-      </button>
-      <div class="elements-grid" data-ref="elements-grid">
-    `;
+    if (btnHeaderBack) btnHeaderBack.style.display = 'inline-flex';
+    if (panelIcon) panelIcon.style.display = 'none';
+    if (activeElementsCategory === 'shapes' && activeShapeSection) {
+      const activeSecObj = SHAPE_SECTIONS.find((s) => s.key === activeShapeSection);
+      if (panelTitle) panelTitle.textContent = activeSecObj ? activeSecObj.label : (activeShapeSection === 'other' ? 'Otras formas' : 'Formas');
+    } else {
+      if (panelTitle) panelTitle.textContent = backTitle;
+    }
+
+    let html = '<div class="elements-grid" data-ref="elements-grid">';
 
     if (activeElementsCategory === 'shapes') {
       const vectorShapes = PIXEL_SHAPES.filter((s) => s.category === 'shapes' && s.type === 'vector');
       const assignedShapeIds = new Set<string>();
 
-      SHAPE_SECTIONS.forEach((sec) => {
-        const matching = vectorShapes.filter((s) => {
-          const rawKey = s.id.replace(/^shape_/, '');
-          return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
+      if (activeShapeSection) {
+        let matching: PixelShape[] = [];
+        if (activeShapeSection === 'other') {
+          SHAPE_SECTIONS.forEach((sec) => {
+            vectorShapes.forEach((s) => {
+              const rawKey = s.id.replace(/^shape_/, '');
+              if (sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p))) {
+                assignedShapeIds.add(s.id);
+              }
+            });
+          });
+          matching = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
+        } else {
+          const sec = SHAPE_SECTIONS.find((s) => s.key === activeShapeSection);
+          if (sec) {
+            matching = vectorShapes.filter((s) => {
+              const rawKey = s.id.replace(/^shape_/, '');
+              return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
+            });
+          }
+        }
+
+        html += matching.map((item) => `
+          <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+          </button>
+        `).join('');
+      } else {
+        SHAPE_SECTIONS.forEach((sec) => {
+          const matching = vectorShapes.filter((s) => {
+            const rawKey = s.id.replace(/^shape_/, '');
+            return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
+          });
+
+          if (matching.length > 0) {
+            matching.forEach((s) => assignedShapeIds.add(s.id));
+            html += `
+              <div class="elements-section-header" data-ref="section-header-${sec.key}">
+                <span class="elements-section-title">${escapeHtml(sec.label)}</span>
+                ${matching.length > 6 ? `
+                  <button type="button" class="elements-section-header__action" data-ref="btn-see-all-${sec.key}" data-shape-section="${sec.key}">Ver todo</button>
+                ` : ''}
+              </div>
+            `;
+            html += matching.slice(0, 6).map((item) => `
+              <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+                <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+              </button>
+            `).join('');
+          }
         });
 
-        if (matching.length > 0) {
-          matching.forEach((s) => assignedShapeIds.add(s.id));
-          html += `<div class="elements-section-title">${escapeHtml(sec.label)}</div>`;
-          html += matching.map((item) => `
+        const remainingShapes = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
+        if (remainingShapes.length > 0) {
+          html += `
+            <div class="elements-section-header" data-ref="section-header-other">
+              <span class="elements-section-title">Otras formas</span>
+              ${remainingShapes.length > 6 ? `
+                <button type="button" class="elements-section-header__action" data-ref="btn-see-all-other" data-shape-section="other">Ver todo</button>
+              ` : ''}
+            </div>
+          `;
+          html += remainingShapes.slice(0, 6).map((item) => `
             <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
               <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
             </button>
           `).join('');
         }
-      });
-
-      const remainingShapes = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
-      if (remainingShapes.length > 0) {
-        html += '<div class="elements-section-title">Otras formas</div>';
-        html += remainingShapes.map((item) => `
-          <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
-          </button>
-        `).join('');
       }
     } else if (activeElementsCategory === 'stickers') {
       const stickers = PIXEL_SHAPES.filter((s) => s.type === 'sticker');
@@ -779,10 +912,9 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     } else if (activeElementsCategory === 'stickies') {
       html += STICKY_NOTE_PRESETS.map((item) => `
         <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-sticky-item-${item.id}" data-sticky-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-          <div style="background-color: ${item.color}; border: 1.5px solid ${item.stroke}; border-radius: 6px; width: 34px; height: 34px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
-            <span style="font-size: 9px; font-weight: 700; color: #1e293b;">Aa</span>
+          <div class="element-grid-item__sticky-preview" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));">
+            ${createStickyNoteSvg(item.color, item.foldColor, 34)}
           </div>
-          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
         </button>
       `).join('');
     } else if (activeElementsCategory === 'diagrams') {
@@ -802,68 +934,28 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
         html += catItems.map((item) => `
           <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
             <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
-            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
           </button>
         `).join('');
       });
     } else if (activeElementsCategory === 'tables') {
-      html += '<div class="elements-section-title">Tablas predeterminadas</div>';
+      html += '<div class="elements-section-title">Tablas prediseñadas (3 × 3)</div>';
       html += TABLE_PRESETS.map((item) => `
-        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-rows="${item.rows}" data-table-cols="${item.cols}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
-          <svg viewBox="0 0 48 48" aria-hidden="true" style="width: 32px; height: 32px;">
-            <rect x="6" y="8" width="36" height="32" rx="4" fill="none" stroke="#0284c7" stroke-width="2" />
-            <rect x="6" y="8" width="36" height="10" rx="4" fill="#38bdf8" fill-opacity="0.3" stroke="#0284c7" stroke-width="1.5" />
-            <line x1="6" y1="28" x2="42" y2="28" stroke="#cbd5e1" stroke-width="1.5" />
-            <line x1="18" y1="8" x2="18" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
-            <line x1="30" y1="8" x2="30" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
-          </svg>
-          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-id="${item.id}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+          ${item.previewSvg}
         </button>
       `).join('');
-
-      html += `
-        <div class="elements-section-title" style="margin-top: 16px;">Tabla personalizada</div>
-        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px;">
-          <div style="display: flex; gap: 8px;">
-            <label class="field" style="flex: 1;">
-              <span class="field__label">Filas</span>
-              <input class="field__input" data-ref="input-custom-table-rows" type="number" min="1" max="15" value="3" />
-            </label>
-            <label class="field" style="flex: 1;">
-              <span class="field__label">Columnas</span>
-              <input class="field__input" data-ref="input-custom-table-cols" type="number" min="1" max="10" value="3" />
-            </label>
-          </div>
-          <button type="button" class="component-button component-button--h36 component-button--black component-button--w-full" data-ref="btn-insert-custom-table">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span>Insertar tabla</span>
-          </button>
-        </div>
-      `;
     } else if (activeElementsCategory === 'charts') {
-      html += '<div class="elements-section-title">Tipos de gráficas</div>';
-      html += CHART_CATALOG.map((item) => `
-        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.type}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
-          <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-            ${item.iconSvg}
-          </div>
-          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
-        </button>
-      `).join('');
+      CHART_GROUPS.forEach((group) => {
+        html += `<div class="elements-section-title">${escapeHtml(group.label)}</div>`;
+        html += group.items.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.id}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            ${item.svg}
+          </button>
+        `).join('');
+      });
     } else if (activeElementsCategory === 'frames') {
-      html += `
-        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
-          <button type="button" class="mockup-category-pill ${activeFramesFilter === 'all' ? 'is-active' : ''}" data-ref="frame-cat-pill-all" data-frame-cat="all">Todos</button>
-          ${FRAME_CATEGORIES.map((c) => `
-            <button type="button" class="mockup-category-pill ${activeFramesFilter === c.id ? 'is-active' : ''}" data-ref="frame-cat-pill-${c.id}" data-frame-cat="${c.id}">${escapeHtml(c.name)}</button>
-          `).join('')}
-        </div>
-        <div class="elements-section-title">Marcos disponibles</div>
-      `;
+      html += '<div class="elements-section-title">Marcos disponibles</div>';
       let filteredFrames = FRAME_TEMPLATES;
-      if (activeFramesFilter !== 'all') {
-        filteredFrames = filteredFrames.filter((f) => f.category === activeFramesFilter);
-      }
       if (cleanQ) {
         filteredFrames = filteredFrames.filter((f) => f.name.toLowerCase().includes(cleanQ) || f.description.toLowerCase().includes(cleanQ));
       }
@@ -875,7 +967,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
             <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
               ${tpl.thumbnailSvg}
             </div>
-            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
           </button>
         `).join('');
       }
@@ -893,30 +984,12 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
             <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
               ${tpl.thumbnailSvg}
             </div>
-            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
           </button>
         `).join('');
       }
     } else if (activeElementsCategory === 'mockups') {
-      html += `
-        <div style="grid-column: 1 / -1; margin-bottom: 4px;">
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--w-full" data-ref="btn-elements-open-mockups-panel">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-            <span>Explorar catálogo de mockups</span>
-          </button>
-        </div>
-        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
-          <button type="button" class="mockup-category-pill ${activeMockupsFilter === 'all' ? 'is-active' : ''}" data-ref="mockup-cat-pill-all" data-mockup-general-cat="all">Todos</button>
-          ${MOCKUP_GENERAL_CATEGORIES.map((c) => `
-            <button type="button" class="mockup-category-pill ${activeMockupsFilter === c.id ? 'is-active' : ''}" data-ref="mockup-cat-pill-${c.id}" data-mockup-general-cat="${c.id}">${escapeHtml(c.name)}</button>
-          `).join('')}
-        </div>
-        <div class="elements-section-title">Maquetas disponibles</div>
-      `;
+      html += '<div class="elements-section-title">Maquetas disponibles</div>';
       let filteredMockups = MOCKUP_TEMPLATES;
-      if (activeMockupsFilter !== 'all') {
-        filteredMockups = filteredMockups.filter((m) => m.category === activeMockupsFilter);
-      }
       if (cleanQ) {
         filteredMockups = filteredMockups.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ));
       }
@@ -928,7 +1001,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
             <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
               ${tpl.thumbnailSvg}
             </div>
-            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
           </button>
         `).join('');
       }
@@ -936,10 +1008,14 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       html += '<div class="elements-section-title">Modelos e Ilustraciones 3D</div>';
       html += BOARD_3D_SHAPES.map((shape) => `
         <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-3d-item-${shape.id}" data-shape3d-id="${shape.id}" data-tooltip="${escapeHtml(shape.name)}" aria-label="${escapeHtml(shape.name)}">
-          <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.08); border-radius: 8px; color: #6366f1; pointer-events: none;">
-            <svg class="component-icon" aria-hidden="true" style="width: 22px; height: 22px;"><use href="/icons.svg#${shape.icon}"></use></svg>
-          </div>
-          <span class="element-grid-item__label">${escapeHtml(shape.name)}</span>
+          ${BOARD_3D_2D_SVGS[shape.id] || `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`}
+        </button>
+      `).join('');
+    } else if (activeElementsCategory === 'pixel-grid') {
+      html += '<div class="elements-section-title">Lienzos de Píxel Art</div>';
+      html += PIXEL_GRID_PRESETS.map((preset) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-pixel-preset-${preset.id}" data-pixel-size="${preset.size}" data-pixel-scale="${preset.pixelSize}" data-tooltip="${escapeHtml(preset.name)}" aria-label="${escapeHtml(preset.name)}">
+          ${preset.previewSvg}
         </button>
       `).join('');
     }
@@ -947,28 +1023,18 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
     html += '</div>';
     contentContainer.innerHTML = html;
 
-    const btnBack = contentContainer.querySelector<HTMLButtonElement>('[data-ref="btn-elements-back"]');
-    btnBack?.addEventListener('click', () => {
-      activeElementsCategory = 'root';
-      renderContent('');
-    });
-
     bindItemClicks(contentContainer);
     renderIcons(contentContainer);
   };
 
   const bindItemClicks = (container: HTMLElement) => {
-    container.querySelectorAll<HTMLButtonElement>('[data-frame-cat]').forEach((pill) => {
-      pill.addEventListener('click', () => {
-        activeFramesFilter = pill.getAttribute('data-frame-cat') as FrameCategory | 'all';
-        renderContent(searchInput?.value || '');
-      });
-    });
-
-    container.querySelectorAll<HTMLButtonElement>('[data-mockup-general-cat]').forEach((pill) => {
-      pill.addEventListener('click', () => {
-        activeMockupsFilter = pill.getAttribute('data-mockup-general-cat') as MockupGeneralCategory | 'all';
-        renderContent(searchInput?.value || '');
+    container.querySelectorAll<HTMLButtonElement>('[data-shape-section]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sec = btn.getAttribute('data-shape-section');
+        if (sec) {
+          activeShapeSection = sec;
+          renderContent('');
+        }
       });
     });
 
@@ -1041,27 +1107,38 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       });
     });
 
-    container.querySelectorAll<HTMLButtonElement>('[data-table-rows]').forEach((itemBtn) => {
+    container.querySelectorAll<HTMLButtonElement>('[data-table-id]').forEach((itemBtn) => {
       itemBtn.addEventListener('click', () => {
-        const rows = parseInt(itemBtn.getAttribute('data-table-rows') || '3', 10);
-        const cols = parseInt(itemBtn.getAttribute('data-table-cols') || '3', 10);
-        handleApplyTable(rows, cols, canvasType);
+        const tableId = itemBtn.getAttribute('data-table-id');
+        const preset = TABLE_PRESETS.find((p) => p.id === tableId);
+        if (preset) {
+          handleApplyTable(preset.rows, preset.cols, canvasType, {
+            borderColor: preset.borderColor,
+            cellBackgroundColor: preset.cellBg,
+            cellTextColor: preset.cellText,
+            headerBackgroundColor: preset.headerBg,
+            headerTextColor: preset.headerText,
+          });
+        }
       });
     });
 
-    const btnCustomTable = container.querySelector<HTMLButtonElement>('[data-ref="btn-insert-custom-table"]');
-    btnCustomTable?.addEventListener('click', () => {
-      const inputRows = container.querySelector<HTMLInputElement>('[data-ref="input-custom-table-rows"]');
-      const inputCols = container.querySelector<HTMLInputElement>('[data-ref="input-custom-table-cols"]');
-      const rows = Math.min(15, Math.max(1, parseInt(inputRows?.value || '3', 10) || 3));
-      const cols = Math.min(10, Math.max(1, parseInt(inputCols?.value || '3', 10) || 3));
-      handleApplyTable(rows, cols, canvasType);
-    });
-
-    const btnOpenMockups = container.querySelector<HTMLButtonElement>('[data-ref="btn-elements-open-mockups-panel"]');
-    btnOpenMockups?.addEventListener('click', () => {
-      const controller = getActiveCanvasController();
-      controller?.openMockupsPanel?.();
+    container.querySelectorAll<HTMLButtonElement>('[data-pixel-size]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const size = parseInt(itemBtn.getAttribute('data-pixel-size') || '16', 10);
+        const pixelScale = parseInt(itemBtn.getAttribute('data-pixel-scale') || '16', 10);
+        const controller = getActiveCanvasController();
+        controller?.insertPixelGrid?.({
+          backgroundColor: '#ffffff',
+          gridHeight: size,
+          gridWidth: size,
+          pixelSize: pixelScale,
+        });
+        showToast(`Lienzo de Pixel Art ${size}×${size} añadido`, 'success');
+        if (window.innerWidth <= 768) {
+          toggleDrawer(false);
+        }
+      });
     });
 
     container.querySelectorAll<HTMLButtonElement>('[data-library-uuid]').forEach((itemBtn) => {
@@ -1074,16 +1151,6 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       });
     });
   };
-
-  drawerBody.querySelectorAll<HTMLButtonElement>('[data-quick-search]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tag = btn.getAttribute('data-quick-search') || '';
-      if (searchInput) {
-        searchInput.value = tag;
-      }
-      renderContent(tag);
-    });
-  });
 
   searchInput?.addEventListener('input', () => {
     if (searchDebounceTimer) {

@@ -83,7 +83,7 @@ export async function getBrandKitDetail(uuid: string, userId: number): Promise<B
   );
 
   const [templateRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-    'SELECT id, uuid, brand_kit_id, canvas_id, name, description, canvas_type, preview_thumbnail, canvas_data, sort_order, created_at FROM brand_kit_templates WHERE brand_kit_id = ? ORDER BY sort_order ASC, created_at DESC',
+    'SELECT bkt.id, bkt.uuid, bkt.brand_kit_id, bkt.canvas_id, bkt.name, bkt.description, bkt.canvas_type, bkt.preview_thumbnail, bkt.canvas_data, bkt.sort_order, bkt.created_at, c.uuid AS canvas_uuid FROM brand_kit_templates bkt LEFT JOIN canvases c ON c.id = bkt.canvas_id WHERE bkt.brand_kit_id = ? ORDER BY bkt.sort_order ASC, bkt.created_at DESC',
     [kitId]
   );
 
@@ -95,7 +95,7 @@ export async function getBrandKitDetail(uuid: string, userId: number): Promise<B
     hex: String(r.hex),
     id: Number(r.id),
     name: String(r.name),
-    palette_name: String(r.palette_name || 'Paleta principal'),
+    palette_name: String(r.palette_name || 'Main Palette'),
     sort_order: Number(r.sort_order || 0),
     uuid: String(r.uuid),
   }));
@@ -136,7 +136,8 @@ export async function getBrandKitDetail(uuid: string, userId: number): Promise<B
 
   const logos = allAssets.filter((a) => a.asset_type === 'logo');
   const photos = allAssets.filter((a) => a.asset_type === 'photo');
-  const elements = allAssets.filter((a) => a.asset_type === 'element' || a.asset_type === 'graphic' || a.asset_type === 'icon');
+  const elements = allAssets.filter((a) => a.asset_type === 'element' || a.asset_type === 'graphic');
+  const icons = allAssets.filter((a) => a.asset_type === 'icon');
   const customFonts = allAssets.filter((a) => a.asset_type === 'font');
 
   const charts: BrandKitChart[] = chartRows.map((r) => ({
@@ -157,6 +158,7 @@ export async function getBrandKitDetail(uuid: string, userId: number): Promise<B
     canvas_data: typeof r.canvas_data === 'string' ? JSON.parse(r.canvas_data) : (r.canvas_data || null),
     canvas_id: r.canvas_id !== null ? Number(r.canvas_id) : null,
     canvas_type: (r.canvas_type || 'board') as 'board' | 'presentation' | 'doc',
+    canvas_uuid: r.canvas_uuid ? String(r.canvas_uuid) : undefined,
     created_at: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     description: r.description ? String(r.description) : null,
     id: Number(r.id),
@@ -178,6 +180,7 @@ export async function getBrandKitDetail(uuid: string, userId: number): Promise<B
     elements,
     fonts,
     icon: kitRow.icon ? String(kitRow.icon) : 'workspace_premium',
+    icons,
     id: kitId,
     is_default: Boolean(kitRow.is_default),
     logos,
@@ -238,11 +241,11 @@ export async function createBrandKit(userId: number, dto: CreateBrandKitDto): Pr
   const newKitId = insertRes.insertId;
 
   const defaultPalettes = [
-    { color_type: 'primary', hex: '#6366f1', name: 'Primario', palette_name: 'Paleta principal', sort_order: 1 },
-    { color_type: 'secondary', hex: '#8b5cf6', name: 'Secundario', palette_name: 'Paleta principal', sort_order: 2 },
-    { color_type: 'accent', hex: '#ec4899', name: 'Acento', palette_name: 'Paleta principal', sort_order: 3 },
-    { color_type: 'neutral', hex: '#0f172a', name: 'Oscuro', palette_name: 'Paleta principal', sort_order: 4 },
-    { color_type: 'background', hex: '#ffffff', name: 'Claro', palette_name: 'Paleta principal', sort_order: 5 },
+    { color_type: 'primary', hex: '#6366f1', name: 'Primary', palette_name: 'Main Palette', sort_order: 1 },
+    { color_type: 'secondary', hex: '#8b5cf6', name: 'Secondary', palette_name: 'Main Palette', sort_order: 2 },
+    { color_type: 'accent', hex: '#ec4899', name: 'Accent', palette_name: 'Main Palette', sort_order: 3 },
+    { color_type: 'neutral', hex: '#0f172a', name: 'Dark', palette_name: 'Main Palette', sort_order: 4 },
+    { color_type: 'background', hex: '#ffffff', name: 'Light', palette_name: 'Main Palette', sort_order: 5 },
   ];
 
   for (const p of defaultPalettes) {
@@ -493,7 +496,7 @@ export async function addBrandColor(kitUuid: string, userId: number, dto: AddBra
 
   const kitId = Number(kitRows[0].id);
   const colorUuid = crypto.randomUUID();
-  const paletteName = dto.palette_name?.trim() || 'Paleta principal';
+  const paletteName = dto.palette_name?.trim() || 'Main Palette';
   const name = dto.name.trim().slice(0, 100);
   const hex = dto.hex.trim().slice(0, 20);
   const colorType = dto.color_type || 'primary';

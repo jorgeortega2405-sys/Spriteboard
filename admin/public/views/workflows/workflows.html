@@ -3,14 +3,14 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="workflows-scrollable">
       <div class="view-header" data-ref="workflows-floating-top">
         <div class="view-header__left" data-ref="workflows-floating-left">
-          <h1 class="view-header__title" data-ref="workflows-title">Flujos y Automatizaciones</h1>
+          <h1 class="view-header__title" data-ref="workflows-title" data-i18n="admin.workflows.title">Flujos y Automatizaciones</h1>
         </div>
 
         <div class="view-header__right" data-ref="workflows-floating-right">
           <div class="view-header__actions" data-ref="workflows-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-refresh-workflows" data-tooltip="Actualizar estado de tareas" aria-label="Actualizar estado de tareas">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-refresh-workflows" data-i18n-aria="admin.workflows.refresh_aria" data-i18n-tooltip="admin.workflows.refresh_tooltip" data-tooltip="Actualizar estado de tareas" aria-label="Actualizar estado de tareas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-              <span>Actualizar</span>
+              <span data-i18n="admin.workflows.refresh_btn">Actualizar</span>
             </button>
           </div>
         </div>
@@ -20,53 +20,53 @@
         <div class="dashboard-stats-grid" data-ref="workflows-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
           <div class="dashboard-stat-card" data-ref="metric-active-queues" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Colas Activas</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.workflows.active_queues" data-i18n="admin.workflows.active_queues">Colas Activas</span>
               <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
                 <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
               </div>
             </div>
             <div>
               <div class="stat-card-value" data-ref="val-active-queues" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">4</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Redis & Background Workers</span>
+              <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.workflows.workers_desc" data-i18n="admin.workflows.workers_desc">Redis & Background Workers</span>
             </div>
           </div>
 
           <div class="dashboard-stat-card" data-ref="metric-completed-24h" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Completadas (24h)</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.workflows.completed_24h" data-i18n="admin.workflows.completed_24h">Completadas (24h)</span>
               <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
                 <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
               </div>
             </div>
             <div>
               <div class="stat-card-value" data-ref="val-completed-24h" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Ejecuciones exitosas</span>
+              <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.workflows.successful_runs" data-i18n="admin.workflows.successful_runs">Ejecuciones exitosas</span>
             </div>
           </div>
 
           <div class="dashboard-stat-card" data-ref="metric-running-jobs" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Trabajos Programados</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.workflows.scheduled_jobs" data-i18n="admin.workflows.scheduled_jobs">Trabajos Programados</span>
               <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
                 <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </div>
             </div>
             <div>
               <div class="stat-card-value" data-ref="val-total-jobs" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Automatizaciones registradas</span>
+              <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.workflows.scheduled_desc" data-i18n="admin.workflows.scheduled_desc">Automatizaciones registradas</span>
             </div>
           </div>
 
           <div class="dashboard-stat-card" data-ref="metric-failed-jobs" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Fallos Registrados</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="admin.workflows.registered_failures" data-i18n="admin.workflows.registered_failures">Fallos Registrados</span>
               <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
                 <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
               </div>
             </div>
             <div>
               <div class="stat-card-value" data-ref="val-failed-jobs" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">100% confiabilidad en cola</span>
+              <span style="font-size: 12px; color: var(--text-secondary);" data-i18n="admin.workflows.reliability_desc" data-i18n="admin.workflows.reliability_desc">100% confiabilidad en cola</span>
             </div>
           </div>
         </div>
@@ -78,9 +78,9 @@
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
               </div>
               <div class="component-search__input-box" data-ref="search-input-box">
-                <input class="component-search__input" data-ref="input-search-workflows" type="text" maxlength="100" autocomplete="off" placeholder="Buscar automatización por nombre, descripción o cron..." />
+                <input class="component-search__input" data-ref="input-search-workflows" type="text" maxlength="100" autocomplete="off" data-i18n-placeholder="admin.workflows.search_placeholder" placeholder="Buscar automatización por nombre, descripción o cron..." />
               </div>
-              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" data-i18n-aria="admin.workflows.clear_search_aria" aria-label="Limpiar búsqueda">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
               </button>
             </div>
@@ -90,19 +90,19 @@
             <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="workflows-tags-carousel-wrapper">
               <div class="component-tags-carousel" data-ref="workflows-filter-tabs">
                 <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-category-all" data-category="all">
-                  <span>Todas</span>
+                  <span data-i18n="admin.workflows.cat_all" data-i18n="admin.workflows.cat_all">Todas</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-cleanup" data-category="cleanup">
-                  <span>Limpieza y Purga</span>
+                  <span data-i18n="admin.workflows.cat_cleanup" data-i18n="admin.workflows.cat_cleanup">Limpieza y Purga</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-backup" data-category="backup">
-                  <span>Copias de Seguridad</span>
+                  <span data-i18n="admin.workflows.cat_backups" data-i18n="admin.workflows.cat_backups">Copias de Seguridad</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-mail" data-category="mail">
-                  <span>Colas de Correo</span>
+                  <span data-i18n="admin.workflows.cat_mail" data-i18n="admin.workflows.cat_mail">Colas de Correo</span>
                 </button>
                 <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-analytics" data-category="analytics">
-                  <span>Analítica Diaria</span>
+                  <span data-i18n="admin.workflows.cat_analytics" data-i18n="admin.workflows.cat_analytics">Analítica Diaria</span>
                 </button>
               </div>
             </div>
@@ -113,13 +113,13 @@
           <table class="component-table" data-ref="workflows-table">
             <thead>
               <tr>
-                <th>Trabajo / Automatización</th>
-                <th>Programación (Cron)</th>
-                <th>Última Ejecución</th>
-                <th>Próxima Ejecución</th>
-                <th>Tasa de Éxito</th>
-                <th>Estado</th>
-                <th style="text-align: right;">Acciones</th>
+                <th data-i18n="admin.workflows.th_job">Trabajo / Automatización</th>
+                <th data-i18n="admin.workflows.th_cron">Programación (Cron)</th>
+                <th data-i18n="admin.workflows.th_last_run">Última Ejecución</th>
+                <th data-i18n="admin.workflows.th_next_run">Próxima Ejecución</th>
+                <th data-i18n="admin.workflows.th_success_rate">Tasa de Éxito</th>
+                <th data-i18n="admin.workflows.th_status">Estado</th>
+                <th style="text-align: right;" data-i18n="admin.workflows.th_actions">Acciones</th>
               </tr>
             </thead>
             <tbody data-ref="workflows-tbody">
@@ -130,8 +130,8 @@
 
         <div class="view-empty-state" data-ref="workflows-empty-state" style="display: none; padding: 48px 16px; text-align: center;">
           <svg class="component-icon view-empty-state__icon" aria-hidden="true" style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--text-secondary);"><use href="/icons.svg#tune"></use></svg>
-          <h3 class="view-empty-state__title" style="margin-bottom: 6px;">No se encontraron automatizaciones</h3>
-          <p class="view-empty-state__description" style="color: var(--text-secondary); font-size: 14px;">No hay tareas que coincidan con la búsqueda o categoría seleccionada.</p>
+          <h3 class="view-empty-state__title" style="margin-bottom: 6px;" data-i18n="admin.workflows.empty_title" data-i18n="admin.workflows.empty_title">No se encontraron automatizaciones</h3>
+          <p class="view-empty-state__description" style="color: var(--text-secondary); font-size: 14px;" data-i18n="admin.workflows.empty_desc" data-i18n="admin.workflows.empty_desc">No hay tareas que coincidan con la búsqueda o categoría seleccionada.</p>
         </div>
       </div>
     </div>
@@ -139,7 +139,7 @@
 
   <div class="modal-backdrop" data-ref="modal-workflow-history-backdrop" style="display: none;">
     <div class="modal-container" data-ref="modal-workflow-history-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-history-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-history-modal" data-i18n-aria="admin.workflows.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--lg" data-ref="modal-workflow-history">
@@ -147,18 +147,18 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title" data-ref="workflow-history-title">Historial de Ejecución</h2>
+          <h2 class="modal-card__title" data-ref="workflow-history-title" data-i18n="admin.workflows.modal_title">Historial de Ejecución</h2>
         </div>
         <div class="modal-card__body" style="max-height: 60vh; overflow-y: auto;">
           <div class="component-table-wrapper" data-ref="history-table-wrapper">
             <table class="component-table" data-ref="history-table">
               <thead>
                 <tr>
-                  <th>Fecha / Hora</th>
-                  <th>Disparador</th>
-                  <th>Duración</th>
-                  <th>Estado</th>
-                  <th>Detalle</th>
+                  <th data-i18n="admin.workflows.th_datetime">Fecha / Hora</th>
+                  <th data-i18n="admin.workflows.th_trigger">Disparador</th>
+                  <th data-i18n="admin.workflows.th_duration">Duración</th>
+                  <th data-i18n="admin.workflows.th_status">Estado</th>
+                  <th data-i18n="admin.workflows.th_detail">Detalle</th>
                 </tr>
               </thead>
               <tbody data-ref="history-tbody">
@@ -167,12 +167,12 @@
             </table>
           </div>
           <div class="view-empty-state" data-ref="history-empty-state" style="display: none; padding: 24px; text-align: center;">
-            <p style="color: var(--text-secondary); font-size: 13px;">No hay registros previos de ejecución para este trabajo.</p>
+            <p style="color: var(--text-secondary); font-size: 13px;" data-i18n="admin.workflows.empty_history" data-i18n="admin.workflows.empty_history">No hay registros previos de ejecución para este trabajo.</p>
           </div>
         </div>
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
-            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-close-history-footer">Cerrar</button>
+            <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-close-history-footer" data-i18n="admin.workflows.modal_close_btn" data-i18n="admin.workflows.modal_close_btn">Cerrar</button>
           </div>
         </div>
       </div>

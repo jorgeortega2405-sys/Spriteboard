@@ -38,13 +38,13 @@ export const CANVAS_DEFAULTS = {
   LINE_STROKE_COLOR: '#1e293b',
   LINE_STROKE_WIDTH: 2,
   OPACITY: 1,
-  STICKY_COLOR: '#fef08a',
+  STICKY_COLOR: '#fccb07',
   STICKY_FONT_SIZE: 20,
-  STICKY_TEXT_COLOR: '#1e293b',
+  STICKY_TEXT_COLOR: '#202229',
   STROKE_COLOR: 'transparent',
   STROKE_WIDTH: 0,
   SUBHEADING_FONT_SIZE: 28,
-  TEXT_COLOR: '#1e293b',
+  TEXT_COLOR: '#202229',
 } as const;
 
 export type StrokeStyle = 'solid' | 'dashed' | 'dashed-short' | 'dotted';

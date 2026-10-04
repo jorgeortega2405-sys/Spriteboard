@@ -7,34 +7,34 @@
 
         <div class="home-floating-top__right" data-ref="component-top-right">
           <div class="home-floating-actions" data-ref="teams-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-i18n-tooltip="teams.search_tooltip" data-i18n-aria="teams.search_tooltip" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-open-sso-config" data-tooltip="Inicio de sesión único (SSO) y SCIM" aria-label="Inicio de sesión único (SSO) y SCIM">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-open-sso-config" data-i18n-tooltip="teams.action_sso" data-i18n-aria="teams.action_sso" data-tooltip="Inicio de sesión único (SSO) y SCIM" aria-label="Inicio de sesión único (SSO) y SCIM">
               <span class="material-symbols-rounded" style="font-size: 20px;">vpn_key</span>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-create-team" data-i18n-tooltip="teams.create_btn" data-i18n-aria="teams.create_btn" data-tooltip="Crear equipo" aria-label="Crear equipo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group_add"></use></svg>
             </button>
           </div>
 
           <div class="home-floating-actions" data-ref="teams-selected-actions" style="display: none;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-i18n-tooltip="teams.cancel_selection" data-i18n-aria="teams.cancel_selection" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-create-canvas" data-i18n-tooltip="teams.create_canvas_tooltip" data-i18n-aria="teams.create_canvas_tooltip" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-members" data-i18n-tooltip="teams.btn_members" data-i18n-aria="teams.btn_members" data-tooltip="Miembros" aria-label="Miembros">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sso" data-tooltip="Vincular SSO a este equipo" aria-label="Vincular SSO a este equipo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sso" data-i18n-tooltip="teams.action_sso" data-i18n-aria="teams.action_sso" data-tooltip="Vincular SSO a este equipo" aria-label="Vincular SSO a este equipo">
               <span class="material-symbols-rounded" style="font-size: 20px;">vpn_key</span>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-edit" data-i18n-tooltip="teams.btn_edit" data-i18n-aria="teams.btn_edit" data-tooltip="Editar" aria-label="Editar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
+            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only home-floating-btn" data-ref="btn-action-delete" data-i18n-tooltip="modal.delete" data-i18n-aria="modal.delete" data-tooltip="Eliminar" aria-label="Eliminar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
@@ -48,7 +48,7 @@
             <div class="component-search__input-box" data-ref="search-input-box">
               <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
             </div>
-            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" data-i18n-aria="common.clear_search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -111,7 +111,7 @@
 
   <div class="modal-backdrop" data-ref="modal-team-backdrop">
     <div class="modal-container" data-ref="modal-team-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-team-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-team-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-team-card">
@@ -143,7 +143,7 @@
 
   <div class="modal-backdrop" data-ref="modal-members-backdrop">
     <div class="modal-container" data-ref="modal-members-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" data-i18n-aria="modal.close" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-members-card">

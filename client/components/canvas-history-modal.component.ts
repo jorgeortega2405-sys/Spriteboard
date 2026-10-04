@@ -1,4 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
+import { DEFAULT_STICKY_COLOR, DEFAULT_STICKY_TEXT_COLOR } from '../config/sticky-notes.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -305,10 +306,10 @@ export function openCanvasHistoryModal(options: CanvasHistoryModalOptions): Canv
         const elements = Array.isArray(activePage.elements) ? activePage.elements : [];
         for (const el of elements) {
           if (el.type === 'sticky') {
-            ctx.fillStyle = el.style?.fill || '#fef08a';
+            ctx.fillStyle = el.style?.fill || DEFAULT_STICKY_COLOR;
             ctx.fillRect(el.x || 0, el.y || 0, el.width || 120, el.height || 120);
             if (el.text) {
-              ctx.fillStyle = '#1e293b';
+              ctx.fillStyle = DEFAULT_STICKY_TEXT_COLOR;
               ctx.font = '14px sans-serif';
               ctx.fillText(el.text, (el.x || 0) + 10, (el.y || 0) + 24);
             }

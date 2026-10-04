@@ -1,6 +1,7 @@
 import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, postApi } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
@@ -166,7 +167,7 @@ export class SalesContactController {
 
     if (stage === 1) {
       if (progressFill) progressFill.style.width = '50%';
-      if (stepIndicator) stepIndicator.textContent = 'Etapa 1 de 2: Información de contacto';
+      if (stepIndicator) stepIndicator.textContent = t('sales_contact.step_1_indicator');
       if (btnWizardBack) btnWizardBack.style.visibility = 'hidden';
 
       if (stage1El) stage1El.style.display = 'block';
@@ -174,7 +175,7 @@ export class SalesContactController {
       if (stageSuccessEl) stageSuccessEl.style.display = 'none';
     } else if (stage === 2) {
       if (progressFill) progressFill.style.width = '100%';
-      if (stepIndicator) stepIndicator.textContent = 'Etapa 2 de 2: Datos de la organización';
+      if (stepIndicator) stepIndicator.textContent = t('sales_contact.step_2_indicator');
       if (btnWizardBack) btnWizardBack.style.visibility = 'visible';
 
       if (stage1El) stage1El.style.display = 'none';
@@ -182,7 +183,7 @@ export class SalesContactController {
       if (stageSuccessEl) stageSuccessEl.style.display = 'none';
     } else if (stage === 3) {
       if (progressFill) progressFill.style.width = '100%';
-      if (stepIndicator) stepIndicator.textContent = '¡Solicitud completada!';
+      if (stepIndicator) stepIndicator.textContent = t('sales_contact.step_success_indicator');
       if (btnWizardBack) btnWizardBack.style.visibility = 'hidden';
 
       if (stage1El) stage1El.style.display = 'none';
@@ -237,26 +238,26 @@ export class SalesContactController {
     const email = emailInput?.value.trim() || '';
 
     if (!firstName || firstName.length < 2) {
-      this.showStage1Error('Por favor ingresa tu nombre (mínimo 2 caracteres).');
+      this.showStage1Error(t('sales_contact.error_first_name'));
       firstNameInput?.focus();
       return;
     }
 
     if (!lastName || lastName.length < 2) {
-      this.showStage1Error('Por favor ingresa tu apellido (mínimo 2 caracteres).');
+      this.showStage1Error(t('sales_contact.error_last_name'));
       lastNameInput?.focus();
       return;
     }
 
     const emailResult = validateEmail(email, { enforceAllowedDomains: false });
     if (!emailResult.valid) {
-      this.showStage1Error(emailResult.error || 'Por favor ingresa un correo electrónico corporativo válido.');
+      this.showStage1Error(t('sales_contact.error_email'));
       emailInput?.focus();
       return;
     }
 
     if (!this.selectedContactReason) {
-      this.showStage1Error('Por favor selecciona el motivo de tu consulta.');
+      this.showStage1Error(t('sales_contact.error_reason'));
       return;
     }
 
@@ -283,18 +284,18 @@ export class SalesContactController {
     const howCanWeHelp = howCanWeHelpInput?.value.trim() || '';
 
     if (!companyName || companyName.length < 2) {
-      this.showStage2Error('Por favor ingresa el nombre de tu empresa u organización.');
+      this.showStage2Error(t('sales_contact.error_company_name'));
       companyNameInput?.focus();
       return;
     }
 
     if (!this.selectedCompanySize) {
-      this.showStage2Error('Por favor selecciona el tamaño aproximado de tu empresa.');
+      this.showStage2Error(t('sales_contact.error_company_size'));
       return;
     }
 
     if (!this.selectedCountry) {
-      this.showStage2Error('Por favor selecciona tu país o región.');
+      this.showStage2Error(t('sales_contact.error_country'));
       return;
     }
 

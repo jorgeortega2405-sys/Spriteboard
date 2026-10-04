@@ -4,12 +4,12 @@
       
       <div class="view-header" data-ref="internal-header">
         <div class="view-header__left" data-ref="internal-header-left">
-          <h1 class="view-header__title" data-ref="internal-title">Mesa de Ayuda Interna</h1>
+          <h1 class="view-header__title" data-ref="internal-title" data-i18n="admin.internal_tickets.title">Mesa de Ayuda Interna</h1>
         </div>
 
         <div class="view-header__right" data-ref="internal-header-right">
           <div class="view-header__actions" data-ref="internal-top-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-new-ticket" data-tooltip="Nuevo Ticket" aria-label="Nuevo Ticket">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-new-ticket" data-i18n-aria="admin.internal_tickets.new_ticket_aria" data-i18n-tooltip="admin.internal_tickets.new_ticket_tooltip" data-tooltip="Nuevo Ticket" aria-label="Nuevo Ticket">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             </button>
           </div>
@@ -27,9 +27,9 @@
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
                 </div>
                 <div class="component-search__input-box" data-ref="internal-search-input-box">
-                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por código, título, piso o creador..." />
+                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" data-i18n-placeholder="admin.internal_tickets.search_placeholder" placeholder="Buscar por código, título, piso o creador..." />
                 </div>
-                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" data-i18n-aria="admin.internal_tickets.clear_search_aria" aria-label="Limpiar búsqueda">
                   <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
                 </button>
               </div>
@@ -37,27 +37,27 @@
 
             <div class="support-search-container__filters-wrap" data-ref="internal-filter-wrap">
               <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="internal-tags-carousel-wrapper">
-                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-i18n-aria="admin.internal_tickets.scroll_left_aria" data-i18n-tooltip="admin.internal_tickets.scroll_left_tooltip" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                 </button>
 
                 <div class="component-tags-carousel" data-ref="internal-scope-tabs">
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-scope-open" data-scope="open_queue">
-                    <span>Por Atender</span>
+                    <span data-i18n="admin.internal_tickets.tab_pending">Por Atender</span>
                     <span class="component-badge component-badge--count" data-ref="count-scope-open" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-created" data-scope="created_by_me">
-                    <span>Mis Reportes</span>
+                    <span data-i18n="admin.internal_tickets.tab_my_reports">Mis Reportes</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-assigned" data-scope="assigned_to_me">
-                    <span>Mis Asignados</span>
+                    <span data-i18n="admin.internal_tickets.tab_assigned_to_me">Mis Asignados</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-all" data-scope="all">
-                    <span>Todos</span>
+                    <span data-i18n="admin.internal_tickets.tab_all">Todos</span>
                   </button>
                 </div>
 
-                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-i18n-aria="admin.internal_tickets.scroll_right_aria" data-i18n-tooltip="admin.internal_tickets.scroll_right_tooltip" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                 </button>
               </div>
@@ -78,8 +78,8 @@
           
           <div class="component-empty-state" data-ref="internal-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center;">
             <div class="component-empty-state-graphic" data-ref="internal-empty-graphic"></div>
-            <h2 class="component-empty-state-title" data-ref="internal-empty-title">Selecciona un reporte interno</h2>
-            <p class="component-empty-state-desc" data-ref="internal-empty-desc">Elige un ticket de la lista para ver la ubicación, asignarte la atención técnica, agregar comentarios o marcarlo como resuelto.</p>
+            <h2 class="component-empty-state-title" data-ref="internal-empty-title" data-i18n="admin.internal_tickets.empty_select_title">Selecciona un reporte interno</h2>
+            <p class="component-empty-state-desc" data-ref="internal-empty-desc" data-i18n="admin.internal_tickets.empty_select_desc">Elige un ticket de la lista para ver la ubicación, asignarte la atención técnica, agregar comentarios o marcarlo como resuelto.</p>
           </div>
 
           <div class="support-active-container" data-ref="internal-active-container" style="display: none; flex-direction: column; height: 100%;">
@@ -108,7 +108,7 @@
               <div class="support-ticket-header__actions" data-ref="internal-header-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
 
                 <div class="dropdown-wrapper" data-ref="internal-actions-wrapper" style="position: relative;">
-                  <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-internal-options" data-tooltip="Acciones del ticket" aria-label="Acciones del ticket">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-internal-options" data-i18n-aria="admin.internal_tickets.actions_aria" data-i18n-tooltip="admin.internal_tickets.actions_tooltip" data-tooltip="Acciones del ticket" aria-label="Acciones del ticket">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                   </button>
 
@@ -120,19 +120,19 @@
                       <div class="menu-panel__list" data-ref="internal-actions-list">
                         <button type="button" class="menu-item" data-ref="btn-action-take">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#person_add"></use></svg>
-                          <span class="menu-item__text">Asignarme Ticket</span>
+                          <span class="menu-item__text" data-i18n="admin.internal_tickets.assign_ticket">Asignarme Ticket</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-action-waiting">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#schedule"></use></svg>
-                          <span class="menu-item__text">Esperando Repuesto</span>
+                          <span class="menu-item__text" data-i18n="admin.internal_tickets.waiting_part">Esperando Repuesto</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-action-resolve">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#check_circle"></use></svg>
-                          <span class="menu-item__text">Resolver Incidencia</span>
+                          <span class="menu-item__text" data-i18n="admin.internal_tickets.resolve_ticket">Resolver Incidencia</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-action-reopen" style="display: none;">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#autorenew"></use></svg>
-                          <span class="menu-item__text">Reabrir Incidencia</span>
+                          <span class="menu-item__text" data-i18n="admin.internal_tickets.reopen_ticket">Reabrir Incidencia</span>
                         </button>
                       </div>
                     </div>
@@ -143,7 +143,7 @@
 
             <div class="support-subject-bar" data-ref="internal-title-bar" style="padding: 10px 16px; background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px; gap: 12px; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                <span style="font-weight: 600; color: var(--text-primary); flex-shrink: 0;">Asunto:</span>
+                <span style="font-weight: 600; color: var(--text-primary); flex-shrink: 0;" data-i18n="admin.internal_tickets.subject_label">Asunto:</span>
                 <span data-ref="internal-title-text" style="color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
               </div>
               <div style="display: flex; align-items: center; gap: 12px;">
@@ -161,13 +161,13 @@
               <div class="internal-composer-options" data-ref="internal-composer-options" style="display: flex; align-items: center; justify-content: space-between;">
                 <label class="field-checkbox" data-ref="label-internal-note" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer; user-select: none;">
                   <input data-ref="check-internal-note" type="checkbox" style="cursor: pointer;" />
-                  <span>🔒 Registrar como Nota Técnica Interna (solo visible para administradores y técnicos)</span>
+                  <span data-i18n="admin.internal_tickets.internal_note_checkbox">🔒 Registrar como Nota Técnica Interna (solo visible para administradores y técnicos)</span>
                 </label>
               </div>
 
               <div class="chat-pill-input" data-ref="internal-chat-input-box">
-                <textarea class="chat-pill-input__field" data-ref="input-ticket-message" placeholder="Escribe un comentario o actualización..." rows="1" maxlength="2000"></textarea>
-                <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-send-message" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
+                <textarea class="chat-pill-input__field" data-ref="input-ticket-message" data-i18n-placeholder="admin.internal_tickets.comment_placeholder" placeholder="Escribe un comentario o actualización..." rows="1" maxlength="2000"></textarea>
+                <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-send-message" data-i18n-aria="admin.internal_tickets.send_aria" data-i18n-tooltip="admin.internal_tickets.send_tooltip" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
                 </button>
               </div>
@@ -183,7 +183,7 @@
 
   <div class="modal-backdrop" data-ref="new-ticket-modal-backdrop" style="display: none;">
     <div class="modal-container" data-ref="new-ticket-modal-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-new-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-new-modal" data-i18n-aria="admin.internal_tickets.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-480" data-ref="new-ticket-modal">
@@ -191,22 +191,22 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title">Reportar Incidencia Interna</h2>
-          <p class="modal-card__desc">Genera un ticket para que el personal de TI o mantenimiento atienda el caso.</p>
+          <h2 class="modal-card__title" data-i18n="admin.internal_tickets.create_modal_title">Reportar Incidencia Interna</h2>
+          <p class="modal-card__desc" data-i18n="admin.internal_tickets.create_modal_desc">Genera un ticket para que el personal de TI o mantenimiento atienda el caso.</p>
         </div>
 
         <div class="modal-card__body">
           <label class="field" data-ref="field-ticket-title" style="margin-bottom: 12px; display: block;">
             <input class="field__input" data-ref="input-new-title" type="text" maxlength="150" placeholder=" " />
-            <span class="field__label" data-ref="lbl-new-title">Título / Resumen de la Incidencia</span>
+            <span class="field__label" data-ref="lbl-new-title" data-i18n="admin.internal_tickets.ticket_title_label">Título / Resumen de la Incidencia</span>
           </label>
 
           <div class="field-group" style="margin-bottom: 12px;">
-            <span class="field__label" style="margin-bottom: 4px; display: block;">Prioridad</span>
+            <span class="field__label" style="margin-bottom: 4px; display: block;" data-i18n="admin.internal_tickets.priority_label">Prioridad</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-new-priority">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-new-priority" aria-label="Prioridad">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-new-priority" data-i18n-aria="admin.internal_tickets.priority_aria" aria-label="Prioridad">
                 <div class="dropdown-trigger__left">
-                  <span class="dropdown-trigger__text" data-ref="new-priority-selected-text">Media (Normal)</span>
+                  <span class="dropdown-trigger__text" data-ref="new-priority-selected-text" data-i18n="admin.internal_tickets.priority_medium">Media (Normal)</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -217,16 +217,16 @@
                   </div>
                   <div class="menu-panel__list" data-ref="list-new-priority">
                     <button type="button" class="menu-item" data-ref="opt-new-priority-low" data-value="low">
-                      <span class="menu-item__text">Baja (Sin urgencia)</span>
+                      <span class="menu-item__text" data-i18n="admin.internal_tickets.priority_low">Baja (Sin urgencia)</span>
                     </button>
                     <button type="button" class="menu-item is-active" data-ref="opt-new-priority-medium" data-value="medium">
-                      <span class="menu-item__text">Media (Normal)</span>
+                      <span class="menu-item__text" data-i18n="admin.internal_tickets.priority_medium">Media (Normal)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-new-priority-high" data-value="high">
-                      <span class="menu-item__text">Alta (Afecta trabajo)</span>
+                      <span class="menu-item__text" data-i18n="admin.internal_tickets.priority_high">Alta (Afecta trabajo)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-new-priority-urgent" data-value="urgent">
-                      <span class="menu-item__text">Urgente (Bloqueo crítico)</span>
+                      <span class="menu-item__text" data-i18n="admin.internal_tickets.priority_urgent">Urgente (Bloqueo crítico)</span>
                     </button>
                   </div>
                 </div>
@@ -236,22 +236,22 @@
 
           <label class="field" data-ref="field-ticket-location" style="margin-bottom: 12px; display: block;">
             <input class="field__input" data-ref="input-new-location" type="text" maxlength="100" placeholder=" " />
-            <span class="field__label" data-ref="lbl-new-location">Ubicación Física (Piso / Sala / Estación)</span>
+            <span class="field__label" data-ref="lbl-new-location" data-i18n="admin.internal_tickets.location_label">Ubicación Física (Piso / Sala / Estación)</span>
           </label>
 
           <label class="field" data-ref="field-ticket-description" style="display: block;">
             <textarea class="field__input" data-ref="input-new-description" placeholder=" " rows="4" maxlength="2000" style="min-height: 90px; padding-top: 18px; resize: vertical;"></textarea>
-            <span class="field__label" data-ref="lbl-new-description">Descripción Detallada</span>
+            <span class="field__label" data-ref="lbl-new-description" data-i18n="admin.internal_tickets.description_label">Descripción Detallada</span>
           </label>
         </div>
 
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
             <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-new">
-              <span>Cancelar</span>
+              <span data-i18n="admin.internal_tickets.cancel_btn">Cancelar</span>
             </button>
             <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-new">
-              <span>Crear Ticket</span>
+              <span data-i18n="admin.internal_tickets.create_ticket_btn">Crear Ticket</span>
             </button>
           </div>
           <div class="banner banner--danger" data-ref="new-ticket-error" style="display: none; margin-top: 12px;"></div>
@@ -262,7 +262,7 @@
 
   <div class="modal-backdrop" data-ref="resolve-ticket-modal-backdrop" style="display: none;">
     <div class="modal-container" data-ref="resolve-ticket-modal-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-resolve-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-resolve-modal" data-i18n-aria="admin.internal_tickets.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-480" data-ref="resolve-ticket-modal">
@@ -270,24 +270,24 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title">Resolver Incidencia Interna</h2>
-          <p class="modal-card__desc">Indica la solución aplicada o acciones realizadas para cerrar esta incidencia.</p>
+          <h2 class="modal-card__title" data-i18n="admin.internal_tickets.resolve_modal_title">Resolver Incidencia Interna</h2>
+          <p class="modal-card__desc" data-i18n="admin.internal_tickets.resolve_modal_desc">Indica la solución aplicada o acciones realizadas para cerrar esta incidencia.</p>
         </div>
 
         <div class="modal-card__body">
           <label class="field" data-ref="field-resolve-note" style="display: block;">
             <textarea class="field__input" data-ref="input-resolve-note" placeholder=" " rows="3" maxlength="1000" style="min-height: 80px; padding-top: 18px; resize: vertical;"></textarea>
-            <span class="field__label" data-ref="lbl-resolve-note">Nota de Solución / Diagnóstico</span>
+            <span class="field__label" data-ref="lbl-resolve-note" data-i18n="admin.internal_tickets.solution_note_label">Nota de Solución / Diagnóstico</span>
           </label>
         </div>
 
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
             <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-resolve">
-              <span>Cancelar</span>
+              <span data-i18n="admin.internal_tickets.cancel_btn">Cancelar</span>
             </button>
             <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-resolve">
-              <span>Marcar como Resuelto</span>
+              <span data-i18n="admin.internal_tickets.mark_resolved_btn">Marcar como Resuelto</span>
             </button>
           </div>
           <div class="banner banner--danger" data-ref="resolve-ticket-error" style="display: none; margin-top: 12px;"></div>

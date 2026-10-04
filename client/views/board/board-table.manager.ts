@@ -30,7 +30,14 @@ export class BoardTableManager {
     this.controller = controller;
   }
 
-  public insertTable(rows = 3, cols = 3, width = 450, height = 210): void {
+  public insertTable(rows = 3, cols = 3, width = 450, height = 210, options: {
+    borderColor?: string;
+    borderWidth?: number;
+    cellBackgroundColor?: string;
+    cellTextColor?: string;
+    headerBackgroundColor?: string;
+    headerTextColor?: string;
+  } = {}): void {
     this.controller.pushHistoryState();
     const dpr = window.devicePixelRatio || 1;
     const screenW = this.controller.canvasElement ? this.controller.canvasElement.width / dpr : 800;
@@ -38,6 +45,12 @@ export class BoardTableManager {
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.controller.canvasElement, this.controller.camera);
 
     const tableEl = createTableElement(rows, cols, {
+      borderColor: options.borderColor,
+      borderWidth: options.borderWidth,
+      cellBackgroundColor: options.cellBackgroundColor,
+      cellTextColor: options.cellTextColor,
+      headerBackgroundColor: options.headerBackgroundColor,
+      headerTextColor: options.headerTextColor,
       height,
       width,
       x: Math.round(centerWorld.x - width / 2),

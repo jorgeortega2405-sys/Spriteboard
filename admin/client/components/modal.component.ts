@@ -1,3 +1,4 @@
+import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
 
@@ -6,9 +7,9 @@ let activeModals: ModalInstance[] = [];
 export function openModal(options: ModalOptions = {}): ModalInstance {
   const {
     bodyHtml = '',
-    cancelText = 'Cancelar',
+    cancelText = t('modal.cancel') || 'Cancelar',
     confirmClass = 'component-button--black',
-    confirmText = 'Continuar',
+    confirmText = t('modal.continue') || 'Continuar',
     description = '',
     onCancel = null,
     onClose = null,
@@ -57,6 +58,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     }
   }
 
+  translateElement(backdrop);
   renderIcons(backdrop);
 
   const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card"]');

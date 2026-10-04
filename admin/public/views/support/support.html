@@ -4,7 +4,7 @@
       <!-- View Header -->
       <div class="view-header" data-ref="support-floating-top">
         <div class="view-header__left" data-ref="support-floating-left">
-          <h1 class="view-header__title" data-ref="support-title">Soporte Técnico</h1>
+          <h1 class="view-header__title" data-ref="support-title" data-i18n="admin.support.title">Soporte Técnico</h1>
         </div>
 
         <div class="view-header__right" data-ref="support-floating-right"></div>
@@ -24,9 +24,9 @@
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search" xlink:href="/icons.svg#search"></use></svg>
                 </div>
                 <div class="component-search__input-box" data-ref="search-input-box">
-                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por usuario, ticket o motivo..." />
+                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" data-i18n-placeholder="admin.support.search_placeholder" placeholder="Buscar por usuario, ticket o motivo..." />
                 </div>
-                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" data-i18n-aria="admin.support.clear_search_aria" aria-label="Limpiar búsqueda">
                   <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close" xlink:href="/icons.svg#close"></use></svg>
                 </button>
               </div>
@@ -35,27 +35,27 @@
             <!-- Filter Tabs -->
             <div class="support-search-container__filters-wrap" data-ref="support-filter-wrap">
               <div class="component-tags-carousel-wrapper" data-ref="support-tags-carousel-wrapper">
-                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-i18n-aria="admin.support.scroll_left_aria" data-i18n-tooltip="admin.support.scroll_left_tooltip" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                 </button>
 
                 <div class="component-tags-carousel" data-ref="support-filter-tabs">
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-filter-queued" data-status="queued">
-                    <span>En cola</span>
+                    <span data-i18n="admin.support.tab_queued">En cola</span>
                     <span class="component-badge component-badge--count" data-ref="tab-count-queued" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-my-active" data-status="in_progress">
-                    <span>Mis activos</span>
+                    <span data-i18n="admin.support.tab_my_active">Mis activos</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-escalated" data-status="escalated">
-                    <span>Escalados</span>
+                    <span data-i18n="admin.support.tab_escalated">Escalados</span>
                   </button>
                   <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-all" data-status="all">
-                    <span>Todos</span>
+                    <span data-i18n="admin.support.tab_all">Todos</span>
                   </button>
                 </div>
 
-                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-i18n-aria="admin.support.scroll_right_aria" data-i18n-tooltip="admin.support.scroll_right_tooltip" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                 </button>
               </div>
@@ -79,8 +79,8 @@
           <!-- Empty State (when no ticket selected) -->
           <div class="component-empty-state" data-ref="support-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center;">
             <div class="component-empty-state-graphic" data-ref="support-empty-graphic"></div>
-            <h2 class="component-empty-state-title" data-ref="support-empty-title">Selecciona una solicitud de soporte</h2>
-            <p class="component-empty-state-desc" data-ref="support-empty-desc">Elige un ticket de la lista lateral para atender al usuario en tiempo real, escalar el caso o resolverlo.</p>
+            <h2 class="component-empty-state-title" data-ref="support-empty-title" data-i18n="admin.support.empty_select_title">Selecciona una solicitud de soporte</h2>
+            <p class="component-empty-state-desc" data-ref="support-empty-desc" data-i18n="admin.support.empty_select_desc">Elige un ticket de la lista lateral para atender al usuario en tiempo real, escalar el caso o resolverlo.</p>
           </div>
 
           <!-- Active Ticket Details & Conversation (hidden by default) -->
@@ -111,11 +111,11 @@
 
                 <button type="button" class="component-button component-button--h36 component-button--primary" data-ref="btn-action-accept" style="display: none; padding: 0 14px; font-size: 13px;">
                   <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#check"></use></svg>
-                  <span>Aceptar caso</span>
+                  <span data-i18n="admin.support.accept_case">Aceptar caso</span>
                 </button>
 
                 <div class="dropdown-wrapper" data-ref="ticket-actions-dropdown-wrapper" style="display: none; position: relative;">
-                  <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-ticket-more" data-tooltip="Opciones del caso" aria-label="Opciones del caso">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-ticket-more" data-i18n-aria="admin.support.case_options_aria" data-i18n-tooltip="admin.support.case_options_tooltip" data-tooltip="Opciones del caso" aria-label="Opciones del caso">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                   </button>
 
@@ -127,15 +127,15 @@
                       <div class="menu-panel__list" data-ref="ticket-actions-list">
                         <button type="button" class="menu-item" data-ref="btn-menu-escalate">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#arrow_upward"></use></svg>
-                          <span class="menu-item__text">Escalar caso</span>
+                          <span class="menu-item__text" data-i18n="admin.support.escalate_case">Escalar caso</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-menu-resolve">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#check_circle"></use></svg>
-                          <span class="menu-item__text">Resolver caso</span>
+                          <span class="menu-item__text" data-i18n="admin.support.resolve_case">Resolver caso</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-menu-reopen" style="display: none;">
                           <svg class="component-icon" aria-hidden="true" style="margin-right: 8px;"><use href="/icons.svg#autorenew"></use></svg>
-                          <span class="menu-item__text">Reabrir caso</span>
+                          <span class="menu-item__text" data-i18n="admin.support.reopen_case">Reabrir caso</span>
                         </button>
                       </div>
                     </div>
@@ -147,7 +147,7 @@
             <!-- Subject Banner -->
             <div class="support-subject-bar" data-ref="support-subject-bar" style="padding: 10px 16px; background-color: rgba(99, 102, 241, 0.06); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px; gap: 12px; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                <span style="font-weight: 600; color: var(--text-primary); flex-shrink: 0;">Motivo:</span>
+                <span style="font-weight: 600; color: var(--text-primary); flex-shrink: 0;" data-i18n="admin.support.reason_label">Motivo:</span>
                 <span data-ref="ticket-subject-text" style="color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
               </div>
               <div style="display: flex; align-items: center; gap: 12px;">
@@ -165,8 +165,8 @@
             <div class="support-composer" data-ref="support-composer" style="padding: 10px 16px 14px 16px; background-color: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
               <!-- Chat Pill Input -->
               <div class="chat-pill-input" data-ref="chat-input-box">
-                <textarea class="chat-pill-input__field" data-ref="input-agent-message" placeholder="Escribe una respuesta para el usuario..." rows="1" maxlength="2000"></textarea>
-                <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-send-agent-message" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
+                <textarea class="chat-pill-input__field" data-ref="input-agent-message" data-i18n-placeholder="admin.support.reply_placeholder" placeholder="Escribe una respuesta para el usuario..." rows="1" maxlength="2000"></textarea>
+                <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-send-agent-message" data-i18n-aria="admin.support.send_reply_aria" data-i18n-tooltip="admin.support.send_reply_tooltip" data-tooltip="Enviar mensaje" aria-label="Enviar mensaje">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send" xlink:href="/icons.svg#send"></use></svg>
                 </button>
               </div>
@@ -183,7 +183,7 @@
   <!-- Escalate Modal -->
   <div class="modal-backdrop" data-ref="escalate-modal-backdrop" style="display: none;">
     <div class="modal-container" data-ref="escalate-modal-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-escalate-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-escalate-modal" data-i18n-aria="admin.compliance.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-480" data-ref="escalate-modal">
@@ -191,16 +191,16 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title">Escalar Solicitud de Soporte</h2>
-          <p class="modal-card__desc">Selecciona el nivel técnico al que deseas transferir este caso y agrega una nota descriptiva.</p>
+          <h2 class="modal-card__title" data-i18n="admin.support.escalate_modal_title">Escalar Solicitud de Soporte</h2>
+          <p class="modal-card__desc" data-i18n="admin.support.escalate_modal_desc">Selecciona el nivel técnico al que deseas transferir este caso y agrega una nota descriptiva.</p>
         </div>
         <div class="modal-card__body">
           <div class="field-group">
-            <span class="field__label" style="margin-bottom: 6px; display: block;">Nivel de Soporte Destino</span>
+            <span class="field__label" style="margin-bottom: 6px; display: block;" data-i18n="admin.support.target_level">Nivel de Soporte Destino</span>
             <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-escalate-role">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-escalate-role" aria-label="Nivel de soporte destino">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-escalate-role" data-i18n-aria="admin.support.target_level_aria" aria-label="Nivel de soporte destino">
                 <div class="dropdown-trigger__left">
-                  <span class="dropdown-trigger__text" data-ref="escalate-role-selected-text">Support L2 (Soporte Técnico Avanzado)</span>
+                  <span class="dropdown-trigger__text" data-ref="escalate-role-selected-text" data-i18n="admin.support.level_l2">Support L2 (Soporte Técnico Avanzado)</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -211,19 +211,19 @@
                   </div>
                   <div class="menu-panel__list" data-ref="list-escalate-role">
                     <button type="button" class="menu-item is-active" data-ref="opt-role-l2" data-value="SUPPORT_L2">
-                      <span class="menu-item__text">Support L2 (Soporte Técnico Avanzado)</span>
+                      <span class="menu-item__text" data-i18n="admin.support.level_l2">Support L2 (Soporte Técnico Avanzado)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-role-l3" data-value="SUPPORT_L3">
-                      <span class="menu-item__text">Support L3 (Infraestructura / Ingeniería)</span>
+                      <span class="menu-item__text" data-i18n="admin.support.level_l3">Support L3 (Infraestructura / Ingeniería)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-role-manager" data-value="SUPPORT_MANAGER">
-                      <span class="menu-item__text">Support Manager (Supervisión y Gestión)</span>
+                      <span class="menu-item__text" data-i18n="admin.support.level_manager">Support Manager (Supervisión y Gestión)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-role-cs" data-value="CUSTOMER_SUCCESS">
-                      <span class="menu-item__text">Customer Success (Cuentas y Clientes)</span>
+                      <span class="menu-item__text" data-i18n="admin.support.level_cs">Customer Success (Cuentas y Clientes)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="opt-role-incident" data-value="INCIDENT_MANAGER">
-                      <span class="menu-item__text">Incident Manager (Incidentes Críticos)</span>
+                      <span class="menu-item__text" data-i18n="admin.support.level_incident">Incident Manager (Incidentes Críticos)</span>
                     </button>
                   </div>
                 </div>
@@ -233,17 +233,17 @@
 
           <label class="field" data-ref="field-escalate-note" style="margin-top: 12px; display: block;">
             <textarea class="field__input" data-ref="input-escalate-note" placeholder=" " rows="3" maxlength="1000" style="min-height: 80px; padding-top: 18px; resize: vertical;"></textarea>
-            <span class="field__label" data-ref="lbl-escalate-note">Motivo o Nota Interna</span>
+            <span class="field__label" data-ref="lbl-escalate-note" data-i18n="admin.support.escalate_reason">Motivo o Nota Interna</span>
           </label>
         </div>
 
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
             <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-escalate">
-              <span>Cancelar</span>
+              <span data-i18n="admin.support.cancel_btn">Cancelar</span>
             </button>
             <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-escalate">
-              <span>Confirmar Escalación</span>
+              <span data-i18n="admin.support.confirm_escalation">Confirmar Escalación</span>
             </button>
           </div>
         </div>
@@ -254,7 +254,7 @@
   <!-- Resolve Modal -->
   <div class="modal-backdrop" data-ref="resolve-modal-backdrop" style="display: none;">
     <div class="modal-container" data-ref="resolve-modal-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-close-resolve-modal" aria-label="Cerrar modal">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-resolve-modal" data-i18n-aria="admin.compliance.modal_close_aria" aria-label="Cerrar modal">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-480" data-ref="resolve-modal">
@@ -262,23 +262,23 @@
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header">
-          <h2 class="modal-card__title">Resolver y Cerrar Solicitud</h2>
-          <p class="modal-card__desc">¿Deseas marcar esta solicitud como resuelta? Puedes agregar un resumen de la solución otorgada.</p>
+          <h2 class="modal-card__title" data-i18n="admin.support.resolve_modal_title">Resolver y Cerrar Solicitud</h2>
+          <p class="modal-card__desc" data-i18n="admin.support.resolve_modal_desc">¿Deseas marcar esta solicitud como resuelta? Puedes agregar un resumen de la solución otorgada.</p>
         </div>
         <div class="modal-card__body">
           <label class="field" data-ref="field-resolve-note" style="display: block;">
             <textarea class="field__input" data-ref="input-resolve-note" placeholder=" " rows="3" maxlength="1000" style="min-height: 80px; padding-top: 18px; resize: vertical;"></textarea>
-            <span class="field__label" data-ref="lbl-resolve-note">Nota de Resolución (Opcional)</span>
+            <span class="field__label" data-ref="lbl-resolve-note" data-i18n="admin.support.resolution_note">Nota de Resolución (Opcional)</span>
           </label>
         </div>
 
         <div class="modal-card__footer">
           <div class="modal-card__actions modal-card__actions--end">
             <button type="button" class="component-button component-button--h34 component-button--secondary" data-ref="btn-cancel-resolve">
-              <span>Cancelar</span>
+              <span data-i18n="admin.support.cancel_btn">Cancelar</span>
             </button>
             <button type="button" class="component-button component-button--h34 component-button--primary" data-ref="btn-submit-resolve">
-              <span>Marcar como Resuelto</span>
+              <span data-i18n="admin.support.mark_resolved">Marcar como Resuelto</span>
             </button>
           </div>
         </div>

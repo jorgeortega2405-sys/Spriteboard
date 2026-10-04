@@ -13,43 +13,43 @@
               </div>
               <div style="flex: 1;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                  <h3 class="status-title" data-ref="status-title" style="margin: 0; font-size: 20px; font-weight: 800;">Estado de tu Solicitud</h3>
-                  <span class="component-badge" data-ref="status-pill">Pendiente</span>
+                  <h3 class="status-title" data-ref="status-title" data-i18n="designer_apply.status_title" style="margin: 0; font-size: 20px; font-weight: 800;">Estado de tu Solicitud</h3>
+                  <span class="component-badge" data-ref="status-pill" data-i18n="designer_apply.status_pending">Pendiente</span>
                 </div>
                 <p class="status-message" data-ref="status-message" style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 20px;"></p>
                 
                 <div class="status-details-summary" data-ref="status-details-summary" style="background: var(--bg-hover, rgba(125,125,125,0.06)); border-radius: 12px; padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; font-size: 13px; margin-bottom: 20px;">
                   <div>
-                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Nombre postulado:</span>
+                    <span data-i18n="designer_apply.summary_name" style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Nombre postulado:</span>
                     <strong data-ref="status-summary-name">—</strong>
                   </div>
                   <div>
-                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">País:</span>
+                    <span data-i18n="designer_apply.summary_country" style="color: var(--text-secondary); display: block; margin-bottom: 2px;">País:</span>
                     <strong data-ref="status-summary-country">—</strong>
                   </div>
                   <div>
-                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Fecha de envío:</span>
+                    <span data-i18n="designer_apply.summary_date" style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Fecha de envío:</span>
                     <strong data-ref="status-summary-date">—</strong>
                   </div>
                   <div>
-                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Muestras adjuntas:</span>
+                    <span data-i18n="designer_apply.summary_samples" style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Muestras adjuntas:</span>
                     <strong data-ref="status-summary-files">—</strong>
                   </div>
                 </div>
 
                 <div class="rejection-feedback" data-ref="rejection-feedback-box" style="display: none; background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; border-radius: 6px; padding: 14px 16px; margin-bottom: 20px; font-size: 13px;">
-                  <strong style="color: #ef4444; display: block; margin-bottom: 4px;">Motivo indicado por moderación:</strong>
+                  <strong data-i18n="designer_apply.rejection_reason_label" style="color: #ef4444; display: block; margin-bottom: 4px;">Motivo indicado por moderación:</strong>
                   <span data-ref="rejection-reason-text" style="color: var(--text-primary);"></span>
                 </div>
 
                 <div class="status-actions" data-ref="status-actions" style="display: flex; gap: 12px; flex-wrap: wrap;">
                   <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-reapply" style="display: none;">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-                    <span>Enviar una nueva postulación</span>
+                    <span data-i18n="designer_apply.btn_reapply">Enviar una nueva postulación</span>
                   </button>
                   <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-status-go-templates">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                    <span>Explorar galería de plantillas</span>
+                    <span data-i18n="designer_apply.btn_explore_templates">Explorar galería de plantillas</span>
                   </button>
                 </div>
               </div>
@@ -69,9 +69,9 @@
                 <div class="designer-wizard__top" data-ref="wizard-top">
                   <button type="button" class="component-button component-button--h32 component-button--bordered" data-ref="btn-step-back" style="visibility: hidden;">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-                    <span>Atrás</span>
+                    <span data-i18n="designer_apply.step_back">Atrás</span>
                   </button>
-                  <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator">Paso 1 de 4</span>
+                  <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator" data-no-i18n>Paso 1 de 4</span>
                 </div>
 
                 <div class="designer-wizard__content" data-ref="wizard-content">
@@ -79,9 +79,9 @@
                   <!-- Step 1: Role Selection -->
                   <div class="designer-step is-active" data-ref="step-1">
                     <h2 class="designer-step__title">
-                      ¡Hola! Para empezar, dinos <span class="designer-step__title-accent">qué opción te describe mejor</span>
+                      <span data-i18n="designer_apply.step1_title">¡Hola! Para empezar, dinos</span> <span class="designer-step__title-accent" data-i18n="designer_apply.step1_title_accent">qué opción te describe mejor</span>
                     </h2>
-                    <p class="designer-step__desc">
+                    <p class="designer-step__desc" data-i18n="designer_apply.step1_desc">
                       Recibimos a creadores de todas las categorías, pero enfocamos la búsqueda y selección en lo que más necesite nuestra comunidad creativa.
                     </p>
 
@@ -91,8 +91,8 @@
                           <div class="designer-role-option__dot"></div>
                         </div>
                         <div class="designer-role-option__info">
-                          <h3 class="designer-role-option__title">Diseñador/a</h3>
-                          <p class="designer-role-option__desc">Creo diseños atractivos, como ilustraciones y plantillas listas para usar.</p>
+                          <h3 class="designer-role-option__title" data-i18n="designer_apply.role_designer_title">Diseñador/a</h3>
+                          <p class="designer-role-option__desc" data-i18n="designer_apply.role_designer_desc">Creo diseños atractivos, como ilustraciones y plantillas listas para usar.</p>
                         </div>
                       </div>
 
@@ -101,8 +101,8 @@
                           <div class="designer-role-option__dot"></div>
                         </div>
                         <div class="designer-role-option__info">
-                          <h3 class="designer-role-option__title">Docente</h3>
-                          <p class="designer-role-option__desc">Soy docente o formador y creo recursos interactivos de aprendizaje.</p>
+                          <h3 class="designer-role-option__title" data-i18n="designer_apply.role_teacher_title">Docente</h3>
+                          <p class="designer-role-option__desc" data-i18n="designer_apply.role_teacher_desc">Soy docente o formador y creo recursos interactivos de aprendizaje.</p>
                         </div>
                       </div>
 
@@ -111,48 +111,48 @@
                           <div class="designer-role-option__dot"></div>
                         </div>
                         <div class="designer-role-option__info">
-                          <h3 class="designer-role-option__title">Empresas</h3>
-                          <p class="designer-role-option__desc">Soy especialista en mi área y me apasiona crear plantillas de gran impacto visual para profesionales de negocios.</p>
+                          <h3 class="designer-role-option__title" data-i18n="designer_apply.role_business_title">Empresas</h3>
+                          <p class="designer-role-option__desc" data-i18n="designer_apply.role_business_desc">Soy especialista en mi área y me apasiona crear plantillas de gran impacto visual para profesionales de negocios.</p>
                         </div>
                       </div>
                     </div>
 
                     <div class="designer-wizard__actions" data-ref="step-1-actions">
                       <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-1">
-                        <span>Continuar</span>
+                        <span data-i18n="designer_apply.continue">Continuar</span>
                       </button>
                     </div>
                   </div>
 
                   <!-- Step 2: Guidelines -->
                   <div class="designer-step" data-ref="step-2">
-                    <h2 class="designer-step__title">Antes de enviar la solicitud</h2>
-                    <p class="designer-step__desc">
+                    <h2 class="designer-step__title" data-i18n="designer_apply.step2_title">Antes de enviar la solicitud</h2>
+                    <p class="designer-step__desc" data-i18n="designer_apply.step2_desc">
                       Como parte de la solicitud, tendrás la oportunidad de enviar enlaces a tu portafolio en línea o subir muestras de tu trabajo.
                     </p>
 
-                    <span class="designer-step__subtitle">
+                    <span class="designer-step__subtitle" data-i18n="designer_apply.step2_subtitle">
                       Prepara tu portafolio:
                     </span>
 
                     <div class="designer-numbered-list">
                       <div class="designer-numbered-item">
                         <div class="designer-number-badge">1</div>
-                        <div class="designer-numbered-item__text">
+                        <div class="designer-numbered-item__text" data-i18n-html="designer_apply.step2_item1_html">
                           <strong>Selecciona tus mejores creaciones:</strong> Elige entre 5 y 10 trabajos representativos (ilustraciones, diagramas, presentaciones, banners o sprites).
                         </div>
                       </div>
 
                       <div class="designer-numbered-item">
                         <div class="designer-number-badge">2</div>
-                        <div class="designer-numbered-item__text">
+                        <div class="designer-numbered-item__text" data-i18n-html="designer_apply.step2_item2_html">
                           <strong>Prepara enlaces públicos:</strong> Puedes compartir enlaces de Behance, Dribbble, Figma, GitHub, ArtStation, Instagram o tu sitio web.
                         </div>
                       </div>
 
                       <div class="designer-numbered-item">
                         <div class="designer-number-badge">3</div>
-                        <div class="designer-numbered-item__text">
+                        <div class="designer-numbered-item__text" data-i18n-html="designer_apply.step2_item3_html">
                           <strong>O adjunta archivos directos:</strong> En el siguiente paso podrás subir imágenes (PNG, JPG, SVG, GIF) o un empaquetado ZIP.
                         </div>
                       </div>
@@ -160,12 +160,12 @@
 
                     <div class="designer-tip-callout">
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-                      <span><strong>Evaluamos la calidad, no la cantidad:</strong> Elige trabajos que muestren tu creatividad, variedad y destreza técnica.</span>
+                      <span data-i18n-html="designer_apply.step2_tip_html"><strong>Evaluamos la calidad, no la cantidad:</strong> Elige trabajos que muestren tu creatividad, variedad y destreza técnica.</span>
                     </div>
 
                     <div class="designer-wizard__actions">
                       <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-2">
-                        <span>Continuar</span>
+                        <span data-i18n="designer_apply.continue">Continuar</span>
                       </button>
                     </div>
                   </div>
@@ -173,63 +173,63 @@
                   <!-- Step 3: Specialties -->
                   <div class="designer-step" data-ref="step-3">
                     <h2 class="designer-step__title">
-                      Nos encanta ayudarte a explorar tu lado creativo. <span class="designer-step__title-accent">¿Qué te gusta crear?</span>
+                      <span data-i18n="designer_apply.step3_title">Nos encanta ayudarte a explorar tu lado creativo.</span> <span class="designer-step__title-accent" data-i18n="designer_apply.step3_title_accent">¿Qué te gusta crear?</span>
                     </h2>
-                    <p class="designer-step__desc">
+                    <p class="designer-step__desc" data-i18n="designer_apply.step3_desc">
                       Selecciona tus áreas de especialización favoritas (puedes elegir varias opciones).
                     </p>
 
                     <div class="designer-specialties-grid" data-ref="specialties-grid">
                       <button type="button" class="designer-specialty-chip is-active" data-ref="chip-specialty" data-value="Pizarrones y Diagramas">
-                        <span>Pizarrones y Diagramas</span>
+                        <span data-i18n="designer_apply.spec_boards">Pizarrones y Diagramas</span>
                       </button>
                       <button type="button" class="designer-specialty-chip is-active" data-ref="chip-specialty" data-value="Redes sociales">
-                        <span>Redes sociales</span>
+                        <span data-i18n="designer_apply.spec_social">Redes sociales</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Presentaciones">
-                        <span>Presentaciones</span>
+                        <span data-i18n="designer_apply.spec_presentations">Presentaciones</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Pixel Art & Sprites">
-                        <span>Pixel Art & Sprites</span>
+                        <span data-i18n="designer_apply.spec_pixel">Pixel Art & Sprites</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="UI/UX & Wireframes">
-                        <span>UI/UX & Wireframes</span>
+                        <span data-i18n="designer_apply.spec_ui">UI/UX & Wireframes</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Documentos y Guías">
-                        <span>Documentos y Guías</span>
+                        <span data-i18n="designer_apply.spec_docs">Documentos y Guías</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Ilustración digital">
-                        <span>Ilustración digital</span>
+                        <span data-i18n="designer_apply.spec_illustration">Ilustración digital</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Impresión y Posters">
-                        <span>Impresión y Posters</span>
+                        <span data-i18n="designer_apply.spec_print">Impresión y Posters</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Iconografía">
-                        <span>Iconografía</span>
+                        <span data-i18n="designer_apply.spec_icons">Iconografía</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Gráficas y Vectores">
-                        <span>Gráficas y Vectores</span>
+                        <span data-i18n="designer_apply.spec_graphics">Gráficas y Vectores</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Animación">
-                        <span>Animación</span>
+                        <span data-i18n="designer_apply.spec_animation">Animación</span>
                       </button>
                       <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Fotos y Mockups">
-                        <span>Fotos y Mockups</span>
+                        <span data-i18n="designer_apply.spec_photos">Fotos y Mockups</span>
                       </button>
                     </div>
 
                     <div class="designer-wizard__actions">
                       <button type="button" class="component-button component-button--h50 component-button--black component-button--w-full" data-ref="btn-next-step-3">
-                        <span>Continuar</span>
+                        <span data-i18n="designer_apply.continue">Continuar</span>
                       </button>
                     </div>
                   </div>
 
               <div class="designer-step" data-ref="step-4">
                 <h2 class="designer-step__title">
-                  Último paso: <span class="designer-step__title-accent">Datos de tu postulación</span>
+                  <span data-i18n="designer_apply.step4_title">Último paso:</span> <span class="designer-step__title-accent" data-i18n="designer_apply.step4_title_accent">Datos de tu postulación</span>
                 </h2>
-                <p class="designer-step__desc">
+                <p class="designer-step__desc" data-i18n="designer_apply.step4_desc">
                   Completa tu información personal, incluye enlaces a tu portafolio o sube muestras de tus diseños.
                 </p>
 
@@ -240,28 +240,28 @@
                       <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; color: #6366f1;">
                         <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
                       </div>
-                      <h3 style="margin: 0; font-size: 15px; font-weight: 700;">1. Información Personal</h3>
+                      <h3 data-i18n="designer_apply.section_personal" style="margin: 0; font-size: 15px; font-weight: 700;">1. Información Personal</h3>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 14px;">
                       <label class="field" data-ref="field-full-name">
                         <input class="field__input" data-ref="input-full-name" type="text" placeholder=" " autocomplete="name" required />
-                        <span class="field__label">Nombre completo *</span>
+                        <span class="field__label" data-i18n="designer_apply.full_name_label">Nombre completo *</span>
                       </label>
 
                       <div class="field-group" data-ref="field-country">
-                        <span class="field-group__label">País de residencia *</span>
+                        <span class="field-group__label" data-i18n="designer_apply.country_label">País de residencia *</span>
                         <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-country">
-                          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-country" aria-label="País de residencia">
+                          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-country" data-i18n-aria="designer_apply.country_label" aria-label="País de residencia">
                             <div class="dropdown-trigger__left">
                               <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
-                              <span class="dropdown-trigger__text" data-ref="country-selected-text">Selecciona tu país de residencia *</span>
+                              <span class="dropdown-trigger__text" data-ref="country-selected-text" data-i18n="designer_apply.select_country">Selecciona tu país de residencia *</span>
                             </div>
                             <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                           </button>
                           <div class="dropdown-backdrop" data-ref="dropdown-backdrop-country">
                             <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-country" style="max-height: 240px; overflow-y: auto;">
-                              <div class="menu-panel__list" data-ref="list-country">
+                              <div class="menu-panel__list" data-ref="list-country" data-no-i18n>
                                 <button type="button" class="menu-item" data-ref="btn-country-ar" data-value="Argentina"><span class="menu-item__text">Argentina</span></button>
                                 <button type="button" class="menu-item" data-ref="btn-country-bo" data-value="Bolivia"><span class="menu-item__text">Bolivia</span></button>
                                 <button type="button" class="menu-item" data-ref="btn-country-br" data-value="Brasil"><span class="menu-item__text">Brasil</span></button>
@@ -283,7 +283,7 @@
                                 <button type="button" class="menu-item" data-ref="btn-country-do" data-value="República Dominicana"><span class="menu-item__text">República Dominicana</span></button>
                                 <button type="button" class="menu-item" data-ref="btn-country-uy" data-value="Uruguay"><span class="menu-item__text">Uruguay</span></button>
                                 <button type="button" class="menu-item" data-ref="btn-country-ve" data-value="Venezuela"><span class="menu-item__text">Venezuela</span></button>
-                                <button type="button" class="menu-item" data-ref="btn-country-other" data-value="Otro"><span class="menu-item__text">Otro país</span></button>
+                                <button type="button" class="menu-item" data-ref="btn-country-other" data-value="Otro"><span class="menu-item__text" data-i18n="designer_apply.country_other">Otro país</span></button>
                               </div>
                             </div>
                           </div>
@@ -294,7 +294,7 @@
                     <div>
                       <label class="field field--textarea" data-ref="field-bio">
                         <textarea class="field__input field__textarea" data-ref="textarea-bio" placeholder=" " rows="3" style="resize: vertical; min-height: 80px;"></textarea>
-                        <span class="field__label">Cuéntanos sobre tu trayectoria y por qué deseas ser creador en Spriteboard (opcional)</span>
+                        <span class="field__label" data-i18n="designer_apply.bio_label">Cuéntanos sobre tu trayectoria y por qué deseas ser creador en Spriteboard (opcional)</span>
                       </label>
                     </div>
                   </div>
@@ -305,19 +305,19 @@
                         <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
                       </div>
                       <div>
-                        <h3 style="margin: 0; font-size: 15px; font-weight: 700;">2. Enlaces a tus Obras y Portafolio</h3>
-                        <span style="font-size: 12px; color: var(--text-secondary);">Behance, Dribbble, ArtStation, Figma, GitHub, Instagram o web personal</span>
+                        <h3 data-i18n="designer_apply.section_portfolio" style="margin: 0; font-size: 15px; font-weight: 700;">2. Enlaces a tus Obras y Portafolio</h3>
+                        <span data-i18n="designer_apply.portfolio_subtitle" style="font-size: 12px; color: var(--text-secondary);">Behance, Dribbble, ArtStation, Figma, GitHub, Instagram o web personal</span>
                       </div>
                     </div>
 
                     <div class="portfolio-inputs-box" data-ref="portfolio-inputs-box" style="display: flex; gap: 8px; margin-bottom: 12px;">
                       <label class="field" data-ref="field-portfolio-input" style="flex: 1; margin: 0;">
                         <input class="field__input" data-ref="input-portfolio-url" type="url" placeholder=" " />
-                        <span class="field__label">https://behance.net/tu-perfil o enlace a obra</span>
+                        <span class="field__label" data-i18n="designer_apply.portfolio_placeholder">https://behance.net/tu-perfil o enlace a obra</span>
                       </label>
                       <button type="button" class="component-button component-button--h50 component-button--bordered" data-ref="btn-add-portfolio-link">
                         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                        <span>Añadir</span>
+                        <span data-i18n="designer_apply.btn_add">Añadir</span>
                       </button>
                     </div>
 
@@ -332,11 +332,11 @@
                           <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#perm_media"></use></svg>
                         </div>
                         <div>
-                          <h3 style="margin: 0; font-size: 15px; font-weight: 700;">3. Muestras de Trabajo y Archivos</h3>
-                          <span style="font-size: 12px; color: var(--text-secondary);">Sube imágenes individuales de tus creaciones o una carpeta completa</span>
+                          <h3 data-i18n="designer_apply.section_files" style="margin: 0; font-size: 15px; font-weight: 700;">3. Muestras de Trabajo y Archivos</h3>
+                          <span data-i18n="designer_apply.files_subtitle" style="font-size: 12px; color: var(--text-secondary);">Sube imágenes individuales de tus creaciones o una carpeta completa</span>
                         </div>
                       </div>
-                      <span class="files-counter-badge" data-ref="files-counter-badge" style="font-size: 12px; color: var(--text-secondary);">0 archivos seleccionados</span>
+                      <span class="files-counter-badge" data-ref="files-counter-badge" data-no-i18n style="font-size: 12px; color: var(--text-secondary);">0 archivos seleccionados</span>
                     </div>
 
                     <div class="upload-dropzone" data-ref="upload-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 28px 16px; text-align: center; background: var(--bg-hover, rgba(125,125,125,0.03)); cursor: pointer; transition: all 0.2s ease;">
@@ -347,17 +347,17 @@
                         <svg class="component-icon" style="font-size: 22px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
                       </div>
 
-                      <p style="font-weight: 600; font-size: 14px; margin: 0 0 4px;">Arrastra tus archivos o fotos aquí</p>
-                      <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 14px;">PNG, JPG, WEBP, GIF, SVG, ZIP o PDF (hasta 25 MB)</p>
+                      <p data-i18n="designer_apply.dropzone_title" style="font-weight: 600; font-size: 14px; margin: 0 0 4px;">Arrastra tus archivos o fotos aquí</p>
+                      <p data-i18n="designer_apply.dropzone_desc" style="font-size: 12px; color: var(--text-secondary); margin: 0 0 14px;">PNG, JPG, WEBP, GIF, SVG, ZIP o PDF (hasta 25 MB)</p>
 
                       <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
                         <button type="button" class="component-button component-button--h36 component-button--bordered" data-ref="btn-trigger-files">
                           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-                          <span>Seleccionar archivos</span>
+                          <span data-i18n="designer_apply.btn_select_files">Seleccionar archivos</span>
                         </button>
                         <button type="button" class="component-button component-button--h36 component-button--bordered" data-ref="btn-trigger-folder">
                           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                          <span>Subir una carpeta</span>
+                          <span data-i18n="designer_apply.btn_upload_folder">Subir una carpeta</span>
                         </button>
                       </div>
                     </div>
@@ -369,7 +369,7 @@
                   <div class="apply-actions-box" data-ref="apply-actions-box" style="margin-top: 6px;">
                     <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-application">
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                      <span data-ref="btn-submit-text">Enviar Postulación de Creador</span>
+                      <span data-ref="btn-submit-text" data-i18n="designer_apply.btn_submit">Enviar Postulación de Creador</span>
                     </button>
 
                     <div class="banner banner--danger" data-ref="apply-form-error" style="display: none; margin-top: 16px;">

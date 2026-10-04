@@ -4,7 +4,7 @@ import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import { addAccountToSession, clearSessionCookie, consumeDesktopAuthToken, createDesktopAuthToken, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, consumeDesktopAuthToken, createDesktopAuthToken, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, setMultiAccountCookie, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { geoIpService } from '../services/geoip.service.js';
 import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
@@ -502,28 +502,41 @@ export async function me(req: Request, res: Response): Promise<void> {
     const freshUser = await findUserById(user.id);
     const activeUserData = freshUser ? sanitizeUser(freshUser) : sanitizeUser(user);
 
-    if (freshUser && (freshUser.subscription_tier !== user.subscription_tier || freshUser.role !== user.role)) {
-      updateActiveAccountInSession(res, req, {
-        subscription_tier: freshUser.subscription_tier || 'free',
-        role: freshUser.role || 'USER',
-      });
-    }
-
     const accounts = getLinkedAccounts(req);
-    const updatedAccounts = accounts.map((acc) => {
+    const updatedAccounts = await Promise.all(accounts.map(async (acc) => {
       if (acc.id === user.id && freshUser) {
         return {
           ...acc,
-          subscription_tier: freshUser.subscription_tier || 'free',
+          avatar_url: freshUser.avatar_url || null,
+          permissions: freshUser.permissions,
           role: freshUser.role || 'USER',
+          roles: freshUser.roles,
+          subscription_tier: freshUser.subscription_tier || 'free',
+        };
+      }
+      const accFresh = await findUserById(acc.id);
+      if (accFresh) {
+        return {
+          ...acc,
+          avatar_url: accFresh.avatar_url || null,
+          permissions: accFresh.permissions,
+          role: accFresh.role || 'USER',
+          roles: accFresh.roles,
+          subscription_tier: accFresh.subscription_tier || 'free',
         };
       }
       return acc;
-    });
+    }));
+
+    if (session) {
+      session.accounts = updatedAccounts as any;
+      (req as any)._cachedMultiAccountSession = session;
+      setMultiAccountCookie(res, session);
+    }
 
     res.json({
-      user: activeUserData,
       accounts: updatedAccounts.map(sanitizeUser),
+      user: activeUserData,
     });
   } catch (err) {
     sendInternalError(res, 'Error al consultar perfil autenticado (/me)', err);

@@ -2,6 +2,7 @@ import { updateSidebarActiveState } from './components/layout.component.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
 import { currentUser } from './services/api.service.js';
 import { renderIcons } from './services/icon.service.js';
+import { t, translateElement } from './services/i18n.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { SkeletonSession, ViewController } from './types/common.types.js';
@@ -182,18 +183,18 @@ export async function render(): Promise<void> {
         actionText: 'Ir al inicio',
         actionUrl: '/',
         code: '404',
-        description: `La ruta "${path}" no existe o ha sido movida.`,
-        title: 'Página no encontrada',
+        description: t('error.not_found_desc', { path }),
+        title: t('error.not_found_title'),
       });
     }
   } catch {
     const { createErrorView } = await import('./views/error.view.js');
     viewElement = await createErrorView({
-      actionText: 'Volver a intentar',
+      actionText: t('error.retry_action') || 'Volver a intentar',
       actionUrl: '/',
       code: '500',
-      description: 'Ha ocurrido un error inesperado al cargar la página.',
-      title: 'Error del sistema',
+      description: t('error.general_desc'),
+      title: t('error.general_title'),
     });
   }
 
@@ -205,6 +206,7 @@ export async function render(): Promise<void> {
     }
     activeControllers = [];
 
+    translateElement(viewElement);
     await skeletonSession.finish([viewElement], () => navId === currentNavigation);
 
     if (isInitialPageLoad) {

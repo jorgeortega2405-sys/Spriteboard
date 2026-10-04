@@ -49,7 +49,7 @@
           <div class="view-search-pill" data-ref="designer-search-box">
             <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             <input class="view-search-pill__input" data-ref="designer-search-input" data-i18n-placeholder="designer.search_placeholder" type="text" placeholder="Buscar en mis plantillas..." autocomplete="off" />
-            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-designer-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-designer-clear-search" data-i18n-aria="common.clear_search" style="display: none;" aria-label="Limpiar búsqueda">
               <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -79,7 +79,7 @@
 
           <div class="canvas-section__controls home-section-controls" data-ref="designer-section-controls">
             <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="designer-dropdown-wrapper-status">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-filter-status" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-filter-status" data-i18n-tooltip="designer.filter_status_tooltip" data-i18n-aria="designer.filter_status_tooltip" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </button>
               <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-status">
@@ -114,7 +114,7 @@
             </div>
 
             <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="designer-dropdown-wrapper-sort">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-sort" data-i18n-tooltip="home.sort_tooltip" data-i18n-aria="home.sort_tooltip" data-tooltip="Ordenar" aria-label="Ordenar">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
               </button>
               <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
@@ -152,11 +152,11 @@
           <div class="canvas-section__controls home-section-controls" data-ref="elements-section-controls">
             <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-designer-upload-element" style="gap: 6px;">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Subir elemento</span>
+              <span data-i18n="designer.upload_element">Subir elemento</span>
             </button>
 
             <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="elements-dropdown-wrapper-status">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-filter-status" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-filter-status" data-i18n-tooltip="designer.filter_status_tooltip" data-i18n-aria="designer.filter_status_tooltip" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </button>
               <div class="dropdown-backdrop" data-ref="dropdown-backdrop-elements-status">
@@ -167,19 +167,19 @@
                   <div class="menu-panel__list">
                     <button type="button" class="menu-item is-active" data-ref="menu-elem-filter-all" data-status="all">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                      <span class="menu-item__text">Todos</span>
+                      <span class="menu-item__text" data-i18n="designer.filter_all">Todos</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="menu-elem-filter-approved" data-status="approved">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                      <span class="menu-item__text">Aprobados</span>
+                      <span class="menu-item__text" data-i18n="designer.filter_approved">Aprobados</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="menu-elem-filter-pending" data-status="pending">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-                      <span class="menu-item__text">En revisión</span>
+                      <span class="menu-item__text" data-i18n="designer.filter_pending">En revisión</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="menu-elem-filter-rejected" data-status="rejected">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-                      <span class="menu-item__text">Rechazados</span>
+                      <span class="menu-item__text" data-i18n="designer.filter_rejected">Rechazados</span>
                     </button>
                   </div>
                 </div>
@@ -187,7 +187,7 @@
             </div>
 
             <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="elements-dropdown-wrapper-sort">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-trigger-sort" data-i18n-tooltip="home.sort_tooltip" data-i18n-aria="home.sort_tooltip" data-tooltip="Ordenar" aria-label="Ordenar">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
               </button>
               <div class="dropdown-backdrop" data-ref="dropdown-backdrop-elements-sort">
@@ -198,15 +198,15 @@
                   <div class="menu-panel__list">
                     <button type="button" class="menu-item is-active" data-ref="menu-elem-sort-recent" data-sort="recent">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-                      <span class="menu-item__text">Más recientes</span>
+                      <span class="menu-item__text" data-i18n="designer.sort_recent">Más recientes</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="menu-elem-sort-uses" data-sort="uses">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-                      <span class="menu-item__text">Más usados</span>
+                      <span class="menu-item__text" data-i18n="designer.sort_uses">Más usados</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="menu-elem-sort-alpha" data-sort="alpha">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
-                      <span class="menu-item__text">Alfabético (A-Z)</span>
+                      <span class="menu-item__text" data-i18n="designer.sort_alpha">Alfabético (A-Z)</span>
                     </button>
                   </div>
                 </div>
@@ -234,9 +234,9 @@
               <div class="designer-pool-card__icon designer-pool-card__icon--pool">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#savings"></use></svg>
               </div>
-              <span class="component-badge component-badge--primary" style="font-size: 11px; font-weight: 600;">25% PRO</span>
+              <span class="component-badge component-badge--primary" data-no-i18n style="font-size: 11px; font-weight: 600;">25% PRO</span>
             </div>
-            <span class="designer-pool-card__value" data-ref="pool-val-total">$0.00 USD</span>
+            <span class="designer-pool-card__value" data-ref="pool-val-total" data-no-i18n>$0.00 USD</span>
             <span class="designer-pool-card__label" data-i18n="designer.pool_current_month">Fondo del mes en curso</span>
           </div>
 
@@ -265,9 +265,9 @@
               <div class="designer-pool-card__icon designer-pool-card__icon--estimated">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#trending_up"></use></svg>
               </div>
-              <span class="component-badge component-badge--warning" style="font-size: 11px; font-weight: 600;">Estimado</span>
+              <span class="component-badge component-badge--warning" data-i18n="designer.badge_estimated" style="font-size: 11px; font-weight: 600;">Estimado</span>
             </div>
-            <span class="designer-pool-card__value" data-ref="pool-val-estimated">$0.00 USD</span>
+            <span class="designer-pool-card__value" data-ref="pool-val-estimated" data-no-i18n>$0.00 USD</span>
             <span class="designer-pool-card__label" data-i18n="designer.pool_estimated_earnings">Ganancia estimada este mes</span>
           </div>
 
@@ -276,9 +276,9 @@
               <div class="designer-pool-card__icon designer-pool-card__icon--balance">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
               </div>
-              <span class="component-badge component-badge--success" style="font-size: 11px; font-weight: 600;">Disponible</span>
+              <span class="component-badge component-badge--success" data-i18n="designer.badge_available" style="font-size: 11px; font-weight: 600;">Disponible</span>
             </div>
-            <span class="designer-pool-card__value" data-ref="pool-val-balance">$0.00 USD</span>
+            <span class="designer-pool-card__value" data-ref="pool-val-balance" data-no-i18n>$0.00 USD</span>
             <span class="designer-pool-card__label" data-i18n="designer.pool_available_balance">Saldo disponible para retirar</span>
           </div>
 
@@ -288,7 +288,7 @@
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
               </div>
             </div>
-            <span class="designer-pool-card__value" data-ref="pool-val-withdrawn">$0.00 USD</span>
+            <span class="designer-pool-card__value" data-ref="pool-val-withdrawn" data-no-i18n>$0.00 USD</span>
             <span class="designer-pool-card__label" data-i18n="designer.pool_total_withdrawn">Total transferido a la fecha</span>
           </div>
         </div>
@@ -303,7 +303,7 @@
                 <h3 class="designer-stripe-card__title" data-i18n="designer.stripe_title">Pagos directos con Stripe Connect Express</h3>
                 <span class="component-badge component-badge--neutral" data-ref="stripe-status-badge">
                   <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
-                  <span data-ref="stripe-status-text">Verificando...</span>
+                  <span data-ref="stripe-status-text" data-i18n="designer.stripe_verifying">Verificando...</span>
                 </span>
               </div>
               <p class="designer-stripe-card__desc" data-ref="stripe-status-desc" data-i18n="designer.stripe_not_connected_desc">

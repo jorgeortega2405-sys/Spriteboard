@@ -5,6 +5,7 @@ import { openUpgradeModal } from './components/upgrade-modal.component.js';
 import { protectRoute } from './config/plans.config.js';
 import { findRoute } from './config/routes.config.js';
 import { currentUser } from './services/api.service.js';
+import { t, translateElement } from './services/i18n.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
@@ -237,16 +238,16 @@ export async function render(): Promise<void> {
       const { createErrorView } = await import('./views/error.view.js');
       viewElements = [await createErrorView({
         code: '404',
-        description: `La ruta "${path}" no existe o ha sido movida.`,
-        title: 'Página no encontrada',
+        description: t('error.not_found_desc', { path }),
+        title: t('error.not_found_title'),
       })];
     }
   } catch {
     const { createErrorView } = await import('./views/error.view.js');
     const errorView = await createErrorView({
       code: '500',
-      description: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      title: 'Error al cargar la página',
+      description: t('error.general_desc'),
+      title: t('error.general_title'),
     });
     viewElements = [errorView];
   }
@@ -259,6 +260,10 @@ export async function render(): Promise<void> {
     }
     activeControllers = [];
   }
+
+  viewElements.forEach((el) => {
+    translateElement(el);
+  });
 
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
 

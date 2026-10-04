@@ -14,7 +14,7 @@ import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
-import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
+import { DEFAULT_STICKY_COLOR, DEFAULT_STICKY_TEXT_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
 import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardSpatialIndex, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, boardRenderCache, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawBoardCollaboratorLocks, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
@@ -206,7 +206,7 @@ export class BoardController {
   private shareWrapperEl: HTMLElement | null = null;
   private showCollaboratorCursors = true;
   private fontPicker: DocFontPickerComponent | null = null;
-  private stickyDefaultColor = '#fef08a';
+  private stickyDefaultColor = DEFAULT_STICKY_COLOR;
   private topFillSwatchEl: HTMLElement | null = null;
   private topFontFamilyLabelEl: HTMLElement | null = null;
   private topFontSizeLabelEl: HTMLElement | null = null;
@@ -1665,7 +1665,7 @@ export class BoardController {
         () => {
           stickySwatches.forEach((s) => s.classList.remove('is-active'));
           swatch.classList.add('is-active');
-          const color = swatch.getAttribute('data-color') || '#fef08a';
+          const color = swatch.getAttribute('data-color') || DEFAULT_STICKY_COLOR;
           this.stickyDefaultColor = color;
           const selectedEls = this.getSelectedElements();
           if (selectedEls.length > 0 && selectedEls.some((el) => el.type === 'sticky')) {
@@ -6265,12 +6265,12 @@ export class BoardController {
 
           if (tagName === 'blockquote') {
             const stickyEl: BoardStickyElement = {
-              color: '#fef08a',
+              color: DEFAULT_STICKY_COLOR,
               fontSize: 13,
               height: 90,
               id: `sticky_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
               text: textContent.slice(0, 200),
-              textColor: '#1e293b',
+              textColor: DEFAULT_STICKY_TEXT_COLOR,
               type: 'sticky',
               width: cardW - 48,
               x: pageX + 24,
@@ -7519,7 +7519,7 @@ export class BoardController {
         () => {
           stickyBtns.forEach((b) => b.classList.remove('is-active'));
           btn.classList.add('is-active');
-          const color = btn.getAttribute('data-color') || '#fef08a';
+          const color = btn.getAttribute('data-color') || DEFAULT_STICKY_COLOR;
           this.stickyDefaultColor = color;
           const selectedEls = this.getSelectedElements();
           if (selectedEls.length > 0 && selectedEls.some((el) => el.type === 'sticky')) {
@@ -7788,8 +7788,8 @@ export class BoardController {
     showToast('Sección creada', 'success');
   }
 
-  public insertTable(rows = 3, cols = 3, width = 450, height = 210): void {
-    this.tableManager.insertTable(rows, cols, width, height);
+  public insertTable(rows = 3, cols = 3, width = 450, height = 210, options?: { borderColor?: string; borderWidth?: number; cellBackgroundColor?: string; cellTextColor?: string; headerBackgroundColor?: string; headerTextColor?: string }): void {
+    this.tableManager.insertTable(rows, cols, width, height, options);
   }
 
   private getTableAtPoint(worldPos: BoardPoint): { col: number; row: number; table: BoardTableElement } | null {

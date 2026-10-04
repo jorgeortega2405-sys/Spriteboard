@@ -4,6 +4,7 @@ import { openEnterpriseSsoModal } from '../components/enterprise-sso-modal.compo
 import { openModal, showConfirmModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { hasFeature } from '../config/plans.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -355,7 +356,8 @@ class TeamsController {
     const canCreateTeams = userPermissions.includes('*') ||
       userPermissions.includes('subscription:feature:teams') ||
       userPermissions.includes('subscription:feature:all') ||
-      userPermissions.includes('teams:manage');
+      userPermissions.includes('teams:manage') ||
+      hasFeature('teams', currentUser);
     if (!canCreateTeams && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');
@@ -376,6 +378,9 @@ class TeamsController {
     }
     if (this.defaultActions) {
       this.defaultActions.style.display = 'flex';
+    }
+    if (this.btnCreateTeam) {
+      this.btnCreateTeam.style.display = canCreateTeams ? 'inline-flex' : 'none';
     }
 
     this.renderRows(this.allTeams);

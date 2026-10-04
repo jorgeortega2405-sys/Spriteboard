@@ -3,10 +3,12 @@ import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.co
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { showConfirmModal, showPromptModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { DEFAULT_STICKY_COLOR } from '../../config/sticky-notes.config.js';
 import { currentUser, getApi, patchApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { CanvasViewTracker, startCanvasViewTracking } from '../../services/canvas-view-tracker.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { t } from '../../services/i18n.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
@@ -56,7 +58,7 @@ export class SheetController implements ViewController {
       colCount: 26,
       columns: {},
       id: 'sheet-1',
-      name: 'Hoja 1',
+      name: t('sheet.tab_default'),
       rowCount: 1000,
       rows: {},
       showGridLines: true,
@@ -165,21 +167,21 @@ export class SheetController implements ViewController {
   private setupTopBarComponents(): void {
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="sheet-title"]');
     titleEl?.addEventListener('blur', () => {
-      const newTitle = titleEl.textContent?.trim() || 'Hoja de cálculo sin título';
+      const newTitle = titleEl.textContent?.trim() || t('sheet.untitled');
       titleEl.textContent = newTitle;
       this.saveTitle(newTitle);
     }, { signal: this.abortController.signal });
 
     const btnMetrics = this.container.querySelector<HTMLElement>('[data-ref="btn-canvas-metrics"]');
     btnMetrics?.addEventListener('click', () => {
-      openCanvasMetricsModal(this.canvasUuid, titleEl?.textContent || 'Hoja de cálculo');
+      openCanvasMetricsModal(this.canvasUuid, titleEl?.textContent || t('sheet.untitled'));
     }, { signal: this.abortController.signal });
 
     const fileMenuWrapper = this.container.querySelector<HTMLElement>('[data-ref="sheet-file-menu-wrapper"]');
     const btnFileMenu = this.container.querySelector<HTMLElement>('[data-ref="btn-sheet-file-menu"]');
     if (fileMenuWrapper && btnFileMenu) {
       this.fileMenuController = setupCanvasFileMenu({
-        canvasTitle: titleEl?.textContent || 'Hoja de cálculo sin título',
+        canvasTitle: titleEl?.textContent || t('sheet.untitled'),
         canvasType: 'sheet',
         canvasUuid: this.canvasUuid,
         generateThumbnail: () => generateSheetThumbnail(this.project),
@@ -199,7 +201,7 @@ export class SheetController implements ViewController {
           created_at: this.canvasRecord?.created_at || new Date().toISOString(),
           height: 1080,
           id: this.canvasRecord?.id,
-          name: titleEl?.textContent || 'Hoja de cálculo sin título',
+          name: titleEl?.textContent || t('sheet.untitled'),
           unit: 'sheet',
           uuid: this.canvasUuid,
           width: 1920,
@@ -382,14 +384,14 @@ export class SheetController implements ViewController {
     btnExportCsv?.addEventListener('click', () => {
       const activeSheet = this.getActiveSheet();
       exportSheetCsv(activeSheet, `${this.canvasRecord?.name || 'hoja-de-calculo'}.csv`);
-      showToast('Hoja exportada en formato CSV', 'success');
+      showToast(t('sheet.export_csv_success'), 'success');
     }, { signal });
 
     const btnExportXls = this.container.querySelector<HTMLElement>('[data-ref="btn-export-excel"]');
     btnExportXls?.addEventListener('click', () => {
       const activeSheet = this.getActiveSheet();
       exportSheetExcel(activeSheet, `${this.canvasRecord?.name || 'hoja-de-calculo'}.xls`);
-      showToast('Hoja exportada en formato Excel', 'success');
+      showToast(t('sheet.export_excel_success'), 'success');
     }, { signal });
   }
 
@@ -539,7 +541,7 @@ export class SheetController implements ViewController {
           this.elementsManager?.addText('Nuevo texto', 200, 150);
           this.recordState();
         } else if (tool === 'sticky') {
-          this.elementsManager?.addSticky('Nueva nota', '#fef08a', 200, 150);
+          this.elementsManager?.addSticky('Nueva nota', DEFAULT_STICKY_COLOR, 200, 150);
           this.recordState();
         } else if (tool === 'connector') {
           this.elementsManager?.addConnector({ x: 200, y: 200 }, { x: 350, y: 200 });
@@ -685,7 +687,7 @@ export class SheetController implements ViewController {
       colCount: 26,
       columns: {},
       id: newId,
-      name: `Hoja ${this.project.sheets.length + 1}`,
+      name: `${t('sheet.sheet_prefix')} ${this.project.sheets.length + 1}`,
       rowCount: 1000,
       rows: {},
       showGridLines: true,
@@ -921,9 +923,9 @@ export class SheetController implements ViewController {
     const statSum = this.container.querySelector<HTMLElement>('[data-ref="stat-sum"]');
     const statAvg = this.container.querySelector<HTMLElement>('[data-ref="stat-avg"]');
 
-    if (statCount) statCount.textContent = `Recuento: ${count}`;
-    if (statSum) statSum.textContent = `Suma: ${numCount > 0 ? formatCellValue(sum, 'general') : 0}`;
-    if (statAvg) statAvg.textContent = `Promedio: ${numCount > 0 ? formatCellValue(sum / numCount, 'general') : 0}`;
+    if (statCount) statCount.textContent = `${t('sheet.count')}: ${count}`;
+    if (statSum) statSum.textContent = `${t('sheet.sum')}: ${numCount > 0 ? formatCellValue(sum, 'general') : 0}`;
+    if (statAvg) statAvg.textContent = `${t('sheet.average')}: ${numCount > 0 ? formatCellValue(sum / numCount, 'general') : 0}`;
   }
 
   private handleElementsChange(): void {
